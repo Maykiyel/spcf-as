@@ -6,3 +6,40 @@
 html {
   font-optical-sizing: auto;
 }
+
+.sidebar-item {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.sidebar-item:hover,
+.sidebar-item[data-expanded="true"],
+.sidebar-collapsible[data-active="true"] .sidebar-item {
+  color: white;
+}
+
+.sidebar-sub-item {
+  padding: 6px 10px !important;
+  border-radius: 6px;
+  transition-duration: 100ms;
+  color: rgba(255, 255, 255, 0.6) !important;
+  will-change: transform;
+}
+
+.sidebar-sub-item:hover {
+  color: rgba(255, 255, 255, 0.8) !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.collapsible-chevron {
+  transition-duration: 200ms;
+  transform: rotate(0);
+}
+
+.sidebar-collapsible[data-active="true"] .collapsible-chevron {
+  transform: rotate(90deg);
+}
+
+.sidebar-sub-item:active {
+  transform: translateY(2px);
+}
