@@ -1,4 +1,8 @@
-import { createTheme, type MantineColorsTuple } from "@mantine/core";
+import {
+  createTheme,
+  type MantineColorsTuple,
+  type DefaultMantineColor,
+} from "@mantine/core";
 
 const primary: MantineColorsTuple = [
   "#ffffff",
@@ -101,3 +105,17 @@ export const theme = createTheme({
     fontWeight: "600",
   },
 });
+
+type ExtendedCustomColors =
+  | "primary"
+  | "navy"
+  | "danger"
+  | "success"
+  | "dark"
+  | DefaultMantineColor;
+
+declare module "@mantine/core" {
+  export interface MantineThemeColorsOverride {
+    colors: Record<ExtendedCustomColors, MantineColorsTuple>;
+  }
+}
