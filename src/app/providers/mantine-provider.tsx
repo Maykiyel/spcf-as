@@ -1,4 +1,5 @@
 import { MantineProvider as BaseMantineProvider } from "@mantine/core";
+import { theme } from "@/config/theme";
 import "@mantine/core/styles.css";
 
 type MantineProviderProps = {
@@ -6,5 +7,5 @@ type MantineProviderProps = {
 };
 
 export const MantineProvider = ({ children }: MantineProviderProps) => {
-  return <BaseMantineProvider>{children}</BaseMantineProvider>;
+  return <BaseMantineProvider theme={theme}>{children}</BaseMantineProvider>;
 };
