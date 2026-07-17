@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@mantine/charts": "^9.4.1",
     "@mantine/core": "^9.4.1",
     "@mantine/dates": "^9.4.1",
