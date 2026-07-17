@@ -1,0 +1,8 @@
+:root {
+  --mantine-font-family: "Geist" !important;
+  --mantine-font-family-headings: "Geist" !important;
+}
+
+html {
+  font-optical-sizing: auto;
+}
