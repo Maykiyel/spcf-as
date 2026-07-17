@@ -6,6 +6,7 @@ import {
   Checkbox,
   Button,
   Stack,
+  Text,
 } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { login, loginInputSchema, type LoginInput } from "../api/login";
@@ -50,15 +51,15 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
         <Button
           type="submit"
           fullWidth
+          color="primary"
           loading={loginMutation.isPending}
-          
         >
           Login
         </Button>
         {loginMutation.isError && (
-          <p style={{ color: "red", fontSize: 14 }}>
+          <Text size="sm" c="danger" ta="center">
             Invalid username or password.
-          </p>
+          </Text>
         )}
       </Stack>
     </form>

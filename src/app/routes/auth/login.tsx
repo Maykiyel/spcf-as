@@ -1,4 +1,3 @@
-// src/app/routes/login.tsx
 import { useNavigate } from "react-router";
 import {
   Center,
@@ -15,11 +14,14 @@ export const Component = () => {
   const navigate = useNavigate();
 
   return (
-    <Center h="100vh" bg={"linear-gradient(180deg, #4e73df 10%, #0f1e5d 100%)"}>
+    <Center
+      h="100vh"
+      bg="linear-gradient(180deg, var(--mantine-color-primary-6) 10%, var(--mantine-color-navy-8) 100%)"
+    >
       <Container size="xs" w="100%">
         <Paper p="xl" radius="md" shadow="md">
           <Stack gap="lg">
-            <Title order={3} ta="center">
+            <Title order={3} ta="center" c="dark">
               SPCF ACCOUNTING OFFICE - LOGIN
             </Title>
 
