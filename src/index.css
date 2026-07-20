@@ -72,3 +72,20 @@ html {
 .sidebar-sub-item:active {
   transform: translateY(2px);
 }
+
+.dark-dropdown-item {
+  color: #c7c7ca !important;
+}
+
+.dark-dropdown-item:hover {
+  color: #fff !important;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.dark-dropdown-item.danger {
+  color: var(--mantine-color-red-4) !important;
+}
+
+.dark-dropdown-item.danger:hover {
+  background-color: #fa525233;
+}

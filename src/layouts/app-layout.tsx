@@ -1,7 +1,21 @@
-import { AppShell, Card, Center, Flex, Group, Text, Menu, UnstyledButton } from "@mantine/core";
+import {
+  AppShell,
+  Card,
+  Center,
+  Flex,
+  Group,
+  Text,
+  Menu,
+  UnstyledButton,
+} from "@mantine/core";
 import { useNavigate } from "react-router";
 import AppSidebar from "./components/app-sidebar";
-import { IconUserFilled, IconHistory, IconLogout, IconChevronDown } from "@tabler/icons-react";
+import {
+  IconUserFilled,
+  IconLogout,
+  IconChevronDown,
+  IconHeartRateMonitor,
+} from "@tabler/icons-react";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { routePaths } from "@/config/path";
@@ -72,9 +86,23 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             </Card>
           </Flex>
 
-          <Menu shadow="md" width={200} position="bottom-end" offset={8}>
+          <Menu
+            withArrow
+            shadow="md"
+            // transitionProps={{ transition: "skew-down" }}
+            width={200}
+            styles={{
+              arrow: {
+                borderColor: "rgba(255,255,255,0.3)",
+              },
+            }}
+            radius={10}
+            position="bottom-end"
+            offset={6}
+            arrowOffset={10}
+          >
             <Menu.Target>
-              <UnstyledButton>
+              <UnstyledButton pr={9} variant="transparent">
                 <Group gap={6}>
                   <Text fz={14} c="white">
                     {user?.full_name ?? "Guest"}
@@ -85,16 +113,31 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </UnstyledButton>
             </Menu.Target>
 
-            <Menu.Dropdown>
+            <Menu.Dropdown
+              bg="dark.7"
+              styles={{
+                dropdown: {
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  boxShadow:
+                    "inset 0 0 0 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1), 0 10px 24px rgba(0, 0, 0, 0.1)",
+                },
+              }}
+            >
               <Menu.Item
-                leftSection={<IconHistory size={16} />}
-                onClick={() => navigate('/temp')}
+                className="dark-dropdown-item"
+                leftSection={<IconHeartRateMonitor size={18} opacity={0.6} />}
+                onClick={() => navigate("/temp")}
               >
                 Activity Log
               </Menu.Item>
-              <Menu.Divider />
+              <Menu.Divider mb={0} style={{ borderColor: "rgba(0,0,0,0.2)" }} />
+              <Menu.Divider
+                mt={0}
+                style={{ borderColor: "rgba(255,255,255,0.15)" }}
+              />
               <Menu.Item
-                leftSection={<IconLogout size={16} />}
+                className="dark-dropdown-item danger"
+                leftSection={<IconLogout size={18} opacity={0.6} />}
                 color="danger"
                 onClick={handleLogout}
               >

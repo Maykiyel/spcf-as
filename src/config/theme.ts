@@ -104,6 +104,21 @@ export const theme = createTheme({
     fontFamily: "Inter, system-ui, sans-serif",
     fontWeight: "600",
   },
+  components: {
+    Menu: {
+      defaultProps: {
+        transitionProps: {
+          transition: {
+            in: { opacity: 1, transform: "translateY(0)" },
+            out: { opacity: 0, transform: "translateY(-6px)" },
+            transitionProperty: "opacity, transform",
+          },
+          duration: 300,
+          timingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+        },
+      },
+    },
+  },
 });
 
 type ExtendedCustomColors =
