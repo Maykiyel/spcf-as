@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { Divider, Paper, Title, Stack } from "@mantine/core";
 import { DataTableContext } from "./data-table-context";
 import type { DataTableContextValue } from "./types";
+import { Card } from "@/components/ui/card";
 
 type DataTableRootProps<T> = {
   title: string;
@@ -16,15 +16,11 @@ export function DataTableRoot<T>({
 }: DataTableRootProps<T>) {
   return (
     <DataTableContext.Provider value={state}>
-      <Paper radius="md" shadow="sm" withBorder>
-        <Title order={5} c="primary" p="md" bg={"navy.1"}>
-          {title}
-        </Title>
-        <Divider mb={"sm"} />
-        <Stack gap="md" p="md" pt={0}>
-          {children}
-        </Stack>
-      </Paper>
+      <Card.Root>
+        <Card.Header title={title} />
+        <Card.Divider />
+        <Card.Body>{children}</Card.Body>
+      </Card.Root>
     </DataTableContext.Provider>
   );
 }
