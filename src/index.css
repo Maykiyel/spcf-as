@@ -7,6 +7,35 @@ html {
   font-optical-sizing: auto;
 }
 
+.sidebar-link,
+.sidebar-logo-text {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar-link,
+.sidebar-logo-text {
+  opacity: 1;
+  transition: all 0.3s ease-in-out 0.1s;
+  transition-property: opacity, transform;
+  pointer-events: all;
+  transform: translateY(0px);
+  will-change: transform;
+}
+
+.sidebar-link.hidden,
+.sidebar-logo-text.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.1s ease-in-out 0s;
+  transition-property: opacity, transform;
+  transform: translateY(3px);
+}
+
+.sidebar-toggle:hover {
+  color: white !important;
+}
+
 .sidebar-item {
   cursor: pointer;
   color: rgba(255, 255, 255, 0.6);
