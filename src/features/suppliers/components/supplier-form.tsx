@@ -85,7 +85,13 @@ export function SupplierForm({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Card.Root>
+    <Card.Root
+      style={{
+        border: isEditMode
+          ? "2px solid #b4c4f1"
+          : "1px solid var(--paper-border-color)",
+      }}
+    >
       <Card.Header title={isEditMode ? "Edit Supplier" : "Add Supplier"} />
       <Card.Divider />
       <Card.Body>

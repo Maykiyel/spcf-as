@@ -8,7 +8,7 @@ type CardHeaderProps = {
 
 export function CardHeader({ title, actions }: CardHeaderProps) {
   return (
-    <Group justify="space-between" p="md" bg="navy.1">
+    <Group justify="space-between" p="md" bg="navy.0">
       <Title order={5} c="primary">
         {title}
       </Title>
