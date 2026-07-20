@@ -87,11 +87,11 @@ const SidebarItem = ({
                   styles={{ label: { paddingTop: 0, paddingBottom: 0 } }}
                 >
                   <Flex
+                    className="sidebar-item"
                     px="xs"
                     py="sm"
                     justify="space-between"
                     align="center"
-                    className="sidebar-item"
                   >
                     <Flex align="center" gap={16}>
                       <Center>

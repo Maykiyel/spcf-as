@@ -42,7 +42,7 @@ html {
 }
 
 .sidebar-item:hover,
-.sidebar-item[data-expanded="true"],
+.mantine-Accordion-control[aria-expanded="true"] .sidebar-item,
 .sidebar-collapsible[data-active="true"] .sidebar-item {
   color: white;
 }
@@ -65,7 +65,7 @@ html {
   transform: rotate(0);
 }
 
-.sidebar-collapsible[data-active="true"] .collapsible-chevron {
+.mantine-Accordion-control[aria-expanded="true"] .collapsible-chevron {
   transform: rotate(90deg);
 }
 
