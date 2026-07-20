@@ -1,5 +1,3 @@
-import AppLayout from "@/layouts/app-layout";
-
 export const Component = () => {
-  return <AppLayout>Dashboard</AppLayout>;
+  return <h1>Dashboard</h1>;
 };
