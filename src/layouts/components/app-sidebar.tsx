@@ -35,7 +35,7 @@ const AppSidebar = () => {
           align="center"
           justify="space-between"
         >
-          <Flex gap="sm">
+          <Flex align="center" gap="sm">
             {desktopOpened ? (
               <Image src={logo} w={30} h={30} />
             ) : (
