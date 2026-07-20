@@ -157,7 +157,7 @@ export const adminLinks: SidebarItem[] = [
   {
     label: "Supplier",
     icon: IconTruckFilled,
-    to: "/supplier",
+    to: "/suppliers",
   },
   {
     label: "Accounts",

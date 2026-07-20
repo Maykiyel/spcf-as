@@ -1,4 +1,3 @@
-// src/app/create-router.tsx
 import { routePaths } from "@/config/path";
 import { createBrowserRouter } from "react-router";
 import { ProtectedRoute } from "@/components/routes/protected-route";
@@ -19,6 +18,10 @@ export const createRouter = () =>
             {
               path: routePaths.dashboard.path,
               lazy: () => import("./routes/app/dashboard"),
+            },
+            {
+              path: routePaths.suppliers.path,
+              lazy: () => import("./routes/app/suppliers"),
             },
           ],
         },
