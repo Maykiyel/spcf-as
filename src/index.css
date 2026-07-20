@@ -6,3 +6,69 @@
 html {
   font-optical-sizing: auto;
 }
+
+.sidebar-link,
+.sidebar-logo-text {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar-link,
+.sidebar-logo-text {
+  opacity: 1;
+  transition: all 0.3s ease-in-out 0.1s;
+  transition-property: opacity, transform;
+  pointer-events: all;
+  transform: translateY(0px);
+  will-change: transform;
+}
+
+.sidebar-link.hidden,
+.sidebar-logo-text.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.1s ease-in-out 0s;
+  transition-property: opacity, transform;
+  transform: translateY(3px);
+}
+
+.sidebar-toggle:hover {
+  color: white !important;
+}
+
+.sidebar-item {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.sidebar-item:hover,
+.mantine-Accordion-control[aria-expanded="true"] .sidebar-item,
+.sidebar-collapsible[data-active="true"] .sidebar-item {
+  color: white;
+}
+
+.sidebar-sub-item {
+  padding: 6px 10px !important;
+  border-radius: 6px;
+  transition-duration: 100ms;
+  color: rgba(255, 255, 255, 0.6) !important;
+  will-change: transform;
+}
+
+.sidebar-sub-item:hover {
+  color: rgba(255, 255, 255, 0.8) !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.collapsible-chevron {
+  transition-duration: 200ms;
+  transform: rotate(0);
+}
+
+.mantine-Accordion-control[aria-expanded="true"] .collapsible-chevron {
+  transform: rotate(90deg);
+}
+
+.sidebar-sub-item:active {
+  transform: translateY(2px);
+}
