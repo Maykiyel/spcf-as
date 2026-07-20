@@ -1,10 +1,21 @@
-import { AppShell, Card, Center, Flex, Group, Text } from "@mantine/core";
+import { AppShell, Card, Center, Flex, Group, Text, Menu, UnstyledButton } from "@mantine/core";
+import { useNavigate } from "react-router";
 import AppSidebar from "./components/app-sidebar";
-import { IconUserFilled } from "@tabler/icons-react";
+import { IconUserFilled, IconHistory, IconLogout, IconChevronDown } from "@tabler/icons-react";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { routePaths } from "@/config/path";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { mobileOpened, desktopOpened } = useSidebarStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate(routePaths.auth.login.path);
+  };
 
   return (
     <AppShell
@@ -61,12 +72,36 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             </Card>
           </Flex>
 
-          <Group>
-            <Text fz={14} c="white">
-              Placeholder Name
-            </Text>
-            <IconUserFilled color="white" />
-          </Group>
+          <Menu shadow="md" width={200} position="bottom-end" offset={8}>
+            <Menu.Target>
+              <UnstyledButton>
+                <Group gap={6}>
+                  <Text fz={14} c="white">
+                    {user?.full_name ?? "Guest"}
+                  </Text>
+                  <IconUserFilled color="white" size={20} />
+                  <IconChevronDown color="white" size={14} />
+                </Group>
+              </UnstyledButton>
+            </Menu.Target>
+
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<IconHistory size={16} />}
+                onClick={() => navigate('/temp')}
+              >
+                Activity Log
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item
+                leftSection={<IconLogout size={16} />}
+                color="danger"
+                onClick={handleLogout}
+              >
+                Log out
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Group>
       </AppShell.Header>
       <AppSidebar />
