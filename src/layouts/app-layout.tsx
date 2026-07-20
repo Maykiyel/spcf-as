@@ -148,7 +148,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         </Group>
       </AppShell.Header>
       <AppSidebar />
-      <AppShell.Main pb={80}>{children}</AppShell.Main>
+      <AppShell.Main>{children}</AppShell.Main>
     </AppShell>
   );
 };

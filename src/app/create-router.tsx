@@ -1,6 +1,8 @@
+// src/app/create-router.tsx
 import { routePaths } from "@/config/path";
 import { createBrowserRouter } from "react-router";
 import { ProtectedRoute } from "@/components/routes/protected-route";
+import { AppLayoutRoute } from "@/layouts/app-layout-route";
 
 export const createRouter = () =>
   createBrowserRouter([
@@ -12,13 +14,19 @@ export const createRouter = () =>
       Component: ProtectedRoute,
       children: [
         {
-          path: routePaths.dashboard.path,
-          lazy: () => import("./routes/app/dashboard"),
+          Component: AppLayoutRoute,
+          children: [
+            {
+              path: routePaths.dashboard.path,
+              lazy: () => import("./routes/app/dashboard"),
+            },
+          ],
         },
       ],
     },
     {
-      path: "*",
+      path: routePaths.notFound.path,
       lazy: () => import("./routes/not-found"),
     },
+    { path: "*", lazy: () => import("./routes/not-found") },
   ]);
