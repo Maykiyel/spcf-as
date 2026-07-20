@@ -58,7 +58,7 @@ const SidebarItem = ({
         disabled={desktopOpened}
         opened={!desktopOpened && popoverOpened}
         onChange={setPopoverOpened}
-        transitionProps={{ transition: "pop-top-left", duration: 150 }}
+        transitionProps={{ transition: "fade-right", duration: 150 }}
       >
         <AppTooltip disabled={desktopOpened} position="right" label={label}>
           <Popover.Target>
