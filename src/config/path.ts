@@ -33,4 +33,8 @@ export const routePaths = {
       getHref: () => "/students/uploads",
     },
   },
+  suppliers: {
+    path: "/suppliers",
+    getHref: () => "/suppliers",
+  },
 };
