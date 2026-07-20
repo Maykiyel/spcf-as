@@ -14,6 +14,6 @@ import { DataTablePagination } from "./data-table-pagination";
 export const DataTable = {
   Root: DataTableRoot,
   Toolbar: DataTableToolbar,
-  Table: DataTableGrid,
+  Grid: DataTableGrid,
   Pagination: DataTablePagination,
 };
