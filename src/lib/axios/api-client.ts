@@ -9,10 +9,10 @@ import { env } from "@/config/env";
 import { useAuthStore } from "@/stores/auth-store";
 
 export interface ApiResponse<T> {
-  message: string;
+  success: boolean;
   data: T;
+  message: string;
   code: number;
-  error: boolean;
 }
 
 const api = axios.create({
@@ -36,7 +36,7 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
   (response) => {
     const body = response.data as ApiResponse<unknown>;
-    if (body?.error) {
+    if (!body?.success) {
       return Promise.reject(
         new AxiosError(
           body.message,

@@ -10,6 +10,8 @@ import {
 } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { login, loginInputSchema, type LoginInput } from "../api/login";
+import { useAuthStore } from "@/stores/auth-store";
+import type { LoginResponse } from "../types";
 
 type LoginFormProps = {
   onSuccess: () => void;
@@ -25,9 +27,14 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     defaultValues: { username: "", password: "", rememberMe: false },
   });
 
+  const setAuth = useAuthStore((s) => s.setAuth);
+
   const loginMutation = useMutation({
     mutationFn: login,
-    onSuccess,
+    onSuccess: (data: LoginResponse, variables) => {
+      setAuth(data.token, data.user, data.role, variables.rememberMe);
+      onSuccess();
+    },
   });
 
   const onSubmit = (data: LoginInput) => {

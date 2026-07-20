@@ -10,8 +10,8 @@ export const loginInputSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginInputSchema>;
 
-export const login = (data: LoginInput): Promise<LoginResponse> => {
+export const login = async (data: LoginInput): Promise<LoginResponse> => {
   return apiClient
-    .post<LoginResponse, LoginInput>("/auth/login", data)
+    .post<LoginResponse, LoginInput>("/login", data)
     .then((response) => response.data);
 };

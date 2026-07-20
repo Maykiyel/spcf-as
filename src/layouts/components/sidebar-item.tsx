@@ -58,7 +58,7 @@ const SidebarItem = ({
         disabled={desktopOpened}
         opened={!desktopOpened && popoverOpened}
         onChange={setPopoverOpened}
-        transitionProps={{ transition: "pop-top-left", duration: 150 }}
+        transitionProps={{ transition: "fade-right", duration: 150 }}
       >
         <AppTooltip disabled={desktopOpened} position="right" label={label}>
           <Popover.Target>
@@ -87,11 +87,11 @@ const SidebarItem = ({
                   styles={{ label: { paddingTop: 0, paddingBottom: 0 } }}
                 >
                   <Flex
+                    className="sidebar-item"
                     px="xs"
                     py="sm"
                     justify="space-between"
                     align="center"
-                    className="sidebar-item"
                   >
                     <Flex align="center" gap={16}>
                       <Center>
@@ -147,7 +147,7 @@ const SidebarItem = ({
               "inset 0 0 0 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1), 0 10px 24px rgba(0, 0, 0, 0.1)",
           }}
         >
-          <Text size="xs" fw={700} c="gray.4" mb={6} px={4}>
+          <Text size="sm" fw={600} c="gray.4" mb={6} px={4}>
             {label}
           </Text>
           {subItemsContent}
