@@ -1,10 +1,10 @@
 import { AppShell, Card, Center, Flex, Group, Text } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
 import AppSidebar from "./components/app-sidebar";
 import { IconUserFilled } from "@tabler/icons-react";
+import { useSidebarStore } from "@/stores/sidebar-store";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const [opened] = useDisclosure(true);
+  const { mobileOpened, desktopOpened } = useSidebarStore();
 
   return (
     <AppShell
@@ -13,9 +13,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       layout="alt"
       header={{ height: 60 }}
       navbar={{
-        width: 280,
+        width: desktopOpened ? 280 : 70,
         breakpoint: "sm",
-        collapsed: { mobile: !opened },
+        collapsed: { mobile: !mobileOpened },
       }}
       styles={{
         navbar: {
