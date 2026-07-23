@@ -7,7 +7,13 @@ type CardRootProps = PaperProps & {
 
 export function CardRoot({ children, ...paperProps }: CardRootProps) {
   return (
-    <Paper radius="md" shadow="sm" withBorder {...paperProps}>
+    <Paper
+      radius="md"
+      shadow="sm"
+      withBorder
+      {...paperProps}
+      style={{ overflow: "hidden", ...paperProps.style }}
+    >
       {children}
     </Paper>
   );

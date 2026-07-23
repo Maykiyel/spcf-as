@@ -14,6 +14,11 @@ export function SupplierActionsCell({
     <EditButton
       onClick={() => {
         onEdit(supplier);
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "smooth",
+        });
       }}
     />
   );

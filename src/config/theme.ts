@@ -18,7 +18,7 @@ const primary: MantineColorsTuple = [
 ];
 
 const navy: MantineColorsTuple = [
-  "#ffffff",
+  "#f0f1f5",
   "#e6e7ee",
   "#cccfdd",
   "#b2b7cb",

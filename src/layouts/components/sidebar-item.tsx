@@ -164,7 +164,7 @@ const SidebarItem = ({
       <Link style={{ color: "white", textDecoration: "none" }} to={to}>
         <Flex
           data-expanded={isActive}
-          className="sidebar-item"
+          className={isActive ? "" : "sidebar-item"}
           px="xs"
           py="xs"
           align="center"
