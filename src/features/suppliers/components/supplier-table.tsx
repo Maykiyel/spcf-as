@@ -1,7 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   DataTable,
-  useClientTableState,
+  useServerTableState,
   type ColumnDef,
 } from "@/components/ui/data-table";
 import { getSuppliers } from "../api/get-suppliers";
@@ -13,15 +12,10 @@ type SupplierTableProps = {
 };
 
 export function SupplierTable({ onEdit }: SupplierTableProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: getSuppliers,
-  });
-
   const columns: ColumnDef<Supplier>[] = [
     { key: "id", header: "ID", sortable: true },
     { key: "name", header: "Supplier Name", sortable: true },
-    { key: "contact_no", header: "Contact No", sortable: true },
+    { key: "contact_no", header: "Contact No" },
     { key: "email", header: "Email Address", sortable: true },
     {
       key: "id",
@@ -31,13 +25,14 @@ export function SupplierTable({ onEdit }: SupplierTableProps) {
     },
   ];
 
-  const tableState = useClientTableState({ data: data ?? [], columns });
+  const tableState = useServerTableState({
+    queryKey: ["suppliers"],
+    queryFn: getSuppliers,
+    columns,
+  });
 
   return (
-    <DataTable.Root
-      title="List of Supplier"
-      state={{ ...tableState, isLoading }}
-    >
+    <DataTable.Root title="List of Supplier" state={tableState}>
       <DataTable.Toolbar />
       <DataTable.Grid />
       <DataTable.Pagination />

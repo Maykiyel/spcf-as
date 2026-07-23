@@ -9,3 +9,11 @@ export type Supplier = {
     updated_at: string;
   };
 };
+
+export type SupplierPagination = {
+  current_page: number;
+  total_pages: number;
+  count: number;
+  per_page: number;
+  total: number;
+};
