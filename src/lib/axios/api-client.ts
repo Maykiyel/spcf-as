@@ -21,16 +21,17 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
+  withXSRFToken: true,
 });
 
-//request interceptor
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+export const getCsrfCookie = () =>
+  axios.get(`${env.APP_URL}/sanctum/csrf-cookie`, { withCredentials: true });
+
+// Dedupe concurrent CSRF refreshes if several requests 419 at once.
+let csrfRefreshPromise: Promise<unknown> | null = null;
+
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => config);
 
 //response interceptor
 api.interceptors.response.use(
@@ -49,11 +50,32 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
+  async (error: AxiosError) => {
+    const status = error.response?.status;
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+
+    const isLoginRequest = originalRequest?.url?.includes("/");
+    if (status === 401 && !isLoginRequest) {
       useAuthStore.getState().logout();
-      window.location.href = "/login";
+      window.location.href = "/";
+      return Promise.reject(error);
     }
+
+    // 419 = CSRF token mismatch (Laravel's default for this). Refresh the
+    // XSRF cookie once and retry the original request exactly once.
+    // Confirm with backend that 419 is actually what an expired/missing
+    // CSRF token returns before relying on this — don't assume.
+    if (status === 419 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      csrfRefreshPromise ??= getCsrfCookie().finally(() => {
+        csrfRefreshPromise = null;
+      });
+      await csrfRefreshPromise;
+      return api(originalRequest);
+    }
+
     return Promise.reject(error);
   },
 );

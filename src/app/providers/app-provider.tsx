@@ -1,5 +1,6 @@
 import { QueryProvider } from "./query-provider";
 import { MantineProvider } from "./mantine-provider";
+import { AuthProvider } from "./auth-provider";
 
 type AppProviderProps = {
   children: React.ReactNode;
@@ -8,7 +9,9 @@ type AppProviderProps = {
 export const AppProvider = ({ children }: AppProviderProps) => {
   return (
     <QueryProvider>
-      <MantineProvider>{children}</MantineProvider>
+      <MantineProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </MantineProvider>
     </QueryProvider>
   );
 };

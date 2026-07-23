@@ -1,17 +1,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  TextInput,
-  PasswordInput,
-  Checkbox,
-  Button,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { TextInput, PasswordInput, Button, Stack, Text } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
 import { login, loginInputSchema, type LoginInput } from "../api/login";
 import { useAuthStore } from "@/stores/auth-store";
-import type { LoginResponse } from "../types";
+import type { AuthUser } from "../types";
 
 type LoginFormProps = {
   onSuccess: () => void;
@@ -24,15 +17,15 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginInputSchema),
-    defaultValues: { username: "", password: "", rememberMe: false },
+    defaultValues: { username: "", password: "" },
   });
 
-  const setAuth = useAuthStore((s) => s.setAuth);
+  const setUser = useAuthStore((s) => s.setUser);
 
   const loginMutation = useMutation({
     mutationFn: login,
-    onSuccess: (data: LoginResponse, variables) => {
-      setAuth(data.token, data.user, data.role, variables.rememberMe);
+    onSuccess: (user: AuthUser) => {
+      setUser(user);
       onSuccess();
     },
   });
@@ -54,7 +47,6 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           {...register("password")}
           error={errors.password?.message}
         />
-        <Checkbox label="Remember Me" {...register("rememberMe")} />
         <Button
           type="submit"
           fullWidth
