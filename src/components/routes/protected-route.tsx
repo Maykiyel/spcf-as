@@ -3,10 +3,10 @@ import { useAuthStore } from "@/stores/auth-store";
 import { routePaths } from "@/config/path";
 
 export function ProtectedRoute() {
-  const token = useAuthStore((s) => s.token);
+  const status = useAuthStore((s) => s.status);
   const location = useLocation();
 
-  if (!token) {
+  if (status === "unauthenticated") {
     return (
       <Navigate
         to={routePaths.auth.login.path}

@@ -1,7 +1,6 @@
 export type LoginCredentials = {
   username: string;
   password: string;
-  rememberMe: boolean;
 };
 
 export type AuthUser = {
@@ -11,10 +10,5 @@ export type AuthUser = {
   full_name: string;
   user_name: string;
   email: string;
-};
-
-export type LoginResponse = {
-  user: AuthUser;
-  token: string;
-  role: string | null;
+  role: string;
 };

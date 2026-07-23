@@ -28,7 +28,10 @@ ${Object.entries(parsedEnv.error.flatten().fieldErrors)
     );
   }
 
-  return parsedEnv.data;
+  return {
+    ...parsedEnv.data,
+    APP_URL: parsedEnv.data.API_URL.replace(/\/api\/?$/, ""),
+  };
 };
 
 export const env = createEnv();
