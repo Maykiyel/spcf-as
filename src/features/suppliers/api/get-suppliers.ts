@@ -6,9 +6,7 @@ import type {
 } from "@/components/ui/data-table";
 
 type SuppliersIndexData = {
-  data: {
-    suppliers: Supplier[];
-  };
+  suppliers: Supplier[];
   pagination: SupplierPagination;
 };
 
@@ -25,7 +23,7 @@ export const getSuppliers = async (
     },
   });
   return {
-    data: response.data.data.suppliers,
+    data: response.data.suppliers,
     total: response.data.pagination.total,
   };
 };
