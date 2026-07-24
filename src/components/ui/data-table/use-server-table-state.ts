@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import { notifications } from "@mantine/notifications";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import type { ColumnDef, SortDirection } from "./types";
+import type { ColumnDef } from "./types";
+import { useTableControls } from "./use-table-controls";
 
 export type ServerTableParams = {
   page: number;
@@ -29,16 +32,23 @@ export function useServerTableState<T extends Record<string, any>>({
   columns,
   initialPageSize = 25,
 }: UseServerTableStateOptions<T>) {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(initialPageSize);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const {
+    page,
+    pageSize,
+    searchQuery,
+    sortKey,
+    sortDirection,
+    onPageChange,
+    onPageSizeChange,
+    onSearchChange,
+    onSort,
+    resetSort,
+  } = useTableControls(initialPageSize);
 
   // Debounce search before it ever reaches the network
   const debouncedSearch = useDebouncedValue(searchQuery, 400);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error } = useQuery({
     queryKey: [
       ...queryKey,
       page,
@@ -58,36 +68,30 @@ export function useServerTableState<T extends Record<string, any>>({
     placeholderData: keepPreviousData, // keeps old rows visible while the next page loads, instead of a flash to empty
   });
 
-  const onSort = (key: string) => {
-    if (sortKey !== key) {
-      setSortKey(key);
-      setSortDirection("asc");
-    } else if (sortDirection === "asc") {
-      setSortDirection("desc");
-    } else {
-      setSortKey(null);
-      setSortDirection(null);
-    }
-    setPage(1);
-  };
+  useEffect(() => {
+    if (!isError || !sortKey) return;
+    const status =
+      error instanceof AxiosError ? error.response?.status : undefined;
+    if (status !== 422) return;
 
-  const onSearchChange = (query: string) => {
-    setSearchQuery(query);
-    setPage(1);
-  };
+    resetSort();
+    notifications.show({
+      color: "danger",
+      message: "That column can't be sorted.",
+    });
+  }, [isError, error, sortKey, resetSort]);
 
   return {
     columns,
     rows: data?.data ?? [],
     totalCount: data?.total ?? 0,
     isLoading: isLoading || isFetching,
+    isError,
+    errorMessage: isError ? "Couldn't load data. Please try again." : null,
     page,
     pageSize,
-    onPageChange: setPage,
-    onPageSizeChange: (size: number) => {
-      setPageSize(size);
-      setPage(1);
-    },
+    onPageChange,
+    onPageSizeChange,
     searchQuery,
     onSearchChange,
     sortKey,
