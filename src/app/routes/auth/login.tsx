@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import {
   Center,
   Container,
@@ -13,9 +13,23 @@ import {
 import { LoginForm } from "@/features/auth/components/login-form";
 import spcfLogo from "@/assets/logo.png";
 import ictduLogo from "@/assets/favicon.png";
+import { useAuthStore } from "@/stores/auth-store";
+import { routePaths } from "@/config/path";
 
 export const Component = () => {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const location = useLocation();
+
+  if (user) {
+    return (
+      <Navigate
+        to={routePaths.dashboard.path}
+        replace
+        state={{ from: location }}
+      />
+    );
+  }
 
   return (
     <Center
