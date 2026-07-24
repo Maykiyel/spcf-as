@@ -1,4 +1,4 @@
-import { Navigate, useLocation, useNavigate } from "react-router";
+import { Navigate, useLocation } from "react-router";
 import {
   Center,
   Container,
@@ -17,11 +17,12 @@ import { useAuthStore } from "@/stores/auth-store";
 import { routePaths } from "@/config/path";
 
 export const Component = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
+  const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
 
-  if (user) {
+  if (status === "authenticated" && user) {
     return (
       <Navigate
         to={routePaths.dashboard.path}
@@ -42,7 +43,7 @@ export const Component = () => {
             <Title order={3} ta="center" c="dark">
               SPCF ACCOUNTING OFFICE - LOGIN
             </Title>
-            <LoginForm onSuccess={() => navigate("/dashboard")} />
+            <LoginForm />
             <Divider />
             <Text size="sm" c="dimmed" ta="center">
               Copyright © SYSTEMS PLUS COLLEGE FOUNDATION - 2026

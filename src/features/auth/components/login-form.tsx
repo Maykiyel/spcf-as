@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import type { AuthUser } from "../types";
 
 type LoginFormProps = {
-  onSuccess: () => void;
+  onSuccess?: () => void;
 };
 
 export const LoginForm = ({ onSuccess }: LoginFormProps) => {
@@ -26,7 +26,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     mutationFn: login,
     onSuccess: (user: AuthUser) => {
       setUser(user);
-      onSuccess();
+      // onSuccess();
     },
   });
 
