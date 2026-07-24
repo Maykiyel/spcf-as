@@ -24,6 +24,7 @@ type UseServerTableStateOptions<T> = {
   queryFn: (params: ServerTableParams) => Promise<ServerTableResponse<T>>;
   columns: ColumnDef<T>[];
   initialPageSize?: number;
+  urlKey?: string;
 };
 
 export function useServerTableState<T extends Record<string, any>>({
@@ -31,6 +32,7 @@ export function useServerTableState<T extends Record<string, any>>({
   queryFn,
   columns,
   initialPageSize = 25,
+  urlKey,
 }: UseServerTableStateOptions<T>) {
   const {
     page,
@@ -43,9 +45,11 @@ export function useServerTableState<T extends Record<string, any>>({
     onSearchChange,
     onSort,
     resetSort,
-  } = useTableControls(initialPageSize);
+  } = useTableControls(initialPageSize, urlKey);
 
-  // Debounce search before it ever reaches the network
+  // Debounce search before it ever reaches the network. Independent of the
+  // debounce (if any) `useTableControls` applies before writing to the URL —
+  // they're decoupled on purpose, so URL sync isn't gated on request timing.
   const debouncedSearch = useDebouncedValue(searchQuery, 400);
 
   const { data, isLoading, isFetching, isError, error } = useQuery({

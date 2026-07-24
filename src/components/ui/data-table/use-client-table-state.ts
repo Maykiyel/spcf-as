@@ -6,12 +6,14 @@ type UseClientTableStateOptions<T> = {
   data: T[];
   columns: ColumnDef<T>[];
   initialPageSize?: number;
+  urlKey?: string;
 };
 
 export function useClientTableState<T extends Record<string, any>>({
   data,
   columns,
   initialPageSize = 25,
+  urlKey,
 }: UseClientTableStateOptions<T>) {
   const {
     page,
@@ -23,7 +25,7 @@ export function useClientTableState<T extends Record<string, any>>({
     onPageSizeChange,
     onSearchChange,
     onSort,
-  } = useTableControls(initialPageSize);
+  } = useTableControls(initialPageSize, urlKey);
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return data;
