@@ -18,17 +18,27 @@ import {
 } from "@tabler/icons-react";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { routePaths } from "@/config/path";
+import { apiClient } from "@/lib/axios/api-client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = useQueryClient();
   const { mobileOpened, desktopOpened } = useSidebarStore();
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const logout = useAuthStore((s) => s.setUnauthenticated);
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate(routePaths.auth.login.path);
+  const handleLogOut = async () => {
+    try {
+      const res = await apiClient.post("/logout");
+
+      if (res.success) {
+        logout();
+        queryClient.clear();
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (
@@ -139,7 +149,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 className="dark-dropdown-item danger"
                 leftSection={<IconLogout size={18} opacity={0.6} />}
                 color="danger"
-                onClick={handleLogout}
+                onClick={handleLogOut}
               >
                 Log out
               </Menu.Item>

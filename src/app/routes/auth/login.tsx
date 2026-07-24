@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { Navigate, useLocation } from "react-router";
 import {
   Center,
   Container,
@@ -13,9 +13,24 @@ import {
 import { LoginForm } from "@/features/auth/components/login-form";
 import spcfLogo from "@/assets/logo.png";
 import ictduLogo from "@/assets/favicon.png";
+import { useAuthStore } from "@/stores/auth-store";
+import { routePaths } from "@/config/path";
 
 export const Component = () => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
+  const location = useLocation();
+
+  if (status === "authenticated" && user) {
+    return (
+      <Navigate
+        to={routePaths.dashboard.path}
+        replace
+        state={{ from: location }}
+      />
+    );
+  }
 
   return (
     <Center
@@ -28,7 +43,7 @@ export const Component = () => {
             <Title order={3} ta="center" c="dark">
               SPCF ACCOUNTING OFFICE - LOGIN
             </Title>
-            <LoginForm onSuccess={() => navigate("/dashboard")} />
+            <LoginForm />
             <Divider />
             <Text size="sm" c="dimmed" ta="center">
               Copyright © SYSTEMS PLUS COLLEGE FOUNDATION - 2026

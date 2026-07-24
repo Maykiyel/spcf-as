@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuthStore } from "@/stores/auth-store";
 import { routePaths } from "@/config/path";
+import { Suspense } from "react";
+import { AppLoader } from "../ui/loader";
 
 export function ProtectedRoute() {
   const status = useAuthStore((s) => s.status);
@@ -16,5 +18,9 @@ export function ProtectedRoute() {
     );
   }
 
-  return <Outlet />;
+  return (
+    <Suspense fallback={<AppLoader />}>
+      <Outlet />
+    </Suspense>
+  );
 }
