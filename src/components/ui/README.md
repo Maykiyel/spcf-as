@@ -11,7 +11,6 @@ components/ui  →  features/*  →  app/routes
 If a component needs to know about "suppliers" or "invoices," it doesn't belong
 here — it belongs in that feature's own `components/` folder.
 
-
 ## Button
 
 Three named variants, each a thin wrapper over Mantine's `Button` pinned to one
@@ -83,7 +82,10 @@ consumer — tables and widgets alike — picks it up automatically.
 
 A compound component for tabular data: card wrapper, toolbar (entries-per-page +
 search), the table itself, and pagination. State (search query, sort, page) is
-shared via context — no prop drilling between pieces.
+shared via context — no prop drilling between pieces. It also owns its own
+loading, error, and empty states, so consumers don't hand-roll any of that per
+table (see [Loading, error, and empty states](#loading-error-and-empty-states)
+below).
 
 ```tsx
 import {
@@ -120,12 +122,12 @@ function SupplierTable({ data }: { data: Supplier[] }) {
 
 ### Pieces
 
-| Piece                  | Purpose                                                                                            |
-| ---------------------- | -------------------------------------------------------------------------------------------------- |
-| `DataTable.Root`       | Provides context, wraps children in `Card`. Takes `title` and `state`.                             |
-| `DataTable.Toolbar`    | "Show N entries" select + search input. Omit for a table with no search/page-size controls.        |
-| `DataTable.Grid`       | The actual `<table>` — headers (with sort toggle if `sortable: true`), rows, empty state.          |
-| `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging. |
+| Piece                  | Purpose                                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| `DataTable.Root`       | Provides context, wraps children in `Card`. Takes `title` and `state`.                                   |
+| `DataTable.Toolbar`    | "Show N entries" select + search input. Omit for a table with no search/page-size controls.              |
+| `DataTable.Grid`       | The actual `<table>` — headers (with sort toggle if `sortable: true`), rows, loading/error/empty states. |
+| `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging.       |
 
 ### `ColumnDef<T>`
 
@@ -143,6 +145,12 @@ type ColumnDef<T> = {
 column's `key`) — `DataTable.Grid` uses `col.id ?? col.key` as the React list
 key internally. Without `id`, duplicate keys cause silent rendering bugs on
 sort/page changes.
+
+**Only mark a column `sortable: true` if the backend actually allow-lists it**
+(see `BACKEND_NOTES.md` — the sort allow-list doesn't necessarily cover every
+visible column, and changes over time). If it drifts out of sync,
+`useServerTableState` recovers automatically (see below) rather than leaving
+the table stuck — but it's still worth getting right at the source.
 
 ### Custom cells
 
@@ -169,16 +177,62 @@ whatever `render` function each feature provides, per row.
 `useClientTableState` filters, sorts, and paginates an in-memory array — use it
 for small, bounded datasets (suppliers, categories, user accounts).
 
-For large, unbounded datasets (invoices, transactions, audit logs), a
-`useServerTableState` hook should be built when the first such table is needed —
-it would wrap a `useQuery` call and send `page`/`search`/`sort` as API query
-params instead of filtering in-browser. **Not built yet — build it when a real
-table needs it, not preemptively.**
+`useServerTableState` wraps a `useQuery` call and sends `page`/`search`/`sort`
+as API query params instead of filtering in-browser — use it for large,
+unbounded datasets (invoices, transactions, audit logs). Search is debounced
+400ms before it hits the network, and paging/sorting/searching keeps the
+previous page's rows visible while the next request is in flight
+(`keepPreviousData`) instead of flashing to empty.
 
 Both hooks return the same shape (`DataTableContextValue<T>`), so
 `DataTable.Toolbar` / `.Grid` / `.Pagination` never change regardless of which
 one a given table uses. This is the `state-context-interface` pattern — the UI
-is dependency-injected with state, not coupled to one implementation.
+is dependency-injected with state, not coupled to one implementation. Swapping
+a table from one to the other later (e.g. a client-side list outgrows itself)
+is a one-line change at the call site — nothing in `DataTable.*` needs to know.
+
+**Under the hood**, both hooks are built on an internal `useTableControls`
+hook (not exported — implementation detail of this folder) that owns
+page/pageSize/search/sort state and their handlers. This isn't just for DRY:
+it's what keeps `useClientTableState` and `useServerTableState`
+_behaviorally_ identical, not just shape-identical. Before this existed, the
+two hooks separately reimplemented the same sort-cycling and page-reset
+logic, which meant they could type-check as interchangeable while quietly
+behaving differently — defeating the point of being able to swap them. If you
+ever need a third variant (e.g. something websocket-synced), build it on
+`useTableControls` too rather than hand-rolling that state again.
+
+### Loading, error, and empty states
+
+`DataTable.Grid` derives everything below from `isLoading` / `isError` /
+`rows` in context — none of it needs to be wired up per table:
+
+| State                                          | What renders                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| First load, no data yet                        | Skeleton rows (row count capped at 10, shaped to match your columns)         |
+| Paging/sorting/searching after data has loaded | Existing rows stay visible, dimmed to 60% opacity, instead of flashing empty |
+| Query succeeds with 0 results                  | "No entries found"                                                           |
+| Query fails before any data has loaded         | The error message in place of rows                                           |
+| Any state, `useClientTableState`               | `isError` is always `false` — there's no network call to fail                |
+
+If you need a custom error message instead of the default "Couldn't load
+data. Please try again.", that comes from `errorMessage` in
+`use-server-table-state.ts` — edit it there if a specific table needs
+different wording; it isn't currently a per-table prop.
+
+### Sort error recovery
+
+If a column is marked `sortable: true` but the backend rejects it (a 422 —
+see the allow-list warning under `ColumnDef<T>` above), `useServerTableState`
+detects this automatically: it resets the sort to unsorted and shows a toast
+via `@mantine/notifications` ("That column can't be sorted.") instead of
+leaving the table stuck showing nothing. Any other error (500, network) is
+not special-cased this way — it surfaces as the generic error state above.
+
+**This requires `<Notifications />` to be mounted once somewhere in the app
+tree** (typically inside `MantineProvider`). If it isn't mounted, the sort
+still resets correctly, but the toast explaining why silently does nothing —
+worth confirming this is in place before relying on it.
 
 ---
 

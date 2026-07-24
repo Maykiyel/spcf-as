@@ -15,6 +15,8 @@ export type DataTableContextValue<T> = {
   rows: T[]; // current page's rows, already filtered/sorted/sliced
   totalCount: number; // total matching rows, pre-pagination
   isLoading: boolean;
+  isError: boolean;
+  errorMessage?: string | null;
 
   page: number;
   pageSize: number;
