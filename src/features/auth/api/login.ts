@@ -5,6 +5,7 @@ import type { AuthUser } from "../types";
 export const loginInputSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
+  remember_me: z.boolean().optional(),
 });
 
 export type LoginInput = z.infer<typeof loginInputSchema>;
