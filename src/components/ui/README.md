@@ -202,6 +202,45 @@ behaving differently — defeating the point of being able to swap them. If you
 ever need a third variant (e.g. something websocket-synced), build it on
 `useTableControls` too rather than hand-rolling that state again.
 
+### URL-persisted state
+
+Both `useClientTableState` and `useServerTableState` accept an optional
+`urlKey` string. When provided, page/pageSize/search/sort state is synced to
+the URL's search params instead of living in local `useState` — so filters
+survive a refresh, back/forward navigation, and are shareable as a link.
+
+```tsx
+const tableState = useServerTableState({
+  queryKey: ["suppliers"],
+  queryFn: getSuppliers,
+  columns,
+  urlKey: "suppliers", // <-- opt in
+});
+```
+
+**Fully backward compatible when omitted** — no `urlKey` means the table
+behaves exactly as before, with local component state. Nothing about
+existing tables changes unless you explicitly add the prop.
+
+**Namespaced per table.** Params are prefixed with `urlKey`, so multiple
+tables can live on the same page/URL without clashing —
+`suppliers_page`, `suppliers_q`, `suppliers_sort`, `suppliers_dir`,
+`suppliers_size`, not generic `page`/`q`/`sort`.
+
+**Two independent debounces on search.** Typing goes into a local draft
+first, debounced 400ms before it's written to the URL. For
+`useServerTableState`, the network request has its own separate 400ms
+debounce on top of that — they're deliberately decoupled, so URL sync isn't
+gated on request timing (or vice versa).
+
+**Defaults are omitted from the URL**, not written explicitly — page 1,
+the default page size, and an unsorted state all collapse to "no param"
+rather than `?page=1`. Keeps shareable URLs clean instead of noisy.
+
+**Search and sort changes reset the page param.** Filtering or re-sorting
+with a stale page number would risk showing an empty page, so both clear
+`page` back to its default (omitted) whenever they fire.
+
 ### Loading, error, and empty states
 
 `DataTable.Grid` derives everything below from `isLoading` / `isError` /
