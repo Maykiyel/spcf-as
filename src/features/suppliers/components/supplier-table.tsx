@@ -29,6 +29,7 @@ export function SupplierTable({ onEdit }: SupplierTableProps) {
     queryKey: ["suppliers"],
     queryFn: getSuppliers,
     columns,
+    urlKey: "suppliers",
   });
 
   return (
