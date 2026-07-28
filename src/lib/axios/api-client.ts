@@ -6,14 +6,19 @@ import axios, {
 
 import { env } from "@/config/env";
 
-import { useAuthStore } from "@/stores/auth-store";
-
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message: string;
   code: number;
 }
+
+type UnauthorizedCallback = () => void;
+let onUnauthorizedCallback: UnauthorizedCallback | null = null;
+
+export const setUnauthorizedHandler = (cb: UnauthorizedCallback) => {
+  onUnauthorizedCallback = cb;
+};
 
 const api = axios.create({
   baseURL: env.API_URL,
@@ -28,12 +33,11 @@ const api = axios.create({
 export const getCsrfCookie = () =>
   axios.get(`${env.APP_URL}/sanctum/csrf-cookie`, { withCredentials: true });
 
-// Dedupe concurrent CSRF refreshes if several requests 419 at once.
 let csrfRefreshPromise: Promise<unknown> | null = null;
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => config);
 
-//response interceptor
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
     const body = response.data as ApiResponse<unknown>;
@@ -55,18 +59,10 @@ api.interceptors.response.use(
     const originalRequest = error.config as
       | (InternalAxiosRequestConfig & { _retry?: boolean })
       | undefined;
-
-    const isLoginRequest = originalRequest?.url?.includes("/");
-    if (status === 401 && !isLoginRequest) {
-      useAuthStore.getState().logout();
-      window.location.href = "/";
+    if (status === 401) {
+      onUnauthorizedCallback?.();
       return Promise.reject(error);
     }
-
-    // 419 = CSRF token mismatch (Laravel's default for this). Refresh the
-    // XSRF cookie once and retry the original request exactly once.
-    // Confirm with backend that 419 is actually what an expired/missing
-    // CSRF token returns before relying on this — don't assume.
     if (status === 419 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       csrfRefreshPromise ??= getCsrfCookie().finally(() => {
@@ -80,7 +76,7 @@ api.interceptors.response.use(
   },
 );
 
-//wrapper functions
+// Wrapper functions
 export const apiClient = {
   get: <TResponse>(
     url: string,
