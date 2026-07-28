@@ -3,11 +3,6 @@ import { useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { SortDirection } from "./types";
 
-type SortState = {
-  key: string | null;
-  direction: SortDirection;
-};
-
 export type TableControls = {
   page: number;
   pageSize: number;
@@ -21,6 +16,8 @@ export type TableControls = {
   resetSort: () => void;
 };
 
+type TableControlsAdapter = TableControls;
+
 const clampPage = (value: string | null): number => {
   const n = Number(value);
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
@@ -31,25 +28,16 @@ const clampPageSize = (value: string | null, fallback: number): number => {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : fallback;
 };
 
-export function useTableControls(
-  initialPageSize = 25,
-  urlKey?: string,
-): TableControls {
+function useUrlAdapter(
+  initialPageSize: number,
+  urlKey: string | undefined,
+): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const paramName = useCallback(
     (name: string) => (urlKey ? `${urlKey}_${name}` : name),
     [urlKey],
   );
-
-  // ---- Local fallback state, used only when `urlKey` is omitted ----
-  const [localPage, setLocalPage] = useState(1);
-  const [localPageSize, setLocalPageSize] = useState(initialPageSize);
-  const [localSearchQuery, setLocalSearchQuery] = useState("");
-  const [localSort, setLocalSort] = useState<SortState>({
-    key: null,
-    direction: null,
-  });
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -71,7 +59,8 @@ export function useTableControls(
     [setSearchParams],
   );
 
-  // ---- Search draft (see debounce note above) ----
+  // ---- Search draft (decoupled from the network-side debounce that
+  // `useServerTableState` applies independently before hitting the API) ----
   const urlSearchQuery = searchParams.get(paramName("q")) ?? "";
   const [searchDraft, setSearchDraft] = useState(urlSearchQuery);
   const debouncedSearchDraft = useDebouncedValue(searchDraft, 400);
@@ -95,90 +84,58 @@ export function useTableControls(
     });
   }, [debouncedSearchDraft, urlKey]);
 
-  const page = urlKey
-    ? clampPage(searchParams.get(paramName("page")))
-    : localPage;
-  const pageSize = urlKey
-    ? clampPageSize(searchParams.get(paramName("size")), initialPageSize)
-    : localPageSize;
-  const searchQuery = urlKey ? searchDraft : localSearchQuery;
-  const sortKey = urlKey ? searchParams.get(paramName("sort")) : localSort.key;
-  const sortDirection = urlKey
-    ? ((searchParams.get(paramName("dir")) as SortDirection) ?? null)
-    : localSort.direction;
+  const page = clampPage(searchParams.get(paramName("page")));
+  const pageSize = clampPageSize(
+    searchParams.get(paramName("size")),
+    initialPageSize,
+  );
+  const sortKey = searchParams.get(paramName("sort"));
+  const sortDirection =
+    (searchParams.get(paramName("dir")) as SortDirection) ?? null;
 
   const onPageChange = (newPage: number) => {
-    if (urlKey) {
-      // Omit the param entirely at the default (page 1) to keep shareable
-      // URLs clean when nothing's actually been filtered/paged.
-      updateParams({
-        [paramName("page")]: newPage > 1 ? String(newPage) : null,
-      });
-    } else {
-      setLocalPage(newPage);
-    }
+    updateParams({
+      [paramName("page")]: newPage > 1 ? String(newPage) : null,
+    });
   };
 
   const onPageSizeChange = (size: number) => {
-    if (urlKey) {
-      updateParams({
-        [paramName("size")]: size !== initialPageSize ? String(size) : null,
-        [paramName("page")]: null,
-      });
-    } else {
-      setLocalPageSize(size);
-      setLocalPage(1);
-    }
+    updateParams({
+      [paramName("size")]: size !== initialPageSize ? String(size) : null,
+      [paramName("page")]: null,
+    });
   };
 
   const onSearchChange = (query: string) => {
-    if (urlKey) {
-      setSearchDraft(query); // debounced effect above commits this to the URL
-    } else {
-      setLocalSearchQuery(query);
-      setLocalPage(1);
-    }
+    setSearchDraft(query); // debounced effect above commits this to the URL
   };
 
   const onSort = (key: string) => {
-    if (urlKey) {
-      let nextKey: string | null = key;
-      let nextDir: SortDirection = "asc";
-      if (sortKey === key) {
-        if (sortDirection === "asc") {
-          nextDir = "desc";
-        } else {
-          nextKey = null;
-          nextDir = null;
-        }
+    let nextKey: string | null = key;
+    let nextDir: SortDirection = "asc";
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        nextDir = "desc";
+      } else {
+        nextKey = null;
+        nextDir = null;
       }
-      updateParams({
-        [paramName("sort")]: nextKey,
-        [paramName("dir")]: nextDir,
-        [paramName("page")]: null,
-      });
-    } else {
-      setLocalSort((prev) => {
-        if (prev.key !== key) return { key, direction: "asc" };
-        if (prev.direction === "asc") return { key, direction: "desc" };
-        return { key: null, direction: null };
-      });
-      setLocalPage(1);
     }
+    updateParams({
+      [paramName("sort")]: nextKey,
+      [paramName("dir")]: nextDir,
+      [paramName("page")]: null,
+    });
   };
 
   const resetSort = () => {
-    if (urlKey) {
-      updateParams({ [paramName("sort")]: null, [paramName("dir")]: null });
-    } else {
-      setLocalSort({ key: null, direction: null });
-    }
+    updateParams({ [paramName("sort")]: null, [paramName("dir")]: null });
   };
 
   return {
     page,
     pageSize,
-    searchQuery,
+    searchQuery: searchDraft,
     sortKey,
     sortDirection,
     onPageChange,
@@ -187,4 +144,68 @@ export function useTableControls(
     onSort,
     resetSort,
   };
+}
+
+type SortState = { key: string | null; direction: SortDirection };
+
+/** Local (component) state adapter, used when no `urlKey` is provided. */
+function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sort, setSort] = useState<SortState>({ key: null, direction: null });
+
+  const onPageChange = (newPage: number) => setPage(newPage);
+
+  const onPageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
+  const onSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setPage(1);
+  };
+
+  const onSort = (key: string) => {
+    // Key and direction are read and written together so a rapid double
+    // click can't read a stale direction against a fresh key (or vice versa).
+    setSort((prev) => {
+      if (prev.key !== key) return { key, direction: "asc" };
+      if (prev.direction === "asc") return { key, direction: "desc" };
+      return { key: null, direction: null };
+    });
+    setPage(1);
+  };
+
+  const resetSort = () => setSort({ key: null, direction: null });
+
+  return {
+    page,
+    pageSize,
+    searchQuery,
+    sortKey: sort.key,
+    sortDirection: sort.direction,
+    onPageChange,
+    onPageSizeChange,
+    onSearchChange,
+    onSort,
+    resetSort,
+  };
+}
+
+/**
+ * Thin selector over one interface: both adapters are always instantiated
+ * (so hook call order stays stable regardless of `urlKey`), and this just
+ * picks which one's state/handlers to expose. No handler here re-checks
+ * `urlKey` — that decision is made once, at the return statement.
+ */
+export function useTableControls(
+  initialPageSize = 25,
+  urlKey?: string,
+): TableControls {
+  const urlAdapter = useUrlAdapter(initialPageSize, urlKey);
+  const localAdapter = useLocalAdapter(initialPageSize);
+
+  return urlKey ? urlAdapter : localAdapter;
 }
