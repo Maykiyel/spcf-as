@@ -11,23 +11,6 @@ type AuthState = {
   setUnauthenticated: () => void;
 };
 
-// export const useAuthStore = create<AuthState>()(
-//   persist(
-//     (set) => ({
-//       user: null,
-//       status: "idle",
-//       setChecking: () => set({ status: "checking" }),
-//       setUser: (user) => set({ user, status: "authenticated" }),
-//       setUnauthenticated: () => set({ user: null, status: "unauthenticated" }),
-//       logout: () => set({ user: null, status: "unauthenticated" }),
-//     }),
-//     {
-//       name: "auth-storage",
-//       storage: createJSONStorage(() => localStorage),
-//       partialize: (state) => ({ user: state.user }),
-//     },
-//   ),
-// );
 
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
