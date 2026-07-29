@@ -82,7 +82,7 @@ function useUrlAdapter(
       [paramName("q")]: debouncedSearchDraft || null,
       [paramName("page")]: null, // stale page after filtering would show an empty page
     });
-  }, [debouncedSearchDraft, urlKey]);
+  }, [debouncedSearchDraft, urlKey, urlSearchQuery, updateParams, paramName]);
 
   const page = clampPage(searchParams.get(paramName("page")));
   const pageSize = clampPageSize(
