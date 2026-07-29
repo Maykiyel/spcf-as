@@ -1,3 +1,5 @@
+export type Role = "admin" | "cashier";
+
 export type LoginCredentials = {
   username: string;
   password: string;
@@ -10,5 +12,5 @@ export type AuthUser = {
   full_name: string;
   user_name: string;
   email: string;
-  role: string;
+  role: Role; // was: string
 };
