@@ -9,9 +9,8 @@ import {
   Text,
 } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
-import { login, loginInputSchema, type LoginInput } from "../api/login";
-import { useAuthStore } from "@/stores/auth-store";
-import type { AuthUser } from "../types";
+import { loginInputSchema, type LoginInput } from "../api/login";
+import { authSession } from "../session";
 
 export const LoginForm = () => {
   const {
@@ -23,13 +22,8 @@ export const LoginForm = () => {
     defaultValues: { username: "", password: "", remember_me: false },
   });
 
-  const setUser = useAuthStore((s) => s.setUser);
-
   const loginMutation = useMutation({
-    mutationFn: login,
-    onSuccess: (user: AuthUser) => {
-      setUser(user);
-    },
+    mutationFn: authSession.login,
   });
 
   const onSubmit = (data: LoginInput) => {

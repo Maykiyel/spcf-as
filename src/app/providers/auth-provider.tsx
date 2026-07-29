@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { AppLoader } from "@/components/ui/loader";
-import { apiClient, setUnauthorizedHandler } from "@/lib/axios/api-client";
-import { type AuthUser } from "@/features/auth/types";
+import { setUnauthorizedHandler } from "@/lib/axios/api-client";
+import { authSession } from "@/features/auth/session";
 
 type AuthProviderProps = {
   children: React.ReactNode;
@@ -14,21 +14,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       useAuthStore.getState().setUnauthenticated();
-      // window.location.href = "/";
     });
-
-    // 2. Initial auth check
-    const initializeAuth = async () => {
-      useAuthStore.getState().setChecking();
-      try {
-        const response = await apiClient.get<AuthUser>("/users/me");
-        useAuthStore.getState().setUser(response.data);
-      } catch (error) {
-        useAuthStore.getState().setUnauthenticated();
-      }
-    };
-
-    initializeAuth();
+    authSession.restore();
   }, []);
 
   if (status === "idle" || status === "checking") {
