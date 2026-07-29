@@ -1,7 +1,7 @@
 import { routePaths } from "@/config/path";
 import { createBrowserRouter } from "react-router";
 import { ProtectedRoute } from "@/components/routes/protected-route";
-import { AppLayoutRoute } from "@/layouts/app-layout-route";
+import { AppLayoutRoute } from "@/components/layouts/app-layout-route";
 
 export const createRouter = () =>
   createBrowserRouter([
