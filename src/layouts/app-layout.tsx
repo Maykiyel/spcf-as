@@ -18,27 +18,18 @@ import {
 } from "@tabler/icons-react";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { apiClient } from "@/lib/axios/api-client";
+import { authSession } from "@/features/auth/session";
 import { useQueryClient } from "@tanstack/react-query";
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
   const { mobileOpened, desktopOpened } = useSidebarStore();
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.setUnauthenticated);
   const navigate = useNavigate();
 
   const handleLogOut = async () => {
-    try {
-      const res = await apiClient.post("/logout");
-
-      if (res.success) {
-        logout();
-        queryClient.clear();
-      }
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+    await authSession.logout();
+    queryClient.clear();
   };
 
   return (
