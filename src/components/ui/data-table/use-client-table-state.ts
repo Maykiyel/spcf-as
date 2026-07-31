@@ -19,8 +19,7 @@ export function useClientTableState<T extends Record<string, any>>({
     page,
     pageSize,
     searchQuery,
-    sortKey,
-    sortDirection,
+    sorts,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
@@ -40,17 +39,20 @@ export function useClientTableState<T extends Record<string, any>>({
   }, [data, columns, searchQuery]);
 
   const sorted = useMemo(() => {
-    if (!sortKey || !sortDirection) return filtered;
+    if (sorts.length === 0) return filtered;
     const copy = [...filtered];
     copy.sort((a, b) => {
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
-      if (aVal === bVal) return 0;
-      const result = aVal > bVal ? 1 : -1;
-      return sortDirection === "asc" ? result : -result;
+      for (const { key, direction } of sorts) {
+        const aVal = a[key];
+        const bVal = b[key];
+        if (aVal === bVal) continue;
+        const result = aVal > bVal ? 1 : -1;
+        return direction === "asc" ? result : -result;
+      }
+      return 0;
     });
     return copy;
-  }, [filtered, sortKey, sortDirection]);
+  }, [filtered, sorts]);
 
   const totalCount = sorted.length;
 
@@ -72,8 +74,7 @@ export function useClientTableState<T extends Record<string, any>>({
     onPageSizeChange,
     searchQuery,
     onSearchChange,
-    sortKey,
-    sortDirection,
+    sorts,
     onSort,
   };
 }

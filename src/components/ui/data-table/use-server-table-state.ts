@@ -3,15 +3,14 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { notifications } from "@mantine/notifications";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import type { ColumnDef } from "./types";
+import type { ColumnDef, SortEntry } from "./types";
 import { useTableControls } from "./use-table-controls";
 
 export type ServerTableParams = {
   page: number;
   per_page: number;
   search?: string;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
+  sorts: SortEntry[];
 };
 
 export type ServerTableResponse<T> = {
@@ -38,8 +37,7 @@ export function useServerTableState<T extends Record<string, any>>({
     page,
     pageSize,
     searchQuery,
-    sortKey,
-    sortDirection,
+    sorts,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
@@ -53,27 +51,19 @@ export function useServerTableState<T extends Record<string, any>>({
   const debouncedSearch = useDebouncedValue(searchQuery, 400);
 
   const { data, isLoading, isFetching, isError, error } = useQuery({
-    queryKey: [
-      ...queryKey,
-      page,
-      pageSize,
-      debouncedSearch,
-      sortKey,
-      sortDirection,
-    ],
+    queryKey: [...queryKey, page, pageSize, debouncedSearch, sorts],
     queryFn: () =>
       queryFn({
         page,
         per_page: pageSize,
         search: debouncedSearch || undefined,
-        sortBy: sortKey ?? undefined,
-        sortOrder: sortDirection ?? undefined,
+        sorts,
       }),
     placeholderData: keepPreviousData, // keeps old rows visible while the next page loads, instead of a flash to empty
   });
 
   useEffect(() => {
-    if (!isError || !sortKey) return;
+    if (!isError || sorts.length === 0) return;
     const status =
       error instanceof AxiosError ? error.response?.status : undefined;
     if (status !== 422) return;
@@ -83,7 +73,7 @@ export function useServerTableState<T extends Record<string, any>>({
       color: "danger",
       message: "That column can't be sorted.",
     });
-  }, [isError, error, sortKey, resetSort]);
+  }, [isError, error, sorts, resetSort]);
 
   return {
     columns,
@@ -98,8 +88,7 @@ export function useServerTableState<T extends Record<string, any>>({
     onPageSizeChange,
     searchQuery,
     onSearchChange,
-    sortKey,
-    sortDirection,
+    sorts,
     onSort,
   };
 }

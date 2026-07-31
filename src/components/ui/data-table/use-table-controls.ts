@@ -1,14 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import type { SortDirection } from "./types";
+import { MAX_SORT_COLUMNS, type SortEntry } from "./types";
 
 export type TableControls = {
   page: number;
   pageSize: number;
   searchQuery: string;
-  sortKey: string | null;
-  sortDirection: SortDirection;
+  sorts: SortEntry[];
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSearchChange: (query: string) => void;
@@ -18,6 +17,27 @@ export type TableControls = {
 
 type TableControlsAdapter = TableControls;
 
+export function nextSorts(
+  current: SortEntry[],
+  key: string,
+  maxSorts = MAX_SORT_COLUMNS,
+): SortEntry[] {
+  const idx = current.findIndex((s) => s.key === key);
+
+  if (idx !== -1) {
+    const entry = current[idx];
+    if (entry.direction === "asc") {
+      const next = [...current];
+      next[idx] = { key, direction: "desc" };
+      return next;
+    }
+    return current.filter((s) => s.key !== key);
+  }
+
+  const next = [...current, { key, direction: "asc" as const }];
+  return next.length > maxSorts ? next.slice(next.length - maxSorts) : next;
+}
+
 const clampPage = (value: string | null): number => {
   const n = Number(value);
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
@@ -26,6 +46,28 @@ const clampPage = (value: string | null): number => {
 const clampPageSize = (value: string | null, fallback: number): number => {
   const n = Number(value);
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : fallback;
+};
+
+// Encodes the ordered sort list as `key:dir,key:dir` in a single param —
+// order in the string is the priority order, so no separate index/priority
+// field is needed. Defensively re-capped on parse in case a shared/pasted
+// URL was hand-edited past the current limit.
+const encodeSorts = (sorts: SortEntry[]): string | null =>
+  sorts.length === 0
+    ? null
+    : sorts.map((s) => `${s.key}:${s.direction}`).join(",");
+
+const parseSorts = (raw: string | null): SortEntry[] => {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((pair): SortEntry | null => {
+      const [key, dir] = pair.split(":");
+      if (!key || (dir !== "asc" && dir !== "desc")) return null;
+      return { key, direction: dir };
+    })
+    .filter((s): s is SortEntry => s !== null)
+    .slice(0, MAX_SORT_COLUMNS);
 };
 
 function useUrlAdapter(
@@ -89,9 +131,7 @@ function useUrlAdapter(
     searchParams.get(paramName("size")),
     initialPageSize,
   );
-  const sortKey = searchParams.get(paramName("sort"));
-  const sortDirection =
-    (searchParams.get(paramName("dir")) as SortDirection) ?? null;
+  const sorts = parseSorts(searchParams.get(paramName("sort")));
 
   const onPageChange = (newPage: number) => {
     updateParams({
@@ -111,33 +151,21 @@ function useUrlAdapter(
   };
 
   const onSort = (key: string) => {
-    let nextKey: string | null = key;
-    let nextDir: SortDirection = "asc";
-    if (sortKey === key) {
-      if (sortDirection === "asc") {
-        nextDir = "desc";
-      } else {
-        nextKey = null;
-        nextDir = null;
-      }
-    }
     updateParams({
-      [paramName("sort")]: nextKey,
-      [paramName("dir")]: nextDir,
+      [paramName("sort")]: encodeSorts(nextSorts(sorts, key)),
       [paramName("page")]: null,
     });
   };
 
   const resetSort = () => {
-    updateParams({ [paramName("sort")]: null, [paramName("dir")]: null });
+    updateParams({ [paramName("sort")]: null });
   };
 
   return {
     page,
     pageSize,
     searchQuery: searchDraft,
-    sortKey,
-    sortDirection,
+    sorts,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
@@ -146,14 +174,12 @@ function useUrlAdapter(
   };
 }
 
-type SortState = { key: string | null; direction: SortDirection };
-
 /** Local (component) state adapter, used when no `urlKey` is provided. */
 function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sort, setSort] = useState<SortState>({ key: null, direction: null });
+  const [sorts, setSorts] = useState<SortEntry[]>([]);
 
   const onPageChange = (newPage: number) => setPage(newPage);
 
@@ -168,24 +194,17 @@ function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
   };
 
   const onSort = (key: string) => {
-    // Key and direction are read and written together so a rapid double
-    // click can't read a stale direction against a fresh key (or vice versa).
-    setSort((prev) => {
-      if (prev.key !== key) return { key, direction: "asc" };
-      if (prev.direction === "asc") return { key, direction: "desc" };
-      return { key: null, direction: null };
-    });
+    setSorts((prev) => nextSorts(prev, key));
     setPage(1);
   };
 
-  const resetSort = () => setSort({ key: null, direction: null });
+  const resetSort = () => setSorts([]);
 
   return {
     page,
     pageSize,
     searchQuery,
-    sortKey: sort.key,
-    sortDirection: sort.direction,
+    sorts,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
