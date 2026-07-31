@@ -9,8 +9,7 @@ export function DataTableGrid<T extends Record<string, any>>() {
   const {
     columns,
     rows,
-    sortKey,
-    sortDirection,
+    sorts,
     onSort,
     isLoading,
     isError,
@@ -32,41 +31,49 @@ export function DataTableGrid<T extends Record<string, any>>() {
       >
         <Table.Thead>
           <Table.Tr>
-            {columns.map((col) => (
-              <Table.Th key={col.id ?? col.key}>
-                {col.sortable ? (
+            {columns.map((col) => {
+              if (!col.sortable) {
+                return (
+                  <Table.Th key={col.id ?? col.key}>
+                    <Text fw={600} size="sm">
+                      {col.header}
+                    </Text>
+                  </Table.Th>
+                );
+              }
+
+              const sortIndex = sorts.findIndex((s) => s.key === col.key);
+              const active = sortIndex !== -1;
+              const direction = active ? sorts[sortIndex].direction : null;
+              const showPriorityBadge = active && sorts.length > 1;
+
+              return (
+                <Table.Th key={col.id ?? col.key}>
                   <UnstyledButton onClick={() => onSort(col.key)}>
                     <Group gap={4} wrap="nowrap">
                       <Text fw={600} size="sm">
                         {col.header}
                       </Text>
+                      {showPriorityBadge && (
+                        <Text fw={700} size="xs" c="primary">
+                          {sortIndex + 1}
+                        </Text>
+                      )}
                       <Group gap={0}>
                         <IconCaretUpFilled
                           size={12}
-                          opacity={
-                            sortKey === col.key && sortDirection === "asc"
-                              ? 1
-                              : 0.3
-                          }
+                          opacity={direction === "asc" ? 1 : 0.3}
                         />
                         <IconCaretDownFilled
                           size={12}
-                          opacity={
-                            sortKey === col.key && sortDirection === "desc"
-                              ? 1
-                              : 0.3
-                          }
+                          opacity={direction === "desc" ? 1 : 0.3}
                         />
                       </Group>
                     </Group>
                   </UnstyledButton>
-                ) : (
-                  <Text fw={600} size="sm">
-                    {col.header}
-                  </Text>
-                )}
-              </Table.Th>
-            ))}
+                </Table.Th>
+              );
+            })}
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody
