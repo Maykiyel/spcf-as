@@ -23,18 +23,4 @@ export const routePaths = {
       getHref: () => "/transactions",
     },
   },
-  students: {
-    add: {
-      path: "/students/add",
-      getHref: () => "/students/add",
-    },
-    uploads: {
-      path: "/students/uploads",
-      getHref: () => "/students/uploads",
-    },
-  },
-  suppliers: {
-    path: "/suppliers",
-    getHref: () => "/suppliers",
-  },
 };
