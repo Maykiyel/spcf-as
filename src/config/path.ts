@@ -14,8 +14,10 @@ export const routePaths = {
     getHref: () => "/dashboard",
   },
   inventory: {
-    path: "/inventory",
-    getHref: () => "/inventory",
+    itemCodes: {
+      path: "/inventory/item-codes",
+      getHref: () => "/inventory/item-codes",
+    },
   },
   transactions: {
     root: {
