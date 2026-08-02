@@ -6,8 +6,6 @@ import {
   IconKeyFilled,
   IconPlus,
   IconReceiptFilled,
-  IconSchoolFilled,
-  IconUserFilled,
   IconXFilled,
   type Icon,
 } from "@tabler/icons-react";
@@ -72,26 +70,6 @@ export const sidebarLinks: SidebarItem[] = [
         to: "/placeholder",
       },
     ],
-  },
-  {
-    label: "Students",
-    icon: IconSchoolFilled,
-    collapsible: [
-      {
-        label: "Add / Import Students",
-        icon: IconPlus,
-        actionType: "modal",
-        actionKey: "ADD_STUDENT",
-      },
-      { label: "Uploads", icon: IconEye, to: "/transactions/receipts" },
-    ],
-    // no roles — shared, per the old parallel arrays
-  },
-  {
-    label: "Accounts",
-    icon: IconUserFilled,
-    to: "/supplier",
-    roles: ["admin"],
   },
   {
     label: "Activity Log",
