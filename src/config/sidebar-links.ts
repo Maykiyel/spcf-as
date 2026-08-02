@@ -32,8 +32,14 @@ export const sidebarLinks: SidebarItem[] = [
   {
     label: "Inventory",
     icon: IconDeviceDesktopFilled,
-    to: routePaths.inventory.path,
-    roles: ["admin"],
+    roles: ["admin", "cashier"],
+    collapsible: [
+      {
+        label: "Item Codes",
+        icon: IconEye,
+        to: routePaths.inventory.itemCodes.path,
+      },
+    ],
   },
   {
     label: "Transactions",
