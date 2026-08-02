@@ -9,8 +9,10 @@ import {
   Text,
 } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { loginInputSchema, type LoginInput } from "../api/login";
 import { authSession } from "../session";
+import { notifyMutationError } from "@/lib/notifications/notifications";
 
 export const LoginForm = () => {
   const {
@@ -24,7 +26,19 @@ export const LoginForm = () => {
 
   const loginMutation = useMutation({
     mutationFn: authSession.login,
+    onError: (error) => {
+      const isBadCredentials =
+        error instanceof AxiosError && error.response?.status === 401;
+      if (!isBadCredentials) {
+        notifyMutationError(error, "Couldn't log in. Please try again.");
+      }
+    },
   });
+
+  const isBadCredentialsError =
+    loginMutation.isError &&
+    loginMutation.error instanceof AxiosError &&
+    loginMutation.error.response?.status === 401;
 
   const onSubmit = (data: LoginInput) => {
     loginMutation.mutate(data);
@@ -52,7 +66,7 @@ export const LoginForm = () => {
         >
           Login
         </Button>
-        {loginMutation.isError && (
+        {isBadCredentialsError && (
           <Text size="sm" c="danger" ta="center">
             Invalid username or password.
           </Text>
