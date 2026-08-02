@@ -19,10 +19,6 @@ export const createRouter = () =>
               path: routePaths.dashboard.path,
               lazy: () => import("./routes/app/dashboard"),
             },
-            {
-              path: routePaths.suppliers.path,
-              lazy: () => import("./routes/app/suppliers"),
-            },
           ],
         },
       ],
