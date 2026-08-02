@@ -8,7 +8,8 @@ export type {
   ServerTableParams,
   ServerTableResponse,
 } from "./use-server-table-state";
-export type { ColumnDef } from "./types";
+export type { ColumnDef, SortEntry, DataTableContextValue } from "./types";
+export { MAX_SORT_COLUMNS } from "./types";
 
 import { DataTableRoot } from "./data-table-root";
 import { DataTableToolbar } from "./data-table-toolbar";
