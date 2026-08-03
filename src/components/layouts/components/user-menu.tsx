@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth-store";
 import { authSession } from "@/features/auth/session";
+import { notifyMutationError } from "@/lib/notifications/notifications";
 
 function UserMenu() {
   const navigate = useNavigate();
@@ -16,8 +17,16 @@ function UserMenu() {
   const user = useAuthStore((s) => s.user);
 
   const handleLogOut = async () => {
-    await authSession.logout();
-    queryClient.clear();
+    try {
+      await authSession.logout();
+    } catch (error) {
+      notifyMutationError(
+        error,
+        "Logged out, but there was a connection issue.",
+      );
+    } finally {
+      queryClient.clear();
+    }
   };
 
   return (
