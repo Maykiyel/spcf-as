@@ -6,6 +6,7 @@ import {
   IconKeyFilled,
   IconPlus,
   IconReceiptFilled,
+  IconUsersGroup,
   IconXFilled,
   type Icon,
 } from "@tabler/icons-react";
@@ -68,6 +69,18 @@ export const sidebarLinks: SidebarItem[] = [
       },
     ],
     // no roles — shared by both admin and cashier, per the old parallel arrays
+  },
+  {
+    label: "Accounts",
+    icon: IconUsersGroup,
+    roles: ["admin"],
+    collapsible: [
+      {
+        label: "Series Receipts",
+        icon: IconEye,
+        to: routePaths.accounts.seriesReceipts.path,
+      },
+    ],
   },
   {
     label: "Void",
