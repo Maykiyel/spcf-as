@@ -27,6 +27,10 @@ export const createRouter = () =>
               path: routePaths.inventory.itemCodes.path,
               lazy: () => import("./routes/app/inventory/item-codes"),
             },
+            {
+              path: routePaths.accounts.seriesReceipts.path,
+              lazy: () => import("./routes/app/accounts/series-receipts"),
+            },
           ],
         },
       ],

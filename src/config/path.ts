@@ -29,4 +29,10 @@ export const routePaths = {
       getHref: () => "/transactions",
     },
   },
+  accounts: {
+    seriesReceipts: {
+      path: "/accounts/series-receipts",
+      getHref: () => "/accounts/series-receipts",
+    },
+  },
 };

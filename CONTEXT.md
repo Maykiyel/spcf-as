@@ -36,3 +36,15 @@ _Avoid_: inventory table, item list
 **Item codes catalog**:
 The secondary, occasional-upkeep view for managing Item codes directly — create, rename, delete (blocked while Services reference it). Distinct from the Services catalog's inline "create new item code" shortcut, which is a convenience path onto the same underlying data, not a replacement for this catalog.
 _Avoid_: category list, item code manager
+
+**Series receipt**:
+A pre-numbered block of receipt sheets (`from`–`to`) assigned to one cashier for physical/manual receipt writing, tracked so numbering never collides across cashiers. Create-only from the frontend — no edit or delete. `from` is server-computed (next available number) and race-checked on submit; the frontend must treat it as derived, not user-entered. Its "Remaining Sheets" value is currently just the total sheet count at creation — not yet a live decrementing figure; it will start behaving as genuinely "remaining" once Transactions exists and consumes sheets. No restriction today on a cashier holding more than one series receipt.
+_Avoid_: receipt book (fine in conversation, but code/UI should say "series" or "series receipt")
+
+**Cashier** (in the context of a Series receipt):
+The user a series receipt is assigned to. The backend's `SeriesReceipt` model and API call this relation/field **`account`** (`account_id`, `account: {id, full_name}`) — but it always means the assigned cashier, validated server-side to have the `cashier` role. Frontend code for this feature should name things `cashier`, not `account`, to avoid collision with unrelated "account" concepts — translate at the API-call boundary if needed. A request has gone to the backend team to rename the field to `cashier_id`/`cashier`; if that lands, drop the one-off `key: "account"` exception on the Series Receipts table's sort column and rename it to `cashier` throughout.
+_Avoid_: account (only acceptable when directly mirroring the raw API field name, e.g. `account_id` in a request payload type)
+
+**Accounts (sidebar nav group)**:
+The top-level, admin-only navigation group for user-account-related pages. Currently holds only Series Receipts; a future account-management page (creating/editing admin & cashier user records) is anticipated as a sibling but not yet scoped or built — no placeholder route exists for it. Distinct from, and not to be confused with, the `account` field on `SeriesReceipt` (see Cashier, above) — the nav group is about managing user accounts in general, the field is about which cashier one receipt series belongs to.
+_Avoid_: conflating this group's "account" with the `account_id`/`account` field on Series Receipt
