@@ -1,4 +1,4 @@
-import type { SidebarSubItemProps } from "@/config/sidebar-links";
+import type { PageLeaf } from "@/config/pages";
 import {
   Accordion,
   Card,
@@ -9,15 +9,15 @@ import {
   Text,
 } from "@mantine/core";
 import { IconChevronRight, type Icon } from "@tabler/icons-react";
+import { useDisclosure } from "@mantine/hooks";
 import SidebarSubItem from "./sidebar-sub-item";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import AppTooltip from "./app-tooltip";
-import { useCollapsiblePopover } from "./use-collapsible-popover";
 
 type SidebarItemCollapsibleProps = {
   label: string;
   icon: Icon;
-  collapsible: SidebarSubItemProps[];
+  collapsible: PageLeaf[];
 };
 
 function SidebarItemCollapsible({
@@ -26,7 +26,7 @@ function SidebarItemCollapsible({
   collapsible,
 }: SidebarItemCollapsibleProps) {
   const { desktopOpened } = useSidebarStore();
-  const { opened, setOpened } = useCollapsiblePopover();
+  const [opened, { open, close, toggle }] = useDisclosure(false);
 
   const subItemsContent = (
     <Stack gap={2}>
@@ -45,12 +45,12 @@ function SidebarItemCollapsible({
       shadow="md"
       disabled={desktopOpened}
       opened={!desktopOpened && opened}
-      onChange={setOpened}
+      onChange={(v) => (v ? open() : close())}
       transitionProps={{ transition: "fade-right", duration: 150 }}
     >
       <AppTooltip disabled={desktopOpened} position="right" label={label}>
         <Popover.Target>
-          <div onClick={() => !desktopOpened && setOpened((o) => !o)}>
+          <div onClick={() => !desktopOpened && toggle()}>
             <Accordion.Item
               value={label}
               bg="transparent"

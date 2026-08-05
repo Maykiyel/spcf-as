@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuthStore } from "@/stores/auth-store";
-import { routePaths } from "@/config/path";
+import { LOGIN_PATH } from "@/config/pages";
 import { Suspense } from "react";
 import { AppLoader } from "../ui/loader";
 
@@ -11,7 +11,7 @@ export function ProtectedRoute() {
   if (status === "unauthenticated") {
     return (
       <Navigate
-        to={routePaths.auth.login.path}
+        to={LOGIN_PATH}
         replace
         state={{ from: location }}
       />

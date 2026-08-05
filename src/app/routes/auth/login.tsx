@@ -14,7 +14,7 @@ import { LoginForm } from "@/features/auth/components/login-form";
 import spcfLogo from "@/assets/logo.png";
 import ictduLogo from "@/assets/favicon.png";
 import { useAuthStore } from "@/stores/auth-store";
-import { routePaths } from "@/config/path";
+import { DASHBOARD_PATH } from "@/config/pages";
 
 export const Component = () => {
   // const navigate = useNavigate();
@@ -25,7 +25,7 @@ export const Component = () => {
   if (status === "authenticated" && user) {
     return (
       <Navigate
-        to={routePaths.dashboard.path}
+        to={DASHBOARD_PATH}
         replace
         state={{ from: location }}
       />
