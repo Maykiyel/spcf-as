@@ -1,12 +1,16 @@
-import { routePaths } from "@/config/path";
 import { createBrowserRouter } from "react-router";
 import { ProtectedRoute } from "@/components/routes/protected-route";
 import { AppLayoutRoute } from "@/components/layouts/app-layout-route";
+import { pages, isPageGroup, LOGIN_PATH } from "@/config/pages";
+
+const leaves = pages.flatMap((entry) =>
+  isPageGroup(entry) ? entry.children : [entry],
+);
 
 export const createRouter = () =>
   createBrowserRouter([
     {
-      path: routePaths.auth.login.path,
+      path: LOGIN_PATH,
       lazy: () => import("./routes/auth/login"),
     },
     {
@@ -14,29 +18,15 @@ export const createRouter = () =>
       children: [
         {
           Component: AppLayoutRoute,
-          children: [
-            {
-              path: routePaths.dashboard.path,
-              lazy: () => import("./routes/app/dashboard"),
-            },
-            {
-              path: routePaths.inventory.services.path,
-              lazy: () => import("./routes/app/inventory/services"),
-            },
-            {
-              path: routePaths.inventory.itemCodes.path,
-              lazy: () => import("./routes/app/inventory/item-codes"),
-            },
-            {
-              path: routePaths.accounts.seriesReceipts.path,
-              lazy: () => import("./routes/app/accounts/series-receipts"),
-            },
-          ],
+          children: leaves.map((leaf) => ({
+            path: leaf.path,
+            lazy: leaf.lazyImport,
+          })),
         },
       ],
     },
     {
-      path: routePaths.notFound.path,
+      path: "/not-found",
       lazy: () => import("./routes/not-found"),
     },
     { path: "*", lazy: () => import("./routes/not-found") },

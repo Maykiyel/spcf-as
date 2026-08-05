@@ -7,14 +7,10 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 type SidebarItemSimpleProps = {
   label: string;
   icon: Icon;
-  to?: string;
+  to: string;
 };
 
-function SidebarItemSimple({
-  label,
-  icon: Icon,
-  to = "",
-}: SidebarItemSimpleProps) {
+function SidebarItemSimple({ label, icon: Icon, to }: SidebarItemSimpleProps) {
   const { desktopOpened } = useSidebarStore();
   const { pathname } = useLocation();
   const isActive = to === pathname;
