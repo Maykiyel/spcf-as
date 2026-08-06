@@ -9,13 +9,11 @@ type ItemCodeSelectProps = {
   error?: string;
 };
 
-// Creatable item-code picker: search an existing item code, or create a new
-// one inline. Used where the caller wants to select-or-add (e.g. the
-// service form). Deliberately not built as reusable/shared infrastructure —
-// the only real consumer today is Services; a future filter-style variant
-// (e.g. for Transactions) should be designed against that page's actual
-// requirements when it exists, not guessed at now.
-export function ItemCodeSelect({ value, onChange, error }: ItemCodeSelectProps) {
+export function ItemCodeSelect({
+  value,
+  onChange,
+  error,
+}: ItemCodeSelectProps) {
   const { search, setSearch, trimmed, itemCodes, isFetching, combobox } =
     useItemCodeSearch(value?.name ?? "");
 

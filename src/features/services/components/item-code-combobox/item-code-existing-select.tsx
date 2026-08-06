@@ -9,16 +9,12 @@ type ItemCodeExistingSelectProps = {
   error?: string;
 };
 
-// Existing-only item-code picker: search and select, no "create new" option.
-// Used where the caller must reference an item code that already exists
-// (e.g. editing a service) — the type signature makes it structurally
-// impossible to emit a "new" selection, no runtime flag required.
 export function ItemCodeExistingSelect({
   value,
   onChange,
   error,
 }: ItemCodeExistingSelectProps) {
-  const { search, setSearch, trimmed, itemCodes, isFetching, combobox } =
+  const { search, setSearch, itemCodes, isFetching, combobox } =
     useItemCodeSearch(value?.name ?? "");
 
   useEffect(() => {
@@ -29,9 +25,7 @@ export function ItemCodeExistingSelect({
     <Combobox
       store={combobox}
       onOptionSubmit={(optionValue) => {
-        const itemCode = itemCodes.find(
-          (ic) => String(ic.id) === optionValue,
-        );
+        const itemCode = itemCodes.find((ic) => String(ic.id) === optionValue);
         if (itemCode) {
           setSearch(itemCode.name);
           onChange({ kind: "existing", id: itemCode.id, name: itemCode.name });
@@ -59,14 +53,17 @@ export function ItemCodeExistingSelect({
 
       <Combobox.Dropdown>
         <Combobox.Options>
-          {itemCodes.length === 0 && !trimmed && (
-            <Combobox.Empty>No item codes found</Combobox.Empty>
+          {itemCodes.length === 0 ? (
+            <Combobox.Empty>
+              {isFetching ? "Loading..." : "No item codes found"}
+            </Combobox.Empty>
+          ) : (
+            itemCodes.map((ic) => (
+              <Combobox.Option value={String(ic.id)} key={ic.id}>
+                {ic.name}
+              </Combobox.Option>
+            ))
           )}
-          {itemCodes.map((ic) => (
-            <Combobox.Option value={String(ic.id)} key={ic.id}>
-              {ic.name}
-            </Combobox.Option>
-          ))}
         </Combobox.Options>
       </Combobox.Dropdown>
     </Combobox>
