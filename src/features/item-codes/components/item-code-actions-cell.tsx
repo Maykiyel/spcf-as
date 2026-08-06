@@ -11,7 +11,7 @@ import {
   notifyMutationError,
 } from "@/lib/notifications/notifications";
 import { deleteItemCode } from "../api/delete-item-code";
-import type { ItemCode } from "../types";
+import type { ItemCode } from "@/api/item-codes";
 
 type ItemCodeActionsCellProps = {
   itemCode: ItemCode;

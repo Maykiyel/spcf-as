@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { apiClient } from "@/lib/axios/api-client";
-import type { ItemCode } from "../types";
+import type { ItemCode } from "@/api/item-codes";
 
 export const itemCodeInputSchema = z.object({
   name: z.string().min(1, "Item code name is required").max(100),

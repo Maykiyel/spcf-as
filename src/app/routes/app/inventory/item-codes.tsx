@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Stack, Title } from "@mantine/core";
 import { ItemCodeForm } from "@/features/item-codes/components/item-code-form";
 import { ItemCodeTable } from "@/features/item-codes/components/item-code-table";
-import type { ItemCode } from "@/features/item-codes/types";
+import type { ItemCode } from "@/api/item-codes";
 
 export const Component = () => {
   const [editingItemCode, setEditingItemCode] = useState<ItemCode | null>(null);

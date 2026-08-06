@@ -1,24 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   DataTable,
-  useClientTableState,
+  useServerTableState,
   type ColumnDef,
-  type DataTableContextValue,
 } from "@/components/ui/data-table";
 import { getItemCodes } from "../api/get-item-codes";
 import { ItemCodeActionsCell } from "./item-code-actions-cell";
-import type { ItemCode } from "../types";
+import type { ItemCode } from "@/api/item-codes";
 
 type ItemCodeTableProps = {
   onEdit: (itemCode: ItemCode) => void;
 };
 
 export function ItemCodeTable({ onEdit }: ItemCodeTableProps) {
-  const query = useQuery({
-    queryKey: ["item-codes"],
-    queryFn: getItemCodes,
-  });
-
   const columns: ColumnDef<ItemCode>[] = [
     { key: "name", header: "Item Code", sortable: true },
     { key: "description", header: "Description" },
@@ -30,20 +23,12 @@ export function ItemCodeTable({ onEdit }: ItemCodeTableProps) {
     },
   ];
 
-  const clientState = useClientTableState({
-    data: query.data ?? [],
+  const tableState = useServerTableState({
+    queryKey: ["item-codes"],
+    queryFn: getItemCodes,
     columns,
     urlKey: "item_codes",
   });
-
-  const tableState: DataTableContextValue<ItemCode> = {
-    ...clientState,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    errorMessage: query.isError
-      ? "Couldn't load item codes. Please try again."
-      : null,
-  };
 
   return (
     <DataTable.Root title="Item Codes" state={tableState}>
