@@ -19,7 +19,11 @@ import {
   notifySuccess,
   notifyMutationError,
 } from "@/lib/notifications/notifications";
-import { ItemCodeCombobox, type ItemCodeSelection } from "./item-code-combobox";
+import {
+  ItemCodeSelect,
+  ItemCodeExistingSelect,
+  type ItemCodeSelection,
+} from "./item-code-combobox";
 import {
   buildCreatePayload,
   didItemCodeChange,
@@ -133,14 +137,14 @@ export function ServiceForm({
 
   const submitNow = (fields: ServiceInputFields) => {
     if (isEditMode) {
-      // Edit's combobox never offers "create new"
-      const existing = selection as Extract<
-        ItemCodeSelection,
-        { kind: "existing" }
-      >;
+      // ItemCodeExistingSelect can only ever produce a "kind: existing"
+      // selection, but `selection` state is still typed as the broader
+      // union shared with add mode — narrow via a real check, not a cast,
+      // so this is verified rather than assumed.
+      if (!selection || selection.kind !== "existing") return;
       const payload: UpdateServicePayload = {
         ...fields,
-        item_code_id: existing.id,
+        item_code_id: selection.id,
       };
       updateMutation.mutate(payload);
       return;
@@ -199,15 +203,29 @@ export function ServiceForm({
         <Card.Body>
           <form onSubmit={handleSubmit(onSubmit)}>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
-              <ItemCodeCombobox
-                value={selection}
-                onChange={(next) => {
-                  setSelection(next);
-                  setSelectionError(null);
-                }}
-                error={selectionError ?? undefined}
-                allowCreate={!isEditMode}
-              />
+              {isEditMode ? (
+                <ItemCodeExistingSelect
+                  value={
+                    selection && selection.kind === "existing"
+                      ? selection
+                      : null
+                  }
+                  onChange={(next) => {
+                    setSelection(next);
+                    setSelectionError(null);
+                  }}
+                  error={selectionError ?? undefined}
+                />
+              ) : (
+                <ItemCodeSelect
+                  value={selection}
+                  onChange={(next) => {
+                    setSelection(next);
+                    setSelectionError(null);
+                  }}
+                  error={selectionError ?? undefined}
+                />
+              )}
               <Controller
                 name="name"
                 control={control}

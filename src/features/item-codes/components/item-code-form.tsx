@@ -16,7 +16,7 @@ import {
   type ItemCodeInput,
 } from "../api/create-item-code";
 import { updateItemCode } from "../api/update-item-code";
-import type { ItemCode } from "../types";
+import type { ItemCode } from "@/api/item-codes";
 
 type ItemCodeFormProps = {
   editingItemCode: ItemCode | null;
