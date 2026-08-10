@@ -10,6 +10,7 @@ export type {
 } from "./use-server-table-state";
 export type { ColumnDef, SortEntry, DataTableContextValue } from "./types";
 export { MAX_SORT_COLUMNS } from "./types";
+export { encodeSortsForApi } from "./sort-params";
 
 import { DataTableRoot } from "./data-table-root";
 import { DataTableToolbar } from "./data-table-toolbar";
