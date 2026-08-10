@@ -60,7 +60,14 @@ export function ItemCodeSelect({
           onClick={() => combobox.openDropdown()}
           onFocus={() => combobox.openDropdown()}
           onBlur={() => combobox.closeDropdown()}
-          rightSection={isFetching ? <Loader size={16} /> : null}
+          rightSection={
+            isFetching ? (
+              <Loader size={16} />
+            ) : (
+              <Combobox.Chevron error={!!error} />
+            )
+          }
+          rightSectionPointerEvents="none"
           error={error}
         />
       </Combobox.Target>

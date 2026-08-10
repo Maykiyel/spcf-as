@@ -4,5 +4,27 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/components/ui/**/*.ts", "src/components/ui/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "../../features/**", "../../../features/**"],
+                "message": "components/ui must not import from src/features/* — dependencies flow components/ui → features/* → app/routes. See src/components/ui/README.md."
+              },
+              {
+                "group": ["@/app/**", "../../app/**", "../../../app/**"],
+                "message": "components/ui must not import from src/app/* — dependencies flow components/ui → features/* → app/routes. See src/components/ui/README.md."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

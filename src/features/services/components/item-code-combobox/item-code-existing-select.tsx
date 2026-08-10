@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Combobox, InputBase, Loader } from "@mantine/core";
+import { CheckIcon, Combobox, Group, InputBase, Loader } from "@mantine/core";
 import { useItemCodeSearch } from "./use-item-code-search";
 import type { ExistingItemCodeSelection } from "./types";
 
@@ -46,7 +46,14 @@ export function ItemCodeExistingSelect({
           onClick={() => combobox.openDropdown()}
           onFocus={() => combobox.openDropdown()}
           onBlur={() => combobox.closeDropdown()}
-          rightSection={isFetching ? <Loader size={16} /> : null}
+          rightSection={
+            isFetching ? (
+              <Loader size={16} />
+            ) : (
+              <Combobox.Chevron error={!!error} />
+            )
+          }
+          rightSectionPointerEvents="none"
           error={error}
         />
       </Combobox.Target>
@@ -59,8 +66,15 @@ export function ItemCodeExistingSelect({
             </Combobox.Empty>
           ) : (
             itemCodes.map((ic) => (
-              <Combobox.Option value={String(ic.id)} key={ic.id}>
-                {ic.name}
+              <Combobox.Option
+                value={String(ic.id)}
+                key={ic.id}
+                selected={ic.id === value?.id}
+              >
+                <Group gap="sm" wrap="nowrap">
+                  {ic.id === value?.id && <CheckIcon size={12} />}
+                  <span>{ic.name}</span>
+                </Group>
               </Combobox.Option>
             ))
           )}
