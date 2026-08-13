@@ -11,6 +11,7 @@ export type {
 export type { ColumnDef, SortEntry, DataTableContextValue } from "./types";
 export { MAX_SORT_COLUMNS } from "./types";
 export { encodeSortsForApi } from "./sort-params";
+export { createListAdapter } from "./create-list-adapter";
 
 import { DataTableRoot } from "./data-table-root";
 import { DataTableToolbar } from "./data-table-toolbar";
