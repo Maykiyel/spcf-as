@@ -14,8 +14,8 @@ import {
   PRICE_RANGE_VALUES,
   SORT_BY_LABELS,
   SORT_BY_VALUES,
-  type PriceRangeValue,
-  type SortByValue,
+  isPriceRangeValue,
+  isSortByValue,
 } from "../types";
 
 export function FiltersPanel() {
@@ -64,7 +64,9 @@ export function FiltersPanel() {
         <Chip.Group
           multiple={false}
           value={state.priceRange}
-          onChange={(value) => actions.setPriceRange(value as PriceRangeValue)}
+          onChange={(value) => {
+            if (isPriceRangeValue(value)) actions.setPriceRange(value);
+          }}
         >
           <Group gap="xs">
             {PRICE_RANGE_VALUES.map((value) => (
@@ -82,7 +84,9 @@ export function FiltersPanel() {
         </Text>
         <Radio.Group
           value={state.sortBy}
-          onChange={(value) => actions.setSortBy(value as SortByValue)}
+          onChange={(value) => {
+            if (isSortByValue(value)) actions.setSortBy(value);
+          }}
         >
           <Stack gap="xs">
             {SORT_BY_VALUES.map((value) => (
