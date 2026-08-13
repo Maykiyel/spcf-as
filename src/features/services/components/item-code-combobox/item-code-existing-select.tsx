@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { CheckIcon, Combobox, Group, InputBase, Loader } from "@mantine/core";
+import { CheckIcon, Combobox, Group } from "@mantine/core";
 import { useItemCodeSearch } from "./use-item-code-search";
+import { ItemCodeComboboxTarget } from "./item-code-combobox-target";
 import type { ExistingItemCodeSelection } from "./types";
 
 type ItemCodeExistingSelectProps = {
@@ -33,30 +34,14 @@ export function ItemCodeExistingSelect({
         combobox.closeDropdown();
       }}
     >
-      <Combobox.Target>
-        <InputBase
-          label="Item Code"
-          placeholder="Search an existing item code"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.currentTarget.value);
-            combobox.openDropdown();
-            combobox.updateSelectedOptionIndex();
-          }}
-          onClick={() => combobox.openDropdown()}
-          onFocus={() => combobox.openDropdown()}
-          onBlur={() => combobox.closeDropdown()}
-          rightSection={
-            isFetching ? (
-              <Loader size={16} />
-            ) : (
-              <Combobox.Chevron error={!!error} />
-            )
-          }
-          rightSectionPointerEvents="none"
-          error={error}
-        />
-      </Combobox.Target>
+      <ItemCodeComboboxTarget
+        search={search}
+        setSearch={setSearch}
+        combobox={combobox}
+        isFetching={isFetching}
+        placeholder="Search an existing item code"
+        error={error}
+      />
 
       <Combobox.Dropdown>
         <Combobox.Options>
