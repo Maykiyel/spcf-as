@@ -58,12 +58,7 @@ export function FeeCatalogItemCard({ item, onAdd }: FeeCatalogItemCardProps) {
           <Text fw={600} size="sm" lineClamp={1}>
             {item.name}
           </Text>
-          <Badge
-            color="tertiary"
-            variant="light"
-            size="sm"
-            style={{ shrink: 0 }}
-          >
+          <Badge color="tertiary" variant="light" size="sm">
             {item.itemCode}
           </Badge>
         </Group>
@@ -75,7 +70,7 @@ export function FeeCatalogItemCard({ item, onAdd }: FeeCatalogItemCardProps) {
         )}
       </Stack>
 
-      <Group gap="md" wrap="nowrap" style={{ shrink: 0 }}>
+      <Group gap="md" wrap="nowrap">
         <Text fw={700} size="sm">
           {formatCurrency(item.price)}
         </Text>
@@ -88,15 +83,19 @@ export function FeeCatalogItemCard({ item, onAdd }: FeeCatalogItemCardProps) {
             height: 32,
             borderRadius: "var(--mantine-radius-md)",
             backgroundColor: isAdded
-              ? "var(--mantine-color-teal-0)"
-              : "var(--mantine-color-gray-1)",
+              ? "var(--mantine-color-success-2)"
+              : "var(--mantine-color-dark-1)",
             color: isAdded
-              ? "var(--mantine-color-teal-7)"
-              : "var(--mantine-color-gray-7)",
+              ? "var(--mantine-color-success-7)"
+              : "var(--mantine-color-dark-7)",
             transition: "all 150ms ease",
           }}
         >
-          {isAdded ? <IconCheck size={16} /> : <IconPlus size={16} />}
+          {isAdded ? (
+            <IconCheck size={16} stroke={4} />
+          ) : (
+            <IconPlus size={16} />
+          )}
         </Group>
       </Group>
     </FeeCatalogItemFrame>
@@ -139,12 +138,12 @@ function FeeCatalogItemFrame({
         minHeight: "4.25rem",
         border: `1px solid ${
           hovered
-            ? "var(--mantine-color-gray-5)"
-            : "var(--mantine-color-gray-3)"
+            ? "var(--mantine-color-dark-5)"
+            : "var(--mantine-color-dark-3)"
         }`,
         borderRadius: "var(--mantine-radius-lg)",
         backgroundColor: hovered
-          ? "var(--mantine-color-gray-0)"
+          ? "var(--mantine-color-gray-1)"
           : "var(--mantine-color-white)",
         boxShadow: hovered ? "var(--mantine-shadow-xs)" : "none",
         transition: "all 150ms ease",

@@ -8,15 +8,14 @@ export function NewTransactionPage() {
   return (
     <TransactionBuilderProvider>
       <Grid
-        gap="lg"
+        gap="xl"
+        p="sm"
         align="stretch"
         style={{ flex: 1, minHeight: 0 }}
         styles={{ inner: { height: "100%" } }}
       >
         <Grid.Col span={{ base: 12, md: 2 }} style={{ height: "100%" }}>
           <Paper
-            radius="md"
-            p="lg"
             h="100%"
             style={{
               display: "flex",
@@ -30,8 +29,6 @@ export function NewTransactionPage() {
 
         <Grid.Col span={{ base: 12, md: 4 }} style={{ height: "100%" }}>
           <Paper
-            radius="md"
-            p="lg"
             h="100%"
             style={{
               display: "flex",
@@ -45,8 +42,6 @@ export function NewTransactionPage() {
 
         <Grid.Col span={{ base: 12, md: 6 }} style={{ height: "100%" }}>
           <Paper
-            radius="md"
-            p="lg"
             h="100%"
             style={{
               display: "flex",

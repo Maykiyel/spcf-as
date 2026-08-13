@@ -35,7 +35,7 @@ export function ReceiptPanel() {
             <Title order={4}>Receipt</Title>
           </Group>
           {state.lineItems.length > 0 && (
-            <Badge variant="light" color="gray" size="sm">
+            <Badge variant="light" color="dark" size="sm">
               {state.lineItems.length}{" "}
               {state.lineItems.length === 1 ? "Item" : "Items"}
             </Badge>
@@ -98,7 +98,7 @@ export function ReceiptPanel() {
           </Table>
         </Table.ScrollContainer>
 
-        <Stack gap="xs" style={{ shrink: 0 }}>
+        <Stack gap="xs">
           <Divider />
 
           <Group justify="space-between" align="center">

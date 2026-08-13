@@ -41,13 +41,13 @@ export function ReceiptLineItemRow({
 
   return (
     <Table.Tr>
-      <Table.Td style={{ py: 6 }}>
+      <Table.Td py="sm">
         <Text size="sm" fw={500} truncate="end">
           {lineItem.name}
         </Text>
       </Table.Td>
 
-      <Table.Td style={{ py: 6 }}>
+      <Table.Td py="sm">
         <NumberInput
           value={draftQuantity}
           onChange={handleQuantityChange}
@@ -74,19 +74,19 @@ export function ReceiptLineItemRow({
         />
       </Table.Td>
 
-      <Table.Td style={{ textAlign: "right", py: 6 }}>
+      <Table.Td py="sm" style={{ textAlign: "right" }}>
         <Text size="xs" c="dimmed">
           {formatCurrency(lineItem.price)}
         </Text>
       </Table.Td>
 
-      <Table.Td style={{ textAlign: "right", py: 6 }}>
+      <Table.Td py="sm" style={{ textAlign: "right" }}>
         <Text size="sm" fw={700}>
           {formatCurrency(calculateLineSubtotal(lineItem))}
         </Text>
       </Table.Td>
 
-      <Table.Td style={{ textAlign: "center", py: 6 }}>
+      <Table.Td py="sm" style={{ textAlign: "center" }}>
         <ActionIcon
           variant="subtle"
           color="red"
