@@ -9,7 +9,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AppShell
-      p="lg"
       bg="lightBackground"
       layout="alt"
       header={{ height: 60 }}
@@ -26,7 +25,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           transition: "padding-left 300ms ease",
         },
       }}
-      padding="md"
+      padding="lg"
     >
       <AppShell.Header bg="dark" px="lg" withBorder={false}>
         <Group h="100%" align="center" px="md" justify="space-between">
