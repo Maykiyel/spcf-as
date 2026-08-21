@@ -39,7 +39,7 @@ import {
   updateService,
   type UpdateServicePayload,
 } from "../api/update-service";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 type ServiceFormProps = {
   editingService: Service | null;

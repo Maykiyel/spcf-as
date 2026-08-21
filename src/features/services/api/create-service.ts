@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { apiClient } from "@/lib/axios/api-client";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 export const serviceInputSchema = z.object({
   name: z.string().min(1, "Service name is required").max(100),

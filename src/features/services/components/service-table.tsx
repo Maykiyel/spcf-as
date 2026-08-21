@@ -10,7 +10,7 @@ import { ServiceActiveToggle } from "./service-active-toggle";
 import { ServiceActionsCell } from "./service-actions-cell";
 import { ServiceStatusFilter } from "./service-status-filter";
 import { useServiceStatusFilter } from "./use-service-status-filter";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 type ServiceTableProps = {
   onEdit: (service: Service) => void;

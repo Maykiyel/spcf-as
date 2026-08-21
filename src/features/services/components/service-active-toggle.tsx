@@ -2,7 +2,7 @@ import { Switch } from "@mantine/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toggleServiceActive } from "../api/toggle-service-active";
 import { notifyMutationError } from "@/lib/notifications/notifications";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 type ServiceActiveToggleProps = {
   service: Service;

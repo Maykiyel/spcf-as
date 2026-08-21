@@ -3,7 +3,7 @@ import {
   type ServerTableParams,
   type ServerTableResponse,
 } from "@/components/ui/data-table";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 const listServices = createListAdapter<Service>("/services", "services");
 
