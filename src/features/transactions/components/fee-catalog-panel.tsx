@@ -1,4 +1,5 @@
 import {
+  Loader,
   ScrollArea,
   Stack,
   Text,
@@ -7,7 +8,7 @@ import {
   Group,
 } from "@mantine/core";
 import { IconListSearch, IconSearch } from "@tabler/icons-react";
-import { useTransactionBuilder } from "./transaction-builder-context";
+import { useTransactionBuilder } from "./use-transaction-builder";
 import { FeeCatalogItemCard } from "./fee-catalog-item-card";
 
 export function FeeCatalogPanel() {
@@ -29,7 +30,18 @@ export function FeeCatalogPanel() {
 
       <ScrollArea style={{ flex: 1, minHeight: 0 }} offsetScrollbars>
         <Stack gap="sm">
-          {meta.filteredCatalog.length === 0 ? (
+          {meta.isCatalogLoading ? (
+            <Group justify="center" py="lg">
+              <Loader size="sm" />
+              <Text size="sm" c="dimmed">
+                Loading fee catalog...
+              </Text>
+            </Group>
+          ) : meta.isCatalogError ? (
+            <Text size="sm" c="danger" ta="center" py="lg">
+              Couldn't load the fee catalog. Please try again.
+            </Text>
+          ) : meta.filteredCatalog.length === 0 ? (
             <Text size="sm" c="dimmed" ta="center" py="lg">
               No fees match your search or filters.
             </Text>

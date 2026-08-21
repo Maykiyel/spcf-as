@@ -8,7 +8,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
-import { useTransactionBuilder } from "./transaction-builder-context";
+import { useTransactionBuilder } from "./use-transaction-builder";
 import {
   PRICE_RANGE_LABELS,
   PRICE_RANGE_VALUES,
