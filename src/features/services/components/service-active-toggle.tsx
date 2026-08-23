@@ -16,6 +16,12 @@ export function ServiceActiveToggle({ service }: ServiceActiveToggleProps) {
       toggleServiceActive(service.id, nextActive),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["services"] });
+      // A service being disabled/enabled changes which services the
+      // transaction Fee Catalog should offer — keep it from serving a
+      // stale entry for up to its own stale window.
+      queryClient.invalidateQueries({
+        queryKey: ["transactions", "fee-catalog"],
+      });
     },
     onError: (error) => {
       notifyMutationError(error, "Couldn't update active status.");
