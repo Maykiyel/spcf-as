@@ -41,6 +41,21 @@ export function isPageGroup(entry: TopLevelPage): entry is PageGroup {
   return "children" in entry;
 }
 
+// Every navigable leaf with its required roles resolved — a group's
+// `roles` apply to all of its children (mirroring the sidebar's own
+// filtering in sidebar-links-container.tsx), a standalone leaf uses its
+// own `roles`. This is the router's source for role-gating a direct
+// navigation, the same way `pages` above is the sidebar's.
+export function getLeafRoutes(
+  entries: TopLevelPage[] = pages,
+): (PageLeaf & { roles?: Role[] })[] {
+  return entries.flatMap((entry) =>
+    isPageGroup(entry)
+      ? entry.children.map((child) => ({ ...child, roles: entry.roles }))
+      : [entry],
+  );
+}
+
 // The single source of truth for every page in the app shell. The router
 // and the sidebar both derive from this array — adding, removing, or
 // regrouping a page is an edit here, nowhere else.

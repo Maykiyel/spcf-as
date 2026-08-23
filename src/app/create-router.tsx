@@ -1,11 +1,9 @@
 import { createBrowserRouter } from "react-router";
 import { ProtectedRoute } from "@/components/routes/protected-route";
 import { AppLayoutRoute } from "@/components/layouts/app-layout-route";
-import { pages, isPageGroup, LOGIN_PATH } from "@/config/pages";
+import { getLeafRoutes, LOGIN_PATH } from "@/config/pages";
 
-const leaves = pages.flatMap((entry) =>
-  isPageGroup(entry) ? entry.children : [entry],
-);
+const leaves = getLeafRoutes();
 
 export const createRouter = () =>
   createBrowserRouter([
@@ -21,6 +19,7 @@ export const createRouter = () =>
           children: leaves.map((leaf) => ({
             path: leaf.path,
             lazy: leaf.lazyImport,
+            handle: { roles: leaf.roles },
           })),
         },
       ],
