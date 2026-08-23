@@ -6,23 +6,29 @@ import { TransactionBuilderProvider } from "./transaction-builder-context";
 import { useTransactionBuilder } from "./use-transaction-builder";
 import { initiateTransaction } from "../api/initiate-transaction";
 import { addTransactionItem } from "../api/add-transaction-item";
-import { deleteTransactionItem } from "../api/delete-transaction-item";
-import { updateTransactionItemQuantity } from "../api/update-transaction-item-quantity";
-import type { FeeCatalogItem, TransactionItemDTO } from "../types";
+import { saveTransaction } from "../api/save-transaction";
+import { cancelTransaction } from "../api/cancel-transaction";
+import { notifySuccess, notifyMutationError } from "@/lib/notifications/notifications";
+import type { FeeCatalogItem, TransactionDTO } from "../types";
+
+// This suite covers only what TransactionBuilderProvider adds on top of
+// useLineItemSync — confirmTransaction/cancelReceipt orchestration and the
+// canConfirm/missingRequirements composition. Line-item add/remove/quantity
+// and locked-line behavior are the hook's own contract and are covered by
+// use-line-item-sync.test.tsx, not re-tested here.
 
 vi.mock("../api/initiate-transaction");
 vi.mock("../api/add-transaction-item");
-vi.mock("../api/delete-transaction-item");
-vi.mock("../api/update-transaction-item-quantity");
 vi.mock("../api/save-transaction");
 vi.mock("../api/cancel-transaction");
+vi.mock("@/lib/notifications/notifications");
 
 const mockInitiateTransaction = vi.mocked(initiateTransaction);
 const mockAddTransactionItem = vi.mocked(addTransactionItem);
-const mockDeleteTransactionItem = vi.mocked(deleteTransactionItem);
-const mockUpdateTransactionItemQuantity = vi.mocked(
-  updateTransactionItemQuantity,
-);
+const mockSaveTransaction = vi.mocked(saveTransaction);
+const mockCancelTransaction = vi.mocked(cancelTransaction);
+const mockNotifySuccess = vi.mocked(notifySuccess);
+const mockNotifyMutationError = vi.mocked(notifyMutationError);
 
 const parkingFee: FeeCatalogItem = {
   id: 2,
@@ -32,30 +38,38 @@ const parkingFee: FeeCatalogItem = {
   itemCode: "PARKING",
 };
 
-// Minimal harness exposing just enough of the context to drive and
-// observe the scenarios below, rather than going through the full page
-// (search, filters, etc.) — the seam under test is the context's public
-// interface, not the surrounding UI.
+const fakeCompletedTransaction: TransactionDTO = {
+  control_id: 1,
+  cashier: { id: 1, full_name: "Test Cashier" },
+  series_number: 42,
+  customer_name: "Juan Dela Cruz",
+  items: [],
+  total: 200,
+  amount_paid: 200,
+  change_amount: 0,
+  status: "completed",
+  date: "2026-08-21",
+};
+
+// Minimal harness exposing just enough of the context to drive and observe
+// confirm/cancel — the seam under test is the context's public interface,
+// not the surrounding page UI.
 function Harness() {
   const { state, actions, meta } = useTransactionBuilder();
-  const line = state.lineItems.find((item) => item.feeItemId === parkingFee.id);
 
   return (
     <div>
       <button onClick={() => actions.addFeeItem(parkingFee)}>add</button>
-      {line && (
-        <button onClick={() => actions.removeLineItem(line.id)}>remove</button>
-      )}
-      {line && (
-        <button onClick={() => actions.setLineItemQuantity(line.id, 5)}>
-          set-quantity-5
-        </button>
-      )}
-      <span data-testid="line-id">{line?.id ?? "none"}</span>
-      <span data-testid="line-quantity">{line?.quantity ?? "none"}</span>
-      <span data-testid="pending-removal">
-        {meta.pendingRemovalFeeItemIds.has(parkingFee.id) ? "yes" : "no"}
-      </span>
+      <button onClick={() => actions.setPayerName("Juan Dela Cruz")}>
+        set-payer
+      </button>
+      <button onClick={() => actions.setAmountPaid(200)}>set-amount</button>
+      <button onClick={() => void actions.confirmTransaction()}>confirm</button>
+      <button onClick={() => void actions.cancelReceipt()}>cancel</button>
+      <span data-testid="payer-name">{state.payerName}</span>
+      <span data-testid="can-confirm">{meta.canConfirm ? "yes" : "no"}</span>
+      <span data-testid="missing">{meta.missingRequirements.join(", ")}</span>
+      <span data-testid="line-count">{state.lineItems.length}</span>
     </div>
   );
 }
@@ -68,16 +82,20 @@ function renderHarness() {
   );
 }
 
-// Advances fake time and flushes the resulting microtask chain, wrapped
-// in act() so React actually commits whatever state updates that chain
-// triggers before the next assertion/interaction reads them. Plain
-// vi.advanceTimersByTimeAsync() without this wrapping left transactionId
-// (etc.) stale in the next click's closure — the state update had
-// happened, but React hadn't re-rendered to reflect it yet.
 async function advance(ms: number) {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
   });
+}
+
+// Adds one settled line item and fills in payer/amount, so confirm/cancel
+// tests start from a state that's actually confirmable.
+async function readyToConfirm() {
+  renderHarness();
+  fireEvent.click(screen.getByText("add"));
+  await advance(400); // add-debounce -> initiate -> addTransactionItem
+  fireEvent.click(screen.getByText("set-payer"));
+  fireEvent.click(screen.getByText("set-amount"));
 }
 
 beforeEach(() => {
@@ -87,7 +105,13 @@ beforeEach(() => {
     status: "pending",
     cashier: { id: 1, full_name: "Test Cashier" },
   });
-  mockDeleteTransactionItem.mockResolvedValue(undefined);
+  mockAddTransactionItem.mockResolvedValue({
+    id: 501,
+    name: parkingFee.name,
+    price: parkingFee.price,
+    quantity: 1,
+    subtotal: parkingFee.price,
+  });
 });
 
 afterEach(() => {
@@ -95,127 +119,110 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("TransactionBuilderProvider — deferred intent on a locked line", () => {
-  it("queues a remove clicked before the add's debounce has even fired (transactionId still null)", async () => {
-    mockAddTransactionItem.mockReturnValue(
-      new Promise(() => {
-        /* never resolves within this test — irrelevant, we never advance
-           past the point where it would even be called */
-      }),
-    );
-
+describe("TransactionBuilderProvider — canConfirm / missingRequirements", () => {
+  it("is not confirmable until payer name, an item, and enough amount paid are all present", async () => {
     renderHarness();
 
-    fireEvent.click(screen.getByText("add"));
-    // No advance() at all yet: the 400ms add-debounce hasn't fired, so
-    // ensureTransaction() has never run and transactionId is still null.
-    // Clicking remove here used to hit removeLineItem's `!transactionId`
-    // early return before the lock check ever ran, silently dropping the
-    // click instead of queuing it.
-    fireEvent.click(screen.getByText("remove"));
+    expect(screen.getByTestId("can-confirm").textContent).toBe("no");
+    expect(screen.getByTestId("missing").textContent).toBe(
+      "Payer Name, At least 1 item",
+    );
 
-    expect(screen.getByTestId("pending-removal").textContent).toBe("yes");
-    expect(screen.getByTestId("line-id").textContent).toBe("optimistic-2");
+    fireEvent.click(screen.getByText("add"));
+    await advance(400);
+    fireEvent.click(screen.getByText("set-payer"));
+    fireEvent.click(screen.getByText("set-amount"));
+
+    expect(screen.getByTestId("can-confirm").textContent).toBe("yes");
+    expect(screen.getByTestId("missing").textContent).toBe("");
   });
 
-  it("queues a remove clicked while the add is still in flight, then actually fires it once the add settles", async () => {
-    let resolveAdd!: (item: TransactionItemDTO) => void;
-    mockAddTransactionItem.mockReturnValue(
-      new Promise((resolve) => {
-        resolveAdd = resolve;
-      }),
-    );
-
+  it("blocks confirm while the receipt is still syncing, even if otherwise complete", async () => {
     renderHarness();
+    fireEvent.click(screen.getByText("set-payer"));
+    fireEvent.click(screen.getByText("set-amount"));
+    fireEvent.click(screen.getByText("add")); // debounce hasn't fired — still syncing
 
-    fireEvent.click(screen.getByText("add"));
+    expect(screen.getByTestId("can-confirm").textContent).toBe("no");
+    expect(screen.getByTestId("missing").textContent).toContain(
+      "Still syncing",
+    );
+  });
+});
 
-    // Optimistic bump is immediate — the line exists locally right away,
-    // on its client-only id, before any network call has even fired.
-    expect(screen.getByTestId("line-id").textContent).toBe("optimistic-2");
+describe("TransactionBuilderProvider — confirmTransaction", () => {
+  it("saves with the trimmed payer name and amount, then resets the receipt on success", async () => {
+    mockSaveTransaction.mockResolvedValue(fakeCompletedTransaction);
+    await readyToConfirm();
 
-    // Let the add-flush's debounce timer fire, which kicks off
-    // ensureTransaction() -> initiateTransaction() -> addTransactionItem().
-    await advance(400);
-    expect(mockAddTransactionItem).toHaveBeenCalledTimes(1);
-
-    // The add hasn't resolved yet — this line is still locked. Removing
-    // it now should NOT fire a DELETE (there's no real id to delete
-    // against yet); it should queue the intent instead.
-    fireEvent.click(screen.getByText("remove"));
-
-    expect(mockDeleteTransactionItem).not.toHaveBeenCalled();
-    expect(screen.getByTestId("pending-removal").textContent).toBe("yes");
-    // The line is still present — a queued remove doesn't optimistically
-    // vanish the row, since we'd lose track of the real id to delete
-    // once one exists. It just renders differently (see
-    // ReceiptLineItemRow's pendingRemoval prop).
-    expect(screen.getByTestId("line-id").textContent).toBe("optimistic-2");
-
-    // Now the add resolves with a real backend id — resolve outside act(),
-    // then flush inside advance() so the resulting .then/finally chain
-    // (including the queued removal it triggers) runs to completion.
-    resolveAdd({
-      id: 501,
-      name: parkingFee.name,
-      price: parkingFee.price,
-      quantity: 1,
-      subtotal: parkingFee.price,
+    await act(async () => {
+      fireEvent.click(screen.getByText("confirm"));
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    await advance(0);
 
-    // The queued removal replayed against the REAL id (501), not the
-    // client-only placeholder — this is the whole point: the intent
-    // queue exists specifically so this call can't be Number("optimistic-2")
-    // (NaN).
-    expect(mockDeleteTransactionItem).toHaveBeenCalledTimes(1);
-    expect(mockDeleteTransactionItem).toHaveBeenCalledWith(1, 501);
-    expect(screen.getByTestId("pending-removal").textContent).toBe("no");
+    expect(mockSaveTransaction).toHaveBeenCalledWith(1, {
+      customer_name: "Juan Dela Cruz",
+      amount_paid: 200,
+    });
+    expect(mockNotifySuccess).toHaveBeenCalledWith(
+      "Transaction completed — Receipt #42.",
+    );
+    expect(screen.getByTestId("payer-name").textContent).toBe("");
+    expect(screen.getByTestId("line-count").textContent).toBe("0");
   });
 
-  it("queues a quantity change clicked while the add is still in flight, then replays it once the add settles", async () => {
-    let resolveAdd!: (item: TransactionItemDTO) => void;
-    mockAddTransactionItem.mockReturnValue(
-      new Promise((resolve) => {
-        resolveAdd = resolve;
-      }),
+  it("notifies and leaves the receipt untouched if the save fails", async () => {
+    mockSaveTransaction.mockRejectedValue(new Error("network error"));
+    await readyToConfirm();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("confirm"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockNotifyMutationError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "Couldn't complete the transaction. Please try again.",
     );
-    mockUpdateTransactionItemQuantity.mockResolvedValue({
-      id: 501,
-      name: parkingFee.name,
-      price: parkingFee.price,
-      quantity: 5,
-      subtotal: parkingFee.price * 5,
+    expect(screen.getByTestId("payer-name").textContent).toBe("Juan Dela Cruz");
+    expect(screen.getByTestId("line-count").textContent).toBe("1");
+  });
+});
+
+describe("TransactionBuilderProvider — cancelReceipt", () => {
+  it("cancels the transaction and resets payer name and amount paid", async () => {
+    mockCancelTransaction.mockResolvedValue({
+      ...fakeCompletedTransaction,
+      status: "cancelled",
+    });
+    await readyToConfirm();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("cancel"));
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
-    renderHarness();
+    expect(mockCancelTransaction).toHaveBeenCalledWith(1);
+    expect(screen.getByTestId("payer-name").textContent).toBe("");
+    expect(screen.getByTestId("line-count").textContent).toBe("0");
+  });
 
-    fireEvent.click(screen.getByText("add"));
-    await advance(400);
-    expect(mockAddTransactionItem).toHaveBeenCalledTimes(1);
+  it("notifies if the cancel fails", async () => {
+    mockCancelTransaction.mockRejectedValue(new Error("network error"));
+    await readyToConfirm();
 
-    // Still locked — setting quantity to 5 should update the local
-    // display immediately but defer the actual PATCH.
-    fireEvent.click(screen.getByText("set-quantity-5"));
-    expect(screen.getByTestId("line-quantity").textContent).toBe("5");
-    expect(mockUpdateTransactionItemQuantity).not.toHaveBeenCalled();
-
-    resolveAdd({
-      id: 501,
-      name: parkingFee.name,
-      price: parkingFee.price,
-      quantity: 1, // the add itself only established quantity 1
-      subtotal: parkingFee.price,
+    await act(async () => {
+      fireEvent.click(screen.getByText("cancel"));
+      await Promise.resolve();
+      await Promise.resolve();
     });
-    // Flush the add's resolution (which queues the replay), then the
-    // replay's own debounce (syncLineItemQuantity schedules through the
-    // same DEBOUNCE_MS path as a normal quantity edit).
-    await advance(0);
-    await advance(400);
 
-    expect(mockUpdateTransactionItemQuantity).toHaveBeenCalledTimes(1);
-    // Replayed against the real id (501) and the queued target quantity
-    // (5), not the quantity the add itself produced (1).
-    expect(mockUpdateTransactionItemQuantity).toHaveBeenCalledWith(1, 501, 5);
+    expect(mockNotifyMutationError).toHaveBeenCalledWith(
+      expect.any(Error),
+      "Couldn't cancel the transaction. Please try again.",
+    );
   });
 });
