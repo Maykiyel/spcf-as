@@ -1,5 +1,5 @@
 import { EditButton } from "@/components/ui/button";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 type ServiceActionsCellProps = {
   service: Service;

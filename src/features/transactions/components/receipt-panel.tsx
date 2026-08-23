@@ -3,6 +3,7 @@ import {
   Badge,
   Divider,
   Group,
+  NumberInput,
   Stack,
   Table,
   Text,
@@ -10,9 +11,9 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { IconReceipt, IconUser } from "@tabler/icons-react";
+import { IconCash, IconReceipt, IconUser } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
-import { useTransactionBuilder } from "./transaction-builder-context";
+import { useTransactionBuilder } from "./use-transaction-builder";
 import { ReceiptLineItemRow } from "./receipt-line-item-row";
 import { formatCurrency } from "../lib/currency";
 
@@ -87,6 +88,9 @@ export function ReceiptPanel() {
                   <ReceiptLineItemRow
                     key={lineItem.id}
                     lineItem={lineItem}
+                    pendingRemoval={meta.pendingRemovalFeeItemIds.has(
+                      lineItem.feeItemId,
+                    )}
                     onQuantityChange={(quantity) =>
                       actions.setLineItemQuantity(lineItem.id, quantity)
                     }
@@ -110,12 +114,51 @@ export function ReceiptPanel() {
             </Text>
           </Group>
 
+          <NumberInput
+            label="Amount Paid"
+            placeholder="0.00"
+            value={state.amountPaid === 0 ? "" : state.amountPaid}
+            onChange={(value) => {
+              // NumberInput's onChange gives a string instead of a number
+              // in a few edge cases — notably "trailing decimals", which
+              // fixedDecimalScale triggers constantly (every value here
+              // is padded to 2 decimals, e.g. "1000.00"). Coercing only
+              // `typeof value === "number"` and dropping everything else
+              // to 0 was wrong: it silently zeroed amountPaid on exactly
+              // the padded values fixedDecimalScale produces, while the
+              // field kept showing what was typed.
+              const parsed = typeof value === "number" ? value : Number(value);
+              actions.setAmountPaid(Number.isFinite(parsed) ? parsed : 0);
+            }}
+            leftSection={<IconCash size={16} />}
+            min={0}
+            decimalScale={2}
+            fixedDecimalScale
+            thousandSeparator=","
+            size="sm"
+            disabled={state.lineItems.length === 0}
+          />
+
+          <Group justify="space-between" align="center">
+            <Text fw={600} size="sm">
+              Change
+            </Text>
+            <Text fw={700} size="md">
+              {formatCurrency(meta.change)}
+            </Text>
+          </Group>
+
           <Group justify="flex-end" mt="xs">
             <DangerButton
               type="button"
               size="sm"
-              disabled={state.lineItems.length === 0 && !state.payerName}
-              onClick={actions.resetReceipt}
+              disabled={
+                (state.lineItems.length === 0 && !state.payerName) ||
+                meta.isCancelling ||
+                meta.isConfirming
+              }
+              loading={meta.isCancelling}
+              onClick={actions.cancelReceipt}
             >
               Cancel
             </DangerButton>
@@ -130,7 +173,8 @@ export function ReceiptPanel() {
                 <PrimaryButton
                   type="submit"
                   size="md"
-                  disabled={!meta.canConfirm}
+                  disabled={!meta.canConfirm || meta.isConfirming}
+                  loading={meta.isConfirming}
                 >
                   Confirm Payment
                 </PrimaryButton>

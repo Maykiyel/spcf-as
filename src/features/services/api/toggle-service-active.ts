@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/axios/api-client";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 export const toggleServiceActive = async (
   id: number,

@@ -53,15 +53,19 @@ export function FeeCatalogItemCard({ item, onAdd }: FeeCatalogItemCardProps) {
       tabIndex={0}
       aria-label={`Add ${item.name} for ${formatCurrency(item.price)}`}
     >
-      <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
-        <Group gap="xs" wrap="nowrap">
-          <Text fw={600} size="sm" lineClamp={1}>
-            {item.name}
-          </Text>
-          <Badge color="tertiary" variant="light" size="sm">
-            {item.itemCode}
-          </Badge>
-        </Group>
+      <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
+        <Text fw={600} size="sm" lineClamp={1}>
+          {item.name}
+        </Text>
+
+        <Badge
+          color="tertiary"
+          variant="light"
+          size="sm"
+          style={{ alignSelf: "flex-start" }}
+        >
+          {item.itemCode}
+        </Badge>
 
         {item.description && (
           <Text size="xs" c="dimmed" lineClamp={1}>

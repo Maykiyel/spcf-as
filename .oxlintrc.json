@@ -25,6 +25,12 @@
           }
         ]
       }
+    },
+    {
+      "files": ["src/test/**/*.ts", "src/test/**/*.tsx"],
+      "rules": {
+        "react/only-export-components": "off"
+      }
     }
   ]
 }

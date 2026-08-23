@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActionIcon, NumberInput, Table, Text } from "@mantine/core";
+import { ActionIcon, Loader, NumberInput, Table, Text } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import { formatCurrency } from "../lib/currency";
 import { calculateLineSubtotal } from "../lib/receipt";
@@ -7,12 +7,21 @@ import type { ReceiptLineItem } from "../types";
 
 type ReceiptLineItemRowProps = {
   lineItem: ReceiptLineItem;
+  // True once the cashier has asked to remove this line but it was still
+  // locked at the time (no real backend id yet, or a repeat-add for this
+  // fee hasn't settled) — the removal is queued and will fire for real
+  // once that settles (see applyQueuedIntent in the builder context).
+  // Quantity edits and removal are otherwise never blocked: an add's
+  // in-flight/debouncing state on a line no longer disables anything —
+  // see PendingLineItemIntent's doc comment for why.
+  pendingRemoval: boolean;
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
 };
 
 export function ReceiptLineItemRow({
   lineItem,
+  pendingRemoval,
   onQuantityChange,
   onRemove,
 }: ReceiptLineItemRowProps) {
@@ -40,7 +49,7 @@ export function ReceiptLineItemRow({
   };
 
   return (
-    <Table.Tr>
+    <Table.Tr style={pendingRemoval ? { opacity: 0.5 } : undefined}>
       <Table.Td py="sm">
         <Text size="sm" fw={500} truncate="end">
           {lineItem.name}
@@ -64,6 +73,11 @@ export function ReceiptLineItemRow({
           w={64}
           hideControls
           allowNegative={false}
+          // Only disabled once removal is already queued for this line —
+          // editing quantity on something you've already asked to remove
+          // doesn't make sense. Never disabled just because an add is
+          // still syncing; see the pendingRemoval doc comment above.
+          disabled={pendingRemoval}
           aria-label={`Quantity of ${lineItem.name}`}
           styles={{
             input: {
@@ -87,15 +101,23 @@ export function ReceiptLineItemRow({
       </Table.Td>
 
       <Table.Td py="sm" style={{ textAlign: "center" }}>
-        <ActionIcon
-          variant="subtle"
-          color="red"
-          size="md"
-          onClick={onRemove}
-          aria-label={`Remove ${lineItem.name}`}
-        >
-          <IconTrash size={16} />
-        </ActionIcon>
+        {pendingRemoval ? (
+          <Loader
+            size="xs"
+            aria-label={`Removing ${lineItem.name}`}
+            role="status"
+          />
+        ) : (
+          <ActionIcon
+            variant="subtle"
+            color="red"
+            size="md"
+            onClick={onRemove}
+            aria-label={`Remove ${lineItem.name}`}
+          >
+            <IconTrash size={16} />
+          </ActionIcon>
+        )}
       </Table.Td>
     </Table.Tr>
   );

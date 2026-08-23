@@ -39,7 +39,7 @@ import {
   updateService,
   type UpdateServicePayload,
 } from "../api/update-service";
-import type { Service } from "../types";
+import type { Service } from "@/api/services";
 
 type ServiceFormProps = {
   editingService: Service | null;
@@ -106,6 +106,12 @@ export function ServiceForm({
     // A new item code may have just been created as a side effect of
     // sending item_code_name on create.
     queryClient.invalidateQueries({ queryKey: ["item-codes"] });
+    // Creating/editing a service changes what the transaction Fee
+    // Catalog should offer — keep it from serving a stale entry for up
+    // to its own stale window.
+    queryClient.invalidateQueries({
+      queryKey: ["transactions", "fee-catalog"],
+    });
     notifySuccess(`"${service.name}" was ${verb}.`);
   };
 
