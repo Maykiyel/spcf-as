@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSetState } from "@/hooks/use-set-state";
 import { initiateTransaction } from "../api/initiate-transaction";
 import { addTransactionItem } from "../api/add-transaction-item";
@@ -207,7 +207,7 @@ export function useLineItemSync() {
     return promise;
   };
 
-  const addFeeItem = (feeItem: FeeCatalogItem) => {
+  const addFeeItemImpl = (feeItem: FeeCatalogItem) => {
     // Optimistic: bump the receipt immediately, before the network call
     // resolves, so the UI doesn't lag a click behind the server.
     const optimisticId = `optimistic-${feeItem.id}`;
@@ -232,6 +232,20 @@ export function useLineItemSync() {
       void runFlushAddFeeItem(feeItem);
     }, DEBOUNCE_MS);
   };
+
+  // addFeeItem is called from the fee-catalog side of the UI, which lives
+  // in a separate context from the rest of this hook's state (see
+  // transaction-builder-context.tsx) — that split only pays off if
+  // addFeeItem's identity never changes, otherwise the catalog context
+  // would re-render on every receipt-side change anyway. addFeeItemImpl
+  // closes over the current render's runFlushAddFeeItem/etc. and is
+  // re-assigned to the ref every render, so this indirection is always
+  // calling fresh internals despite the wrapper itself never changing.
+  const addFeeItemImplRef = useRef(addFeeItemImpl);
+  addFeeItemImplRef.current = addFeeItemImpl;
+  const addFeeItem = useCallback((feeItem: FeeCatalogItem) => {
+    addFeeItemImplRef.current(feeItem);
+  }, []);
 
   // Per-line-item debounce state for quantity edits, keyed by lineItemId.
   const quantityTimeoutsRef = useRef<

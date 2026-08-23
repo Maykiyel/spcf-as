@@ -8,11 +8,11 @@ import {
   Group,
 } from "@mantine/core";
 import { IconListSearch, IconSearch } from "@tabler/icons-react";
-import { useTransactionBuilder } from "./use-transaction-builder";
+import { useCatalogBuilder } from "./use-catalog-builder";
 import { FeeCatalogItemCard } from "./fee-catalog-item-card";
 
 export function FeeCatalogPanel() {
-  const { state, actions, meta } = useTransactionBuilder();
+  const { state, actions, meta } = useCatalogBuilder();
 
   return (
     <Stack gap="md" h="100%" style={{ minHeight: 0 }}>

@@ -13,12 +13,12 @@ import {
 } from "@mantine/core";
 import { IconCash, IconReceipt, IconUser } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
-import { useTransactionBuilder } from "./use-transaction-builder";
+import { useReceiptBuilder } from "./use-receipt-builder";
 import { ReceiptLineItemRow } from "./receipt-line-item-row";
 import { formatCurrency } from "../lib/currency";
 
 export function ReceiptPanel() {
-  const { state, actions, meta } = useTransactionBuilder();
+  const { state, actions, meta } = useReceiptBuilder();
 
   const handleFormSubmit = (event: FormEvent) => {
     event.preventDefault();
