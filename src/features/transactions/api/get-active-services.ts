@@ -13,12 +13,24 @@ type ServicesIndexData = {
 const ACTIVE_SERVICES_PAGE_SIZE = 100;
 
 export const getActiveServices = async (): Promise<Service[]> => {
-  const response = await apiClient.get<ServicesIndexData>("/services", {
-    params: {
-      per_page: ACTIVE_SERVICES_PAGE_SIZE,
-      sort: "name",
-      "filter[is_active]": 1,
-    },
-  });
-  return response.data.services;
+  const services: Service[] = [];
+  let page = 1;
+  let total = Infinity;
+
+  while (services.length < total) {
+    const response = await apiClient.get<ServicesIndexData>("/services", {
+      params: {
+        per_page: ACTIVE_SERVICES_PAGE_SIZE,
+        page,
+        sort: "name",
+        "filter[is_active]": 1,
+      },
+    });
+
+    services.push(...response.data.services);
+    total = response.data.pagination.total;
+    page += 1;
+  }
+
+  return services;
 };
