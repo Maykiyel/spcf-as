@@ -11,13 +11,16 @@ export type FeeCatalogItem = {
   itemCode: string;
 };
 
-// `id` is the backend TransactionItem id once the line has round-tripped
-// through `POST /transactions/:id/items` (as a string, since it's used as
-// a React list key and DataTable-style ids elsewhere in the app are
-// strings). Freshly-added-but-not-yet-confirmed-by-the-server lines don't
-// exist as a separate "local-only" state — `addFeeItem` awaits the API
-// call before a line ever enters `lineItems`, so every entry here always
-// has a real backend id.
+// `id` is a string (used as a React list key, matching this app's
+// DataTable-style string ids elsewhere) — either the backend
+// TransactionItem id once a line has round-tripped through the server
+// and been reconciled by `upsertLineItemFromDTO`, or, before that, a
+// client-only `optimistic-${feeItemId}` id assigned immediately on add
+// (see `addOrIncrementLineItem`, `isPendingLineItem` in
+// `lib/receipt.ts`). That optimistic id is either replaced with the real
+// backend id once the add confirms, or the whole optimistic bump is
+// undone by `revertOptimisticIncrement` if the add fails — a line never
+// only ever appears after server confirmation.
 export type ReceiptLineItem = {
   id: string;
   feeItemId: number;
