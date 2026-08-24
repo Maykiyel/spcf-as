@@ -8,7 +8,7 @@ import {
   Title,
 } from "@mantine/core";
 import { IconFilter } from "@tabler/icons-react";
-import { useTransactionBuilder } from "./use-transaction-builder";
+import { useCatalogBuilder } from "./use-catalog-builder";
 import {
   PRICE_RANGE_LABELS,
   PRICE_RANGE_VALUES,
@@ -19,7 +19,7 @@ import {
 } from "../types";
 
 export function FiltersPanel() {
-  const { state, actions, meta } = useTransactionBuilder();
+  const { state, actions, meta } = useCatalogBuilder();
 
   const itemCodes = Object.keys(meta.itemCodeCounts).sort();
 

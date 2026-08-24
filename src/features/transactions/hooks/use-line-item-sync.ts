@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSetState } from "@/hooks/use-set-state";
 import { initiateTransaction } from "../api/initiate-transaction";
 import { addTransactionItem } from "../api/add-transaction-item";
@@ -207,7 +207,7 @@ export function useLineItemSync() {
     return promise;
   };
 
-  const addFeeItem = (feeItem: FeeCatalogItem) => {
+  const addFeeItemImpl = (feeItem: FeeCatalogItem) => {
     // Optimistic: bump the receipt immediately, before the network call
     // resolves, so the UI doesn't lag a click behind the server.
     const optimisticId = `optimistic-${feeItem.id}`;
@@ -321,7 +321,7 @@ export function useLineItemSync() {
     }, DEBOUNCE_MS);
   };
 
-  const setLineItemQuantity = (lineItemId: string, quantity: number) => {
+  const setLineItemQuantityImpl = (lineItemId: string, quantity: number) => {
     const clamped = Math.max(1, quantity);
 
     const existingLineItem = lineItems.find((item) => item.id === lineItemId);
@@ -374,7 +374,7 @@ export function useLineItemSync() {
     }
   };
 
-  const removeLineItem = (lineItemId: string) => {
+  const removeLineItemImpl = (lineItemId: string) => {
     const targetLineItem = lineItems.find((item) => item.id === lineItemId);
 
     // Locked lines (no real id yet, or a repeat-add still settling) queue
@@ -408,7 +408,7 @@ export function useLineItemSync() {
   // Sync, no network call — used after a successful confirm, where
   // there's nothing in flight left to drain (Confirm is gated on
   // isSyncing) and nothing server-side to cancel.
-  const reset = () => {
+  const resetImpl = () => {
     Object.values(quantityTimeoutsRef.current).forEach(clearTimeout);
     quantityTimeoutsRef.current = {};
     latestRequestedQuantityRef.current = {};
@@ -434,7 +434,7 @@ export function useLineItemSync() {
   // closure variable can lag) and drains every in-flight add first, so a
   // late response can't resurrect an item after the cashier already
   // cancelled.
-  const cancel = async (): Promise<void> => {
+  const cancelImpl = async (): Promise<void> => {
     let effectiveTransactionId = transactionId;
 
     if (!effectiveTransactionId && initiatingRef.current) {
@@ -471,8 +471,51 @@ export function useLineItemSync() {
     if (effectiveTransactionId) {
       await cancelTransaction(effectiveTransactionId);
     }
-    reset();
+    resetImpl();
   };
+
+  // Latest-ref pattern: keeps these five callbacks permanently stable
+  // (never change identity) while always running the current render's
+  // logic. Needed for the CatalogBuilder/ReceiptBuilder context split in
+  // transaction-builder-context.tsx to actually reduce re-renders.
+  // Refs update in an effect, not during render, since mutating a ref in
+  // render breaks React's rules and disables compiler optimization.
+  const addFeeItemImplRef = useRef(addFeeItemImpl);
+  const setLineItemQuantityImplRef = useRef(setLineItemQuantityImpl);
+  const removeLineItemImplRef = useRef(removeLineItemImpl);
+  const cancelImplRef = useRef(cancelImpl);
+  const resetImplRef = useRef(resetImpl);
+
+  useLayoutEffect(() => {
+    addFeeItemImplRef.current = addFeeItemImpl;
+    setLineItemQuantityImplRef.current = setLineItemQuantityImpl;
+    removeLineItemImplRef.current = removeLineItemImpl;
+    cancelImplRef.current = cancelImpl;
+    resetImplRef.current = resetImpl;
+  });
+
+  const addFeeItem = useCallback((feeItem: FeeCatalogItem) => {
+    addFeeItemImplRef.current(feeItem);
+  }, []);
+
+  const setLineItemQuantity = useCallback(
+    (lineItemId: string, quantity: number) => {
+      setLineItemQuantityImplRef.current(lineItemId, quantity);
+    },
+    [],
+  );
+
+  const removeLineItem = useCallback((lineItemId: string) => {
+    removeLineItemImplRef.current(lineItemId);
+  }, []);
+
+  const cancel = useCallback((): Promise<void> => {
+    return cancelImplRef.current();
+  }, []);
+
+  const reset = useCallback(() => {
+    resetImplRef.current();
+  }, []);
 
   const isSyncing =
     isInitiating ||

@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { renderWithQueryClient } from "@/test/render";
 import { TransactionBuilderProvider } from "./transaction-builder-context";
-import { useTransactionBuilder } from "./use-transaction-builder";
+import { useCatalogBuilder } from "./use-catalog-builder";
+import { useReceiptBuilder } from "./use-receipt-builder";
 import { initiateTransaction } from "../api/initiate-transaction";
 import { addTransactionItem } from "../api/add-transaction-item";
 import { saveTransaction } from "../api/save-transaction";
@@ -55,11 +56,16 @@ const fakeCompletedTransaction: TransactionDTO = {
 // confirm/cancel — the seam under test is the context's public interface,
 // not the surrounding page UI.
 function Harness() {
-  const { state, actions, meta } = useTransactionBuilder();
+  // addFeeItem is a catalog action (it's how FeeCatalogPanel adds to the
+  // receipt); everything else under test here is receipt-side.
+  const { actions: catalogActions } = useCatalogBuilder();
+  const { state, actions, meta } = useReceiptBuilder();
 
   return (
     <div>
-      <button onClick={() => actions.addFeeItem(parkingFee)}>add</button>
+      <button onClick={() => catalogActions.addFeeItem(parkingFee)}>
+        add
+      </button>
       <button onClick={() => actions.setPayerName("Juan Dela Cruz")}>
         set-payer
       </button>
