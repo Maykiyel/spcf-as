@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { notifySuccess, notifyMutationError } from "@/lib/notifications/notifications";
 import { getFeeCatalog } from "../api/get-fee-catalog";
@@ -75,15 +75,21 @@ export function TransactionBuilderProvider({
     );
   };
 
+  const lineItemSyncCancel = lineItemSync.cancel;
+  const lineItemSyncReset = lineItemSync.reset;
+
   // Not gated on isSyncing (unlike Confirm) — Cancel should feel instant;
-  // useLineItemSync.cancel() resolves internally instead (drains
-  // in-flight adds, resolves the effective transaction id, calls the
-  // cancel API, resets its own state). This wrapper only owns the
-  // receipt-level fields the hook doesn't know about.
-  const cancelReceipt = async () => {
+  // useLineItemSync.cancel() resolves internally (drains in-flight
+  // adds, resolves the transaction id, calls the cancel API, resets its
+  // own state). This wrapper only owns the receipt-level fields.
+  //
+  // Uses the destructured lineItemSyncCancel, not lineItemSync.cancel()
+  // directly — oxlint's exhaustive-deps flags method calls on an object
+  // dependency as needing the whole object, which would be unstable.
+  const cancelReceipt = useCallback(async () => {
     setIsCancelling(true);
     try {
-      await lineItemSync.cancel();
+      await lineItemSyncCancel();
       setPayerName(INITIAL_PAYER_NAME);
       setAmountPaid(INITIAL_AMOUNT_PAID);
     } catch (error) {
@@ -94,9 +100,9 @@ export function TransactionBuilderProvider({
     } finally {
       setIsCancelling(false);
     }
-  };
+  }, [lineItemSyncCancel]);
 
-  const confirmTransaction = async () => {
+  const confirmTransaction = useCallback(async () => {
     // canConfirm already requires !isSyncing, so this is just type
     // narrowing, not a real-world path.
     if (!lineItemSync.transactionId) return;
@@ -112,7 +118,7 @@ export function TransactionBuilderProvider({
           ? `Transaction completed — Receipt #${saved.series_number}.`
           : "Transaction completed successfully.",
       );
-      lineItemSync.reset();
+      lineItemSyncReset();
       setPayerName(INITIAL_PAYER_NAME);
       setAmountPaid(INITIAL_AMOUNT_PAID);
     } catch (error) {
@@ -123,7 +129,7 @@ export function TransactionBuilderProvider({
     } finally {
       setIsConfirming(false);
     }
-  };
+  }, [lineItemSync.transactionId, payerName, amountPaid, lineItemSyncReset]);
 
   const filteredCatalog = useMemo(
     () =>
@@ -154,29 +160,14 @@ export function TransactionBuilderProvider({
       lineItems: lineItemSync.lineItems,
       amountPaid,
     }) && !lineItemSync.isSyncing;
-  const missingRequirements = [
-    ...getMissingRequirements({
-      payerName,
-      lineItems: lineItemSync.lineItems,
-      amountPaid,
-    }),
-    ...(lineItemSync.isSyncing
-      ? ["Still syncing — please wait a moment"]
-      : []),
-  ];
 
-  // Memoized on catalog/filter fields only, so typing in the payer-name
-  // or amount fields (receipt side) never changes this reference — it's
-  // what actually stops FiltersPanel/FeeCatalogPanel from re-rendering on
-  // receipt-only changes. addFeeItem is safe to include here despite
-  // coming from lineItemSync because it has a permanently stable identity
-  // (see use-line-item-sync.ts).
+  // Memoized on catalog/filter state only, so receipt-side changes don't
+  // re-render FiltersPanel/FeeCatalogPanel. addFeeItem is stable (see
+  // use-line-item-sync.ts) so it's safe to include.
   //
-  // toggleItemCode is deliberately left out of the deps below: it's
-  // recreated every render but only ever closes over setSelectedItemCodes
-  // (React-stable) and its own argument, so every render's copy behaves
-  // identically — including it would just force this memo to recompute
-  // every render for no behavioral difference.
+  // toggleItemCode is left out of deps: it only closes over the stable
+  // setSelectedItemCodes, so every render's copy is behaviorally
+  // identical — including it would just force needless recomputes.
   const catalogValue: CatalogBuilderValue = useMemo(
     () => ({
       state: { search, selectedItemCodes, priceRange, sortBy },
@@ -207,18 +198,10 @@ export function TransactionBuilderProvider({
     ],
   );
 
-  // Memoized on receipt fields only, so typing in the fee-catalog search
-  // box or toggling filters never changes this reference — that's what
-  // stops ReceiptPanel from re-rendering on catalog-only changes.
-  //
-  // cancelReceipt/confirmTransaction are deliberately left out of the
-  // deps below: both are recreated every render, but every reactive value
-  // either closes over (payerName, amountPaid, lineItemSync.transactionId)
-  // is already listed, and the rest (lineItemSync.cancel/.reset,
-  // notify*, saveTransaction) either only touch refs/stable setters or
-  // are module-level imports — so whenever this memo actually needs to
-  // recompute, it already does, and including these two would just make
-  // it recompute on every render instead.
+  // Memoized on receipt state only, so catalog-side changes don't
+  // re-render ReceiptPanel. missingRequirements is computed inline
+  // (not listed as a dep) since a fresh array every render would defeat
+  // the memo regardless of its content.
   const receiptValue: ReceiptBuilderValue = useMemo(
     () => ({
       state: {
@@ -239,7 +222,16 @@ export function TransactionBuilderProvider({
         total,
         change,
         canConfirm,
-        missingRequirements,
+        missingRequirements: [
+          ...getMissingRequirements({
+            payerName,
+            lineItems: lineItemSync.lineItems,
+            amountPaid,
+          }),
+          ...(lineItemSync.isSyncing
+            ? ["Still syncing — please wait a moment"]
+            : []),
+        ],
         isConfirming,
         isCancelling,
         isSyncing: lineItemSync.isSyncing,
@@ -254,10 +246,11 @@ export function TransactionBuilderProvider({
       lineItemSync.lineItems,
       lineItemSync.setLineItemQuantity,
       lineItemSync.removeLineItem,
+      cancelReceipt,
+      confirmTransaction,
       total,
       change,
       canConfirm,
-      missingRequirements,
       isConfirming,
       isCancelling,
       lineItemSync.isSyncing,
