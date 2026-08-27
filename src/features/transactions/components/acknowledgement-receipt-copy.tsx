@@ -1,7 +1,7 @@
 import { Divider, Group, Image, Stack, Text } from "@mantine/core";
 import { schoolLogo, SCHOOL_ADDRESS, SCHOOL_NAME } from "../lib/school-info";
 import { formatTransactionDate } from "../lib/transaction-date";
-import { ReceiptItemsTable } from "./receipt-items-table";
+import { TransactionItemsTable } from "./transaction-items-table";
 import type { TransactionDTO } from "../types";
 
 type AcknowledgementReceiptCopyProps = {
@@ -56,7 +56,7 @@ export function AcknowledgementReceiptCopy({
         </Text>
       </Group>
 
-      <ReceiptItemsTable
+      <TransactionItemsTable
         items={transaction.items}
         total={transaction.total ?? 0}
         amountPaid={transaction.amount_paid}

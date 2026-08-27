@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { ActionIcon, Loader, NumberInput, Table, Text } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 import { formatCurrency } from "../lib/currency";
-import { calculateLineSubtotal } from "../lib/receipt";
-import type { ReceiptLineItem } from "../types";
+import { calculateLineSubtotal } from "../lib/transaction-draft";
+import type { DraftLineItem } from "../types";
 
-type ReceiptLineItemRowProps = {
-  lineItem: ReceiptLineItem;
+type TransactionLineItemRowProps = {
+  lineItem: DraftLineItem;
   // True once the cashier has asked to remove this line but it was still
   // locked at the time (no real backend id yet, or a repeat-add for this
   // fee hasn't settled) — the removal is queued and will fire for real
@@ -19,12 +19,12 @@ type ReceiptLineItemRowProps = {
   onRemove: () => void;
 };
 
-export function ReceiptLineItemRow({
+export function TransactionLineItemRow({
   lineItem,
   pendingRemoval,
   onQuantityChange,
   onRemove,
-}: ReceiptLineItemRowProps) {
+}: TransactionLineItemRowProps) {
   const [draftQuantity, setDraftQuantity] = useState<number | string>(
     lineItem.quantity,
   );

@@ -12,8 +12,8 @@ import {
   setLineItemQuantity,
   canConfirmTransaction,
   getMissingRequirements,
-} from "./receipt";
-import type { FeeCatalogItem, ReceiptLineItem } from "../types";
+} from "./transaction-draft";
+import type { FeeCatalogItem, DraftLineItem } from "../types";
 
 const gradFee: FeeCatalogItem = {
   id: 1,
@@ -32,7 +32,7 @@ const parkingFee: FeeCatalogItem = {
 };
 
 describe("isLineItemLocked", () => {
-  const settledItem: ReceiptLineItem = {
+  const settledItem: DraftLineItem = {
     id: "501",
     feeItemId: 2,
     name: "Parking Sticker",
@@ -41,7 +41,7 @@ describe("isLineItemLocked", () => {
   };
 
   it("is locked while still on its optimistic client-only id, regardless of pendingFeeItemIds", () => {
-    const optimisticItem: ReceiptLineItem = { ...settledItem, id: "optimistic-2" };
+    const optimisticItem: DraftLineItem = { ...settledItem, id: "optimistic-2" };
     expect(isLineItemLocked(optimisticItem, new Set())).toBe(true);
   });
 
@@ -89,7 +89,7 @@ describe("isPendingLineItem", () => {
 });
 
 describe("toLineItem", () => {
-  it("builds a receipt line item with a quantity of 1 by default", () => {
+  it("builds a draft line item with a quantity of 1 by default", () => {
     expect(toLineItem(gradFee, "line-1")).toEqual({
       id: "line-1",
       feeItemId: 1,
@@ -106,7 +106,7 @@ describe("toLineItem", () => {
 
 describe("calculateLineSubtotal", () => {
   it("multiplies price by quantity", () => {
-    const lineItem: ReceiptLineItem = {
+    const lineItem: DraftLineItem = {
       id: "a",
       feeItemId: 1,
       name: "Graduation Fee - College",
@@ -118,12 +118,12 @@ describe("calculateLineSubtotal", () => {
 });
 
 describe("calculateTotal", () => {
-  it("is zero for an empty receipt", () => {
+  it("is zero for an empty draft", () => {
     expect(calculateTotal([])).toBe(0);
   });
 
   it("sums each line's subtotal, not just its unit price", () => {
-    const lineItems: ReceiptLineItem[] = [
+    const lineItems: DraftLineItem[] = [
       {
         id: "a",
         feeItemId: 1,
@@ -144,7 +144,7 @@ describe("calculateTotal", () => {
 });
 
 describe("addOrIncrementLineItem", () => {
-  it("appends a new line item with quantity 1 when the fee isn't in the receipt yet", () => {
+  it("appends a new line item with quantity 1 when the fee isn't in the draft yet", () => {
     const result = addOrIncrementLineItem([], gradFee, "line-1");
     expect(result).toEqual([
       {
@@ -158,7 +158,7 @@ describe("addOrIncrementLineItem", () => {
   });
 
   it("increments the existing line's quantity instead of duplicating it", () => {
-    const existing: ReceiptLineItem[] = [
+    const existing: DraftLineItem[] = [
       {
         id: "line-1",
         feeItemId: 1,
@@ -180,7 +180,7 @@ describe("addOrIncrementLineItem", () => {
   });
 
   it("only increments the matching line, leaving others untouched", () => {
-    const existing: ReceiptLineItem[] = [
+    const existing: DraftLineItem[] = [
       {
         id: "line-1",
         feeItemId: 1,
@@ -216,7 +216,7 @@ describe("addOrIncrementLineItem", () => {
   });
 
   it("does not mutate the input array", () => {
-    const existing: ReceiptLineItem[] = [
+    const existing: DraftLineItem[] = [
       {
         id: "line-1",
         feeItemId: 1,
@@ -233,7 +233,7 @@ describe("addOrIncrementLineItem", () => {
 
 describe("revertOptimisticIncrement", () => {
   it("removes the line entirely when it was down to quantity 1", () => {
-    const lineItems: ReceiptLineItem[] = [
+    const lineItems: DraftLineItem[] = [
       {
         id: "optimistic-1",
         feeItemId: 1,
@@ -246,7 +246,7 @@ describe("revertOptimisticIncrement", () => {
   });
 
   it("decrements quantity by 1 rather than removing when more than one remains", () => {
-    const lineItems: ReceiptLineItem[] = [
+    const lineItems: DraftLineItem[] = [
       {
         id: "501",
         feeItemId: 1,
@@ -266,8 +266,8 @@ describe("revertOptimisticIncrement", () => {
     ]);
   });
 
-  it("is a no-op when the fee isn't in the receipt", () => {
-    const lineItems: ReceiptLineItem[] = [
+  it("is a no-op when the fee isn't in the draft", () => {
+    const lineItems: DraftLineItem[] = [
       {
         id: "501",
         feeItemId: 1,
@@ -280,7 +280,7 @@ describe("revertOptimisticIncrement", () => {
   });
 
   it("only touches the matching line, leaving others untouched", () => {
-    const lineItems: ReceiptLineItem[] = [
+    const lineItems: DraftLineItem[] = [
       {
         id: "501",
         feeItemId: 1,
@@ -336,7 +336,7 @@ describe("revertOptimisticIncrement", () => {
     // quantity 5 instead of 5 separate requests — if that single request
     // fails, the whole batch needs to be rolled back in one call, not
     // five separate single-unit reverts.
-    const lineItems: ReceiptLineItem[] = [
+    const lineItems: DraftLineItem[] = [
       {
         id: "optimistic-1",
         feeItemId: 1,
@@ -349,7 +349,7 @@ describe("revertOptimisticIncrement", () => {
   });
 
   it("reverting a batch leaves a positive remainder when quantity exceeds the batch amount", () => {
-    const lineItems: ReceiptLineItem[] = [
+    const lineItems: DraftLineItem[] = [
       {
         id: "501",
         feeItemId: 1,
@@ -371,7 +371,7 @@ describe("revertOptimisticIncrement", () => {
 });
 
 describe("upsertLineItemFromDTO", () => {
-  it("appends a new line item keyed by the backend item id when the fee isn't in the receipt yet", () => {
+  it("appends a new line item keyed by the backend item id when the fee isn't in the draft yet", () => {
     const result = upsertLineItemFromDTO([], 1, {
       id: 501,
       name: "Graduation Fee - College",
@@ -390,7 +390,7 @@ describe("upsertLineItemFromDTO", () => {
   });
 
   it("replaces the matching line item's quantity rather than duplicating it", () => {
-    const existing: ReceiptLineItem[] = [
+    const existing: DraftLineItem[] = [
       {
         id: "501",
         feeItemId: 1,
@@ -417,7 +417,7 @@ describe("upsertLineItemFromDTO", () => {
   });
 
   it("only updates the matching line, leaving others untouched", () => {
-    const existing: ReceiptLineItem[] = [
+    const existing: DraftLineItem[] = [
       {
         id: "501",
         feeItemId: 1,
@@ -458,7 +458,7 @@ describe("upsertLineItemFromDTO", () => {
   });
 
   it("does not mutate the input array", () => {
-    const existing: ReceiptLineItem[] = [
+    const existing: DraftLineItem[] = [
       {
         id: "501",
         feeItemId: 1,
@@ -479,7 +479,7 @@ describe("upsertLineItemFromDTO", () => {
 });
 
 describe("setLineItemQuantity", () => {
-  const lineItems: ReceiptLineItem[] = [
+  const lineItems: DraftLineItem[] = [
     {
       id: "line-1",
       feeItemId: 1,
@@ -524,7 +524,7 @@ describe("setLineItemQuantity", () => {
 });
 
 describe("calculateChange", () => {
-  const lineItems: ReceiptLineItem[] = [
+  const lineItems: DraftLineItem[] = [
     { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 2 },
   ];
 
@@ -619,7 +619,7 @@ describe("canConfirmTransaction", () => {
 });
 
 describe("getMissingRequirements", () => {
-  it("returns both requirements when name is empty and receipt has no line items", () => {
+  it("returns both requirements when name is empty and draft has no line items", () => {
     expect(
       getMissingRequirements({
         payerName: "   ",
@@ -641,7 +641,7 @@ describe("getMissingRequirements", () => {
     ).toEqual(["Payer Name"]);
   });
 
-  it("returns missing line items when payer name exists but receipt is empty", () => {
+  it("returns missing line items when payer name exists but draft is empty", () => {
     expect(
       getMissingRequirements({
         payerName: "Juan Dela Cruz",

@@ -14,12 +14,12 @@ import {
 import { useNavigate } from "react-router";
 import { IconCash, IconReceipt, IconUser } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
-import { useReceiptBuilder } from "./use-receipt-builder";
-import { ReceiptLineItemRow } from "./receipt-line-item-row";
+import { useTransactionDraft } from "./use-transaction-draft";
+import { TransactionLineItemRow } from "./transaction-line-item-row";
 import { formatCurrency } from "../lib/currency";
 
-export function ReceiptPanel() {
-  const { state, actions, meta } = useReceiptBuilder();
+export function TransactionDraftPanel() {
+  const { state, actions, meta } = useTransactionDraft();
   const navigate = useNavigate();
 
   const handleFormSubmit = (event: FormEvent) => {
@@ -37,7 +37,7 @@ export function ReceiptPanel() {
         <Group justify="space-between" align="center">
           <Group gap="xs">
             <IconReceipt size={24} />
-            <Title order={4}>Receipt</Title>
+            <Title order={4}>Transaction</Title>
           </Group>
           {state.lineItems.length > 0 && (
             <Badge variant="light" color="dark" size="sm">
@@ -83,13 +83,13 @@ export function ReceiptPanel() {
                   <Table.Td colSpan={5}>
                     <Text size="sm" c="dimmed" ta="center" py="xl">
                       No fees added yet. Click items in the catalog to build
-                      this receipt.
+                      this transaction.
                     </Text>
                   </Table.Td>
                 </Table.Tr>
               ) : (
                 state.lineItems.map((lineItem) => (
-                  <ReceiptLineItemRow
+                  <TransactionLineItemRow
                     key={lineItem.id}
                     lineItem={lineItem}
                     pendingRemoval={meta.pendingRemovalFeeItemIds.has(
@@ -162,7 +162,7 @@ export function ReceiptPanel() {
                 meta.isConfirming
               }
               loading={meta.isCancelling}
-              onClick={actions.cancelReceipt}
+              onClick={actions.cancelDraft}
             >
               Cancel
             </DangerButton>

@@ -41,6 +41,10 @@ _Avoid_: category list, item code manager
 A dedicated location for API calls genuinely needed by more than one feature, sitting outside `src/features/*` — per the project's reference architecture (bulletproof-react), which explicitly allows this as an alternative to duplicating a call across features. Distinct from `components/ui`: this tier is allowed to know about domain concepts (it currently holds `item-codes.ts`, exporting the shared `ItemCode` type and `searchItemCodes`), whereas `components/ui` must stay domain-agnostic. Only promote something here once a second real feature actually needs it — don't pre-build shared modules for hypothetical future consumers (e.g. the item-code combobox UI itself stayed feature-local to Services for exactly this reason; only the type + fetcher moved here).
 _Avoid_: treating this as a place for anything reusable in general — it's specifically for cross-feature API calls, not a catch-all
 
+**Transaction draft**:
+The in-progress transaction a cashier assembles on the New Transaction page — line items, payer name, amount paid — before Confirm saves it. Distinct from the confirmed `TransactionDTO` the View Transaction and Print pages load.
+_Avoid_: receipt (it is neither an Acknowledgement Receipt nor a Series receipt), cart, basket
+
 **Acknowledgement Receipt**:
 The printed artifact produced for one completed Transaction, given to the payer. Distinct from **Series receipt** (below) — an Acknowledgement Receipt is the document a payer walks away with; a Series receipt is the pre-numbered block of physical sheets its number is drawn from.
 _Avoid_: receipt (ambiguous with Series receipt — always qualify)

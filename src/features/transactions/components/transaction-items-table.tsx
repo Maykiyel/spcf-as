@@ -2,7 +2,7 @@ import { Group, Stack, Table, Text } from "@mantine/core";
 import { formatCurrency } from "../lib/currency";
 import type { TransactionItemDTO } from "../types";
 
-type ReceiptItemsTableProps = {
+type TransactionItemsTableProps = {
   items: TransactionItemDTO[];
   total: number;
   amountPaid: number;
@@ -19,13 +19,13 @@ type ReceiptItemsTableProps = {
 // plus totals. Extracted specifically because duplicating it would risk
 // the two places' totals formatting silently drifting apart, the same
 // class of risk the print page's two copies are already guarded against.
-export function ReceiptItemsTable({
+export function TransactionItemsTable({
   items,
   total,
   amountPaid,
   changeAmount,
   compact = false,
-}: ReceiptItemsTableProps) {
+}: TransactionItemsTableProps) {
   const textSize = compact ? "xs" : "sm";
 
   return (

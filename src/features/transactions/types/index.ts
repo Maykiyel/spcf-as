@@ -17,11 +17,11 @@ export type FeeCatalogItem = {
 // and been reconciled by `upsertLineItemFromDTO`, or, before that, a
 // client-only `optimistic-${feeItemId}` id assigned immediately on add
 // (see `addOrIncrementLineItem`, `isPendingLineItem` in
-// `lib/receipt.ts`). That optimistic id is either replaced with the real
+// `lib/transaction-draft.ts`). That optimistic id is either replaced with the real
 // backend id once the add confirms, or the whole optimistic bump is
 // undone by `revertOptimisticIncrement` if the add fails — a line never
 // only ever appears after server confirmation.
-export type ReceiptLineItem = {
+export type DraftLineItem = {
   id: string;
   feeItemId: number;
   name: string;

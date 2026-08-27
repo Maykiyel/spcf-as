@@ -12,11 +12,11 @@ import {
   revertOptimisticIncrement,
   setLineItemQuantity as setLineItemQuantityInList,
   upsertLineItemFromDTO,
-} from "../lib/receipt";
+} from "../lib/transaction-draft";
 import type {
   FeeCatalogItem,
   PendingLineItemIntent,
-  ReceiptLineItem,
+  DraftLineItem,
 } from "../types";
 
 // Debounce window for coalescing rapid add clicks into fewer network
@@ -62,7 +62,7 @@ function getFeeAddState(
 // session's remove-on-a-locked-line bug.
 export function useLineItemSync() {
   const [transactionId, setTransactionId] = useState<number | null>(null);
-  const [lineItems, setLineItems] = useState<ReceiptLineItem[]>([]);
+  const [lineItems, setLineItems] = useState<DraftLineItem[]>([]);
 
   // Dedupes concurrent "add fee" clicks racing to initiate the
   // transaction: all callers within the same window await this one
@@ -208,7 +208,7 @@ export function useLineItemSync() {
   };
 
   const addFeeItemImpl = (feeItem: FeeCatalogItem) => {
-    // Optimistic: bump the receipt immediately, before the network call
+    // Optimistic: bump the draft immediately, before the network call
     // resolves, so the UI doesn't lag a click behind the server.
     const optimisticId = `optimistic-${feeItem.id}`;
     setLineItems((current) =>
@@ -476,7 +476,7 @@ export function useLineItemSync() {
 
   // Latest-ref pattern: keeps these five callbacks permanently stable
   // (never change identity) while always running the current render's
-  // logic. Needed for the CatalogBuilder/ReceiptBuilder context split in
+  // logic. Needed for the CatalogBuilder/TransactionDraft context split in
   // transaction-builder-context.tsx to actually reduce re-renders.
   // Refs update in an effect, not during render, since mutating a ref in
   // render breaks React's rules and disables compiler optimization.

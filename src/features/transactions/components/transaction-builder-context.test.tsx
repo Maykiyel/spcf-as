@@ -4,7 +4,7 @@ import { act, fireEvent, screen } from "@testing-library/react";
 import { renderWithQueryClient } from "@/test/render";
 import { TransactionBuilderProvider } from "./transaction-builder-context";
 import { useCatalogBuilder } from "./use-catalog-builder";
-import { useReceiptBuilder } from "./use-receipt-builder";
+import { useTransactionDraft } from "./use-transaction-draft";
 import { initiateTransaction } from "../api/initiate-transaction";
 import { addTransactionItem } from "../api/add-transaction-item";
 import { saveTransaction } from "../api/save-transaction";
@@ -13,7 +13,7 @@ import { notifySuccess, notifyMutationError } from "@/lib/notifications/notifica
 import type { FeeCatalogItem, TransactionDTO } from "../types";
 
 // This suite covers only what TransactionBuilderProvider adds on top of
-// useLineItemSync — confirmTransaction/cancelReceipt orchestration and the
+// useLineItemSync — confirmTransaction/cancelDraft orchestration and the
 // canConfirm/missingRequirements composition. Line-item add/remove/quantity
 // and locked-line behavior are the hook's own contract and are covered by
 // use-line-item-sync.test.tsx, not re-tested here.
@@ -61,9 +61,9 @@ function Harness({
   onConfirmSuccess?: (transaction: TransactionDTO) => void;
 }) {
   // addFeeItem is a catalog action (it's how FeeCatalogPanel adds to the
-  // receipt); everything else under test here is receipt-side.
+  // draft); everything else under test here is draft-side.
   const { actions: catalogActions } = useCatalogBuilder();
-  const { state, actions, meta } = useReceiptBuilder();
+  const { state, actions, meta } = useTransactionDraft();
 
   return (
     <div>
@@ -77,7 +77,7 @@ function Harness({
       <button onClick={() => void actions.confirmTransaction(onConfirmSuccess)}>
         confirm
       </button>
-      <button onClick={() => void actions.cancelReceipt()}>cancel</button>
+      <button onClick={() => void actions.cancelDraft()}>cancel</button>
       <span data-testid="payer-name">{state.payerName}</span>
       <span data-testid="can-confirm">{meta.canConfirm ? "yes" : "no"}</span>
       <span data-testid="missing">{meta.missingRequirements.join(", ")}</span>
@@ -153,7 +153,7 @@ describe("TransactionBuilderProvider — canConfirm / missingRequirements", () =
     expect(screen.getByTestId("missing").textContent).toBe("");
   });
 
-  it("blocks confirm while the receipt is still syncing, even if otherwise complete", async () => {
+  it("blocks confirm while the draft is still syncing, even if otherwise complete", async () => {
     renderHarness();
     fireEvent.click(screen.getByText("set-payer"));
     fireEvent.click(screen.getByText("set-amount"));
@@ -167,7 +167,7 @@ describe("TransactionBuilderProvider — canConfirm / missingRequirements", () =
 });
 
 describe("TransactionBuilderProvider — confirmTransaction", () => {
-  it("saves with the trimmed payer name and amount, then resets the receipt on success", async () => {
+  it("saves with the trimmed payer name and amount, then resets the draft on success", async () => {
     mockSaveTransaction.mockResolvedValue(fakeCompletedTransaction);
     await readyToConfirm();
 
@@ -188,7 +188,7 @@ describe("TransactionBuilderProvider — confirmTransaction", () => {
     expect(screen.getByTestId("line-count").textContent).toBe("0");
   });
 
-  it("notifies and leaves the receipt untouched if the save fails", async () => {
+  it("notifies and leaves the draft untouched if the save fails", async () => {
     mockSaveTransaction.mockRejectedValue(new Error("network error"));
     await readyToConfirm();
 
@@ -237,7 +237,7 @@ describe("TransactionBuilderProvider — confirmTransaction", () => {
   });
 });
 
-describe("TransactionBuilderProvider — cancelReceipt", () => {
+describe("TransactionBuilderProvider — cancelDraft", () => {
   it("cancels the transaction and resets payer name and amount paid", async () => {
     mockCancelTransaction.mockResolvedValue({
       ...fakeCompletedTransaction,

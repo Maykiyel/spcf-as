@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/ui/button";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
-import { ReceiptItemsTable } from "./receipt-items-table";
+import { TransactionItemsTable } from "./transaction-items-table";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
 
 export function ViewTransactionPage() {
@@ -42,7 +42,7 @@ export function ViewTransactionPage() {
               </Stack>
             </Group>
 
-            <ReceiptItemsTable
+            <TransactionItemsTable
               items={transaction.items}
               total={transaction.total ?? 0}
               amountPaid={transaction.amount_paid}

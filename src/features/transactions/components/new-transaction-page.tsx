@@ -1,6 +1,6 @@
 import { Grid, Paper } from "@mantine/core";
 import { TransactionBuilderProvider } from "./transaction-builder-context";
-import { ReceiptPanel } from "./receipt-panel";
+import { TransactionDraftPanel } from "./transaction-draft-panel";
 import { FeeCatalogPanel } from "./fee-catalog-panel";
 import { FiltersPanel } from "./filters-panel";
 
@@ -49,7 +49,7 @@ export function NewTransactionPage() {
               overflow: "hidden",
             }}
           >
-            <ReceiptPanel />
+            <TransactionDraftPanel />
           </Paper>
         </Grid.Col>
       </Grid>

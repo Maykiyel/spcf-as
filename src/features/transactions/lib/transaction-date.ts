@@ -4,7 +4,7 @@
 // this repo, so both have to render correctly.
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-const RECEIPT_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+const ACKNOWLEDGEMENT_RECEIPT_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
@@ -26,11 +26,11 @@ function parseTransactionDate(date: string): Date | null {
 }
 
 // Renders the date an Acknowledgement Receipt prints. Deliberately
-// date-only: the receipt records which day a payment was made, and a time
-// of day would be invented outright for the date-only case.
+// date-only: an Acknowledgement Receipt records which day a payment was
+// made, and a time of day would be invented outright for date-only input.
 export function formatTransactionDate(date: string | undefined): string {
   if (!date) return "—";
 
   const parsed = parseTransactionDate(date);
-  return parsed ? RECEIPT_DATE_FORMAT.format(parsed) : "—";
+  return parsed ? ACKNOWLEDGEMENT_RECEIPT_DATE_FORMAT.format(parsed) : "—";
 }
