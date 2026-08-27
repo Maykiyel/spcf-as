@@ -43,11 +43,11 @@ _Avoid_: treating this as a place for anything reusable in general — it's spec
 
 **Transaction draft**:
 The in-progress transaction a cashier assembles on the New Transaction page — line items, payer name, amount paid — before Confirm saves it. Distinct from the confirmed `TransactionDTO` the View Transaction and Print pages load.
-_Avoid_: receipt (it is neither an Acknowledgement Receipt nor a Series receipt), cart, basket
+_Avoid_: receipt, cart, basket — in code. On screen the builder panel deliberately still reads "Receipt", which is the cashiers’ word from the legacy system; this rule governs identifiers and types, not the UI copy.
 
 **Acknowledgement Receipt**:
 The printed artifact produced for one completed Transaction, given to the payer. Distinct from **Series receipt** (below) — an Acknowledgement Receipt is the document a payer walks away with; a Series receipt is the pre-numbered block of physical sheets its number is drawn from.
-_Avoid_: receipt (ambiguous with Series receipt — always qualify)
+_Avoid_: bare "receipt" in code (ambiguous with Series receipt — always qualify). User-facing copy may still say "Receipt" where that is what cashiers call it.
 
 **Series receipt**:
 A pre-numbered block of receipt sheets (`from`–`to`) assigned to one cashier for physical/manual receipt writing, tracked so numbering never collides across cashiers. Create-only from the frontend — no edit or delete. `from` is server-computed (next available number) and race-checked on submit; the frontend must treat it as derived, not user-entered. Its "Remaining Sheets" value is currently just the total sheet count at creation — not yet a live decrementing figure; it will start behaving as genuinely "remaining" once Transactions exists and consumes sheets. No restriction today on a cashier holding more than one series receipt.

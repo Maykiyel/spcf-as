@@ -17,6 +17,9 @@ The receipt stock is **8.5in x 4in** (215.9mm x 101.6mm).
 Confirmed on Windows with an Epson L120. Other drivers use the same idea but
 may word the menus differently; look for "custom" or "user defined" paper.
 
+This is **per machine, not per Windows user** — registering the size once
+covers every cashier who signs in on that workstation.
+
 1. Open **Settings → Bluetooth & devices → Printers & scanners**, and pick
    the receipt printer.
 2. Open **Printing preferences**.
@@ -45,7 +48,11 @@ The cashier has to pick it once:
    done. Don't use it to verify the setup.)
 3. Open the **Paper size** dropdown and choose the size registered in
    Part 1.
-4. Print.
+4. Turn **Headers and footers off**. Left on, the browser prints the page
+   URL and its own date into the receipt's margins.
+5. Leave **Margins** at **Default**. The print page sets its own `@page`
+   margin of `0.15in`; overriding it here fights that.
+6. Print.
 
 From then on the browser remembers the choice and auto-selects it on that
 machine. This is the whole reason Part 2 exists as a distinct step — it is a
@@ -56,20 +63,6 @@ worth naming out loud: if the paper size ever silently reverts to Letter (a
 driver reinstall, a new printer, a different browser profile), the receipts
 keep printing and only the paper is wrong. Whoever notices should redo
 Part 1, then Part 2.
-
-## Verify on the first machine you set up
-
-These weren't pinned down during development and are worth checking once,
-then folding back into this document:
-
-- Whether the browser's **"Headers and footers"** option needs turning off.
-  If it's on, the browser may print the page URL and date into the receipt's
-  margins.
-- Whether **Margins** and **Scale** need to be left at their defaults. The
-  print page sets its own `@page` margin of `0.15in`; a browser-level
-  "Fit to page" or custom margin could fight it.
-- Whether each cashier's Windows user profile needs Part 1 done separately,
-  or whether registering the size once covers every user on the machine.
 
 ## Background
 

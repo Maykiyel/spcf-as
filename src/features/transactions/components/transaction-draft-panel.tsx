@@ -37,7 +37,7 @@ export function TransactionDraftPanel() {
         <Group justify="space-between" align="center">
           <Group gap="xs">
             <IconReceipt size={24} />
-            <Title order={4}>Transaction</Title>
+            <Title order={4}>Receipt</Title>
           </Group>
           {state.lineItems.length > 0 && (
             <Badge variant="light" color="dark" size="sm">
@@ -83,7 +83,7 @@ export function TransactionDraftPanel() {
                   <Table.Td colSpan={5}>
                     <Text size="sm" c="dimmed" ta="center" py="xl">
                       No fees added yet. Click items in the catalog to build
-                      this transaction.
+                      this receipt.
                     </Text>
                   </Table.Td>
                 </Table.Tr>
