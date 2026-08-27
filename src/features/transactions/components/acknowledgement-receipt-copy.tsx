@@ -1,5 +1,6 @@
 import { Divider, Group, Image, Stack, Text } from "@mantine/core";
 import { schoolLogo, SCHOOL_ADDRESS, SCHOOL_NAME } from "../lib/school-info";
+import { formatTransactionDate } from "../lib/transaction-date";
 import { ReceiptItemsTable } from "./receipt-items-table";
 import type { TransactionDTO } from "../types";
 
@@ -51,16 +52,7 @@ export function AcknowledgementReceiptCopy({
           </Text>
         </Group>
         <Text size="xs">
-          Date:{" "}
-          {transaction.date
-            ? new Intl.DateTimeFormat("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              }).format(new Date(transaction.date))
-            : "—"}
+          Date: {formatTransactionDate(transaction.date)}
         </Text>
       </Group>
 

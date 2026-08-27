@@ -32,11 +32,13 @@ export const createRouter = () =>
             },
           ],
         },
-        // Deliberately outside AppLayoutRoute: no sidebar, header, or
-        // Notifications mount in this tree, so nothing but the receipt
-        // itself can ever end up in the printed output — enforced by
-        // route structure, not by print CSS discipline. Still under
-        // ProtectedRoute, so it stays auth-gated.
+        // Deliberately outside AppLayoutRoute: no sidebar or header in
+        // this tree, so the app chrome cannot reach the printed output.
+        // Note this does NOT cover toasts — <Notifications /> mounts in
+        // MantineProvider above AppRouter, so it is in this page's tree
+        // regardless of route structure and is excluded by the .no-print
+        // class instead (see src/index.css). Still under ProtectedRoute,
+        // so it stays auth-gated.
         {
           path: "/transactions/:controlId/print",
           lazy: () => import("./routes/app/transactions/print"),

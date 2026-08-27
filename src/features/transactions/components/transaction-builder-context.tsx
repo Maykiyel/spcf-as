@@ -122,13 +122,16 @@ export function TransactionBuilderProvider({
         });
         notifySuccess(
           saved.series_number
-            ? `Transaction completed — Receipt #${saved.series_number}.`
+            ? `Transaction completed — Series receipt #${saved.series_number}.`
             : "Transaction completed successfully.",
         );
+        // Before the resets, per spec: the caller navigates away on this
+        // callback, and handing it the saved transaction first keeps the
+        // hand-off independent of teardown ordering below.
+        onSuccess?.(saved);
         lineItemSyncReset();
         setPayerName(INITIAL_PAYER_NAME);
         setAmountPaid(INITIAL_AMOUNT_PAID);
-        onSuccess?.(saved);
       } catch (error) {
         notifyMutationError(
           error,
