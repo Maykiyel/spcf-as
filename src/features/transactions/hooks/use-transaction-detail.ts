@@ -15,13 +15,18 @@ function isFetchableControlId(controlId: number): boolean {
 //
 // On caching: this inherits the app-wide `staleTime: 1000 * 60`
 // (src/lib/react-query/react-query.ts), so a revisit within a minute is
-// served from cache without a refetch. That's correct here rather than
-// merely tolerable — these pages only ever show a *confirmed*
-// transaction, and cancellation is valid only while a transaction is
-// still pending (see cancel-transaction.ts), so the record can't change
-// underneath a cached read. Note this cache hit is also what makes the
-// Print page's StrictMode guard necessary: arriving from the View page,
-// `transaction` is truthy on the very first render.
+// served from cache without a refetch.
+//
+// A confirmed transaction is nearly, but not entirely, immutable: this
+// frontend can't change one (cancel is pending-only), but an admin can
+// still void it server-side, moving it to `returned` — see
+// BACKEND_NOTES.md. A bounded stale window is the right trade for that:
+// it self-heals within a minute, where `staleTime: Infinity` would pin a
+// voided transaction for the whole session.
+//
+// Note this cache hit is also what makes the Print page's StrictMode
+// guard necessary: arriving from the View page, `transaction` is truthy
+// on the very first render.
 export function useTransactionDetail(controlId: number) {
   const canFetch = isFetchableControlId(controlId);
 

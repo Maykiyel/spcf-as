@@ -2,13 +2,12 @@ import { describe, it, expect } from "vitest";
 import { formatTransactionDate } from "./transaction-date";
 
 describe("formatTransactionDate", () => {
-  // The backend's TransactionDTO.date is typed as a bare string and every
-  // fixture we have is date-only. `new Date("2026-08-24")` parses as UTC
-  // midnight, so rendering it in local time invents a clock reading — and
-  // in any negative-offset timezone it rolls back to the previous day. A
-  // printed Acknowledgement Receipt showing the wrong date is a hard
-  // failure for the accounting office's paper trail, so a date-only input
-  // must render as exactly that calendar date, everywhere.
+  // The backend sends `date` as a full timestamp (TransactionResource maps
+  // it to `created_at`), so the timestamp case below is the real one. The
+  // date-only cases guard the typed-as-string gap: `new Date("2026-08-24")`
+  // parses as UTC midnight, which renders as an invented clock reading
+  // locally and rolls back a day west of UTC — silently wrong on a printed
+  // receipt rather than loudly wrong.
   it("renders a date-only string as that exact calendar date", () => {
     expect(formatTransactionDate("2026-08-24")).toBe("Aug 24, 2026");
   });
@@ -22,6 +21,14 @@ describe("formatTransactionDate", () => {
     // machine's timezone, while the expectation itself stays a literal.
     const localNoon = new Date(2026, 7, 24, 12, 0, 0).toISOString();
     expect(formatTransactionDate(localNoon)).toBe("Aug 24, 2026");
+  });
+
+  it("renders the microsecond-precision format the backend actually sends", () => {
+    // Laravel serializes created_at with six fractional digits; Date
+    // accepts it, but pin it so a format change is caught here.
+    expect(formatTransactionDate("2026-08-24T06:30:00.000000Z")).toMatch(
+      /^Aug 2[34], 2026$/,
+    );
   });
 
   it("falls back to a dash when the date is missing", () => {

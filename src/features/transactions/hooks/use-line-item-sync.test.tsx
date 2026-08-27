@@ -392,7 +392,7 @@ describe("useLineItemSync — cancel", () => {
     amount_paid: 0,
     change_amount: 0,
     status: "cancelled",
-    date: "2026-08-21",
+    date: "2026-08-21T06:30:00.000000Z",
   };
 
   it("cancels a settled transaction and clears the draft", async () => {

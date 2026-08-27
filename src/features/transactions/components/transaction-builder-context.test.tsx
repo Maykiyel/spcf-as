@@ -49,7 +49,7 @@ const fakeCompletedTransaction: TransactionDTO = {
   amount_paid: 200,
   change_amount: 0,
   status: "completed",
-  date: "2026-08-21",
+  date: "2026-08-21T06:30:00.000000Z",
 };
 
 // Minimal harness exposing just enough of the context to drive and observe

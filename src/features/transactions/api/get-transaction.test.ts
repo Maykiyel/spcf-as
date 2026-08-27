@@ -19,7 +19,7 @@ const fakeTransaction: TransactionDTO = {
   amount_paid: 5100,
   change_amount: 0,
   status: "completed",
-  date: "2026-08-24",
+  date: "2026-08-24T06:30:00.000000Z",
 };
 
 describe("getTransaction", () => {

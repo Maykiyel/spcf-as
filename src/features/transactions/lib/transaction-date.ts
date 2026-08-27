@@ -1,7 +1,13 @@
 // Matches a date-only value ("2026-08-24") as distinct from a full
-// timestamp ("2026-08-24T14:30:00Z"). TransactionDTO.date is typed as a
-// bare string and the backend's exact shape isn't pinned down anywhere in
-// this repo, so both have to render correctly.
+// timestamp ("2026-08-24T06:30:00.000000Z").
+//
+// The backend sends the latter: TransactionResource maps `date` to the
+// model's `created_at` (see BACKEND_NOTES.md), so it is always a full
+// ISO-8601 timestamp and this branch does not fire in production. It is
+// kept because TransactionDTO.date is typed as a bare string, and a
+// date-only value parsed as an instant is silently wrong rather than
+// loudly wrong — `new Date("2026-08-24")` is UTC midnight, which renders
+// as a fabricated clock time locally and rolls back a day west of UTC.
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 const ACKNOWLEDGEMENT_RECEIPT_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {

@@ -17,7 +17,7 @@ const savedTransaction = {
   control_id: 62598,
   series_number: 42,
   customer_name: "Juan Dela Cruz",
-  date: "2026-08-24",
+  date: "2026-08-24T06:30:00.000000Z",
   total: 200,
   amount_paid: 500,
   change: 300,
