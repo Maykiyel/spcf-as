@@ -19,6 +19,7 @@ import type {
   FeeCatalogItem,
   PriceRangeValue,
   SortByValue,
+  TransactionDTO,
 } from "../types";
 import {
   CatalogBuilderContext,
@@ -102,34 +103,43 @@ export function TransactionBuilderProvider({
     }
   }, [lineItemSyncCancel]);
 
-  const confirmTransaction = useCallback(async () => {
-    // canConfirm already requires !isSyncing, so this is just type
-    // narrowing, not a real-world path.
-    if (!lineItemSync.transactionId) return;
+  // onSuccess is a call-time argument, not a provider prop: navigating
+  // after a save is a page-level decision (which page confirmed, where it
+  // should go), not something TransactionBuilderProvider itself needs to
+  // know — this keeps the provider free of any react-router import, so it
+  // stays testable via the existing router-free harness.
+  const confirmTransaction = useCallback(
+    async (onSuccess?: (transaction: TransactionDTO) => void) => {
+      // canConfirm already requires !isSyncing, so this is just type
+      // narrowing, not a real-world path.
+      if (!lineItemSync.transactionId) return;
 
-    setIsConfirming(true);
-    try {
-      const saved = await saveTransaction(lineItemSync.transactionId, {
-        customer_name: payerName.trim(),
-        amount_paid: amountPaid,
-      });
-      notifySuccess(
-        saved.series_number
-          ? `Transaction completed — Receipt #${saved.series_number}.`
-          : "Transaction completed successfully.",
-      );
-      lineItemSyncReset();
-      setPayerName(INITIAL_PAYER_NAME);
-      setAmountPaid(INITIAL_AMOUNT_PAID);
-    } catch (error) {
-      notifyMutationError(
-        error,
-        "Couldn't complete the transaction. Please try again.",
-      );
-    } finally {
-      setIsConfirming(false);
-    }
-  }, [lineItemSync.transactionId, payerName, amountPaid, lineItemSyncReset]);
+      setIsConfirming(true);
+      try {
+        const saved = await saveTransaction(lineItemSync.transactionId, {
+          customer_name: payerName.trim(),
+          amount_paid: amountPaid,
+        });
+        notifySuccess(
+          saved.series_number
+            ? `Transaction completed — Receipt #${saved.series_number}.`
+            : "Transaction completed successfully.",
+        );
+        lineItemSyncReset();
+        setPayerName(INITIAL_PAYER_NAME);
+        setAmountPaid(INITIAL_AMOUNT_PAID);
+        onSuccess?.(saved);
+      } catch (error) {
+        notifyMutationError(
+          error,
+          "Couldn't complete the transaction. Please try again.",
+        );
+      } finally {
+        setIsConfirming(false);
+      }
+    },
+    [lineItemSync.transactionId, payerName, amountPaid, lineItemSyncReset],
+  );
 
   const filteredCatalog = useMemo(
     () =>

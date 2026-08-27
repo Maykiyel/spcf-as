@@ -41,6 +41,10 @@ _Avoid_: category list, item code manager
 A dedicated location for API calls genuinely needed by more than one feature, sitting outside `src/features/*` — per the project's reference architecture (bulletproof-react), which explicitly allows this as an alternative to duplicating a call across features. Distinct from `components/ui`: this tier is allowed to know about domain concepts (it currently holds `item-codes.ts`, exporting the shared `ItemCode` type and `searchItemCodes`), whereas `components/ui` must stay domain-agnostic. Only promote something here once a second real feature actually needs it — don't pre-build shared modules for hypothetical future consumers (e.g. the item-code combobox UI itself stayed feature-local to Services for exactly this reason; only the type + fetcher moved here).
 _Avoid_: treating this as a place for anything reusable in general — it's specifically for cross-feature API calls, not a catch-all
 
+**Acknowledgement Receipt**:
+The printed artifact produced for one completed Transaction, given to the payer. Distinct from **Series receipt** (below) — an Acknowledgement Receipt is the document a payer walks away with; a Series receipt is the pre-numbered block of physical sheets its number is drawn from.
+_Avoid_: receipt (ambiguous with Series receipt — always qualify)
+
 **Series receipt**:
 A pre-numbered block of receipt sheets (`from`–`to`) assigned to one cashier for physical/manual receipt writing, tracked so numbering never collides across cashiers. Create-only from the frontend — no edit or delete. `from` is server-computed (next available number) and race-checked on submit; the frontend must treat it as derived, not user-entered. Its "Remaining Sheets" value is currently just the total sheet count at creation — not yet a live decrementing figure; it will start behaving as genuinely "remaining" once Transactions exists and consumes sheets. No restriction today on a cashier holding more than one series receipt.
 _Avoid_: receipt book (fine in conversation, but code/UI should say "series" or "series receipt")

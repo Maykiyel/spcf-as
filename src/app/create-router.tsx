@@ -16,11 +16,30 @@ export const createRouter = () =>
       children: [
         {
           Component: AppLayoutRoute,
-          children: leaves.map((leaf) => ({
-            path: leaf.path,
-            lazy: leaf.lazyImport,
-            handle: { roles: leaf.roles },
-          })),
+          children: [
+            ...leaves.map((leaf) => ({
+              path: leaf.path,
+              lazy: leaf.lazyImport,
+              handle: { roles: leaf.roles },
+            })),
+            // Not a nav leaf — no sidebar entry. Reached via navigation
+            // (post-confirm) or a direct link (per-receipt list row,
+            // bookmark). Still gets full AppShell chrome, so it's a
+            // sibling here rather than a pages.ts leaf.
+            {
+              path: "/transactions/:controlId",
+              lazy: () => import("./routes/app/transactions/view"),
+            },
+          ],
+        },
+        // Deliberately outside AppLayoutRoute: no sidebar, header, or
+        // Notifications mount in this tree, so nothing but the receipt
+        // itself can ever end up in the printed output — enforced by
+        // route structure, not by print CSS discipline. Still under
+        // ProtectedRoute, so it stays auth-gated.
+        {
+          path: "/transactions/:controlId/print",
+          lazy: () => import("./routes/app/transactions/print"),
         },
       ],
     },

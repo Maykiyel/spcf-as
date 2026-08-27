@@ -4,6 +4,7 @@ import type {
   PriceRangeValue,
   ReceiptLineItem,
   SortByValue,
+  TransactionDTO,
 } from "../types";
 
 // Split into two contexts along who actually reads what: FiltersPanel and
@@ -57,7 +58,9 @@ export type ReceiptBuilderActions = {
   setLineItemQuantity: (lineItemId: string, quantity: number) => void;
   removeLineItem: (lineItemId: string) => void;
   cancelReceipt: () => void;
-  confirmTransaction: () => void;
+  confirmTransaction: (
+    onSuccess?: (transaction: TransactionDTO) => void,
+  ) => void;
 };
 
 export type ReceiptBuilderMeta = {

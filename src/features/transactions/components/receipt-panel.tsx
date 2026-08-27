@@ -11,6 +11,7 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
+import { useNavigate } from "react-router";
 import { IconCash, IconReceipt, IconUser } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
 import { useReceiptBuilder } from "./use-receipt-builder";
@@ -19,11 +20,14 @@ import { formatCurrency } from "../lib/currency";
 
 export function ReceiptPanel() {
   const { state, actions, meta } = useReceiptBuilder();
+  const navigate = useNavigate();
 
   const handleFormSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (meta.canConfirm) {
-      actions.confirmTransaction();
+      actions.confirmTransaction((saved) => {
+        navigate(`/transactions/${saved.control_id}`);
+      });
     }
   };
 

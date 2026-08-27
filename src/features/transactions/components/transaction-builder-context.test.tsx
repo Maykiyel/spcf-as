@@ -55,7 +55,11 @@ const fakeCompletedTransaction: TransactionDTO = {
 // Minimal harness exposing just enough of the context to drive and observe
 // confirm/cancel — the seam under test is the context's public interface,
 // not the surrounding page UI.
-function Harness() {
+function Harness({
+  onConfirmSuccess,
+}: {
+  onConfirmSuccess?: (transaction: TransactionDTO) => void;
+}) {
   // addFeeItem is a catalog action (it's how FeeCatalogPanel adds to the
   // receipt); everything else under test here is receipt-side.
   const { actions: catalogActions } = useCatalogBuilder();
@@ -70,7 +74,9 @@ function Harness() {
         set-payer
       </button>
       <button onClick={() => actions.setAmountPaid(200)}>set-amount</button>
-      <button onClick={() => void actions.confirmTransaction()}>confirm</button>
+      <button onClick={() => void actions.confirmTransaction(onConfirmSuccess)}>
+        confirm
+      </button>
       <button onClick={() => void actions.cancelReceipt()}>cancel</button>
       <span data-testid="payer-name">{state.payerName}</span>
       <span data-testid="can-confirm">{meta.canConfirm ? "yes" : "no"}</span>
@@ -80,10 +86,12 @@ function Harness() {
   );
 }
 
-function renderHarness() {
+function renderHarness(
+  onConfirmSuccess?: (transaction: TransactionDTO) => void,
+) {
   return renderWithQueryClient(
     <TransactionBuilderProvider catalogOverride={[parkingFee]}>
-      <Harness />
+      <Harness onConfirmSuccess={onConfirmSuccess} />
     </TransactionBuilderProvider>,
   );
 }
@@ -96,8 +104,10 @@ async function advance(ms: number) {
 
 // Adds one settled line item and fills in payer/amount, so confirm/cancel
 // tests start from a state that's actually confirmable.
-async function readyToConfirm() {
-  renderHarness();
+async function readyToConfirm(
+  onConfirmSuccess?: (transaction: TransactionDTO) => void,
+) {
+  renderHarness(onConfirmSuccess);
   fireEvent.click(screen.getByText("add"));
   await advance(400); // add-debounce -> initiate -> addTransactionItem
   fireEvent.click(screen.getByText("set-payer"));
@@ -194,6 +204,36 @@ describe("TransactionBuilderProvider — confirmTransaction", () => {
     );
     expect(screen.getByTestId("payer-name").textContent).toBe("Juan Dela Cruz");
     expect(screen.getByTestId("line-count").textContent).toBe("1");
+  });
+
+  it("calls onSuccess with the saved transaction once the save resolves", async () => {
+    mockSaveTransaction.mockResolvedValue(fakeCompletedTransaction);
+    const onConfirmSuccess = vi.fn();
+    await readyToConfirm(onConfirmSuccess);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("confirm"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(onConfirmSuccess).toHaveBeenCalledExactlyOnceWith(
+      fakeCompletedTransaction,
+    );
+  });
+
+  it("does not call onSuccess if the save fails", async () => {
+    mockSaveTransaction.mockRejectedValue(new Error("network error"));
+    const onConfirmSuccess = vi.fn();
+    await readyToConfirm(onConfirmSuccess);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("confirm"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(onConfirmSuccess).not.toHaveBeenCalled();
   });
 });
 
