@@ -4,7 +4,7 @@ Reference for the API this frontend talks to. Describes **what the backend
 actually returns and enforces** — not why it was built that way.
 
 Source: `spcf-as-backend` (Laravel 12 + Sanctum + spatie/laravel-permission
-+ spatie/laravel-query-builder), read at commit `272f678` (2026-08-26).
++ spatie/laravel-query-builder), read at commit `1f26bd8` (2026-08-27).
 That repo belongs to the backend developer and is read-only from here; this
 file is a transcription of it. When it changes, re-read and update this.
 
@@ -111,6 +111,38 @@ receipt and carries a **unique constraint** across the table. When a series
 is used up its status becomes `exhausted` and the cashier's next `queued`
 series is promoted to `active` automatically.
 
+## Dashboard
+
+`GET /dashboard` (added in `1f26bd8`). A single invokable controller, not a
+resource. Inside the `auth:sanctum` + `throttle:api` group, with **no route
+middleware** — it gates itself with `Gate::allowIf($user->hasAnyRole(['cashier',
+'admin']))`, so both roles reach it and the failure is a 403 from the Gate
+rather than from `role:` middleware.
+
+Response payload (inside the usual envelope):
+
+```json
+{ "earnings_today": 0.0, "transactions_today": 0 }
+```
+
+Scoping: rows are filtered by `completed_at` falling inside today. A
+**cashier** additionally sees only their own (`cashier_id = user.id`); an
+**admin** sees every cashier's.
+
+Two things this frontend has to work around — both are backend behaviour,
+not bugs to fix from here:
+
+- **The two figures don't count the same rows.** `earnings_today` applies
+  the `completed()` scope (`status = completed`); `transactions_today` does
+  **not**. A voided transaction keeps its `completed_at`, so it still counts
+  toward `transactions_today` while contributing nothing to `earnings_today`.
+  The two numbers can therefore disagree, legitimately, and the count is the
+  looser of the two.
+- **"Today" is a UTC day.** `config/app.php` sets `'timezone' => 'UTC'`, so
+  `today()` is UTC midnight, not Manila midnight. In UTC+8 that window is
+  08:00 local to 08:00 the next day — meaning transactions taken before 08:00
+  Manila fall into the *previous* dashboard day.
+
 ## Response shapes
 
 ### `TransactionResource`
@@ -182,13 +214,40 @@ names this relation `account`), `from`, `to`, `remaining_sheets`,
 `filter[cashier_id]` on the index endpoint is accepted **only** for admins.
 For a cashier it is not in the allowed list, so it returns 400.
 
+## Date filters are strict `Y-m-d`
+
+Changed in `d022464`. Every `filter[from_date]` / `filter[to_date]` in the
+API was validated with Laravel's loose `date` rule, which accepted anything
+`Carbon` could parse. They are now `Rule::date()->format('Y-m-d')`, so the
+**only** accepted form is a date-only string like `2026-08-27`. Anything
+else — an ISO-8601 timestamp, `27/08/2026`, `Aug 27 2026` — is a **422**.
+
+Applies to:
+
+| Endpoint | `from_date` / `to_date` |
+|---|---|
+| `GET /transactions` | optional |
+| `GET /activity-logs` | optional |
+| `GET /reports/services-sold` | optional |
+| `GET /reports/services-sold/{service}` | **both required** |
+| `GET /reports/transactions` | optional |
+
+`to_date` additionally carries `after_or_equal:from_date` everywhere.
+
+**The trap:** responses are asymmetric with requests. `TransactionResource.date`
+comes back as a full ISO-8601 timestamp (`2026-08-24T06:30:00.000000Z`), but
+that value cannot be sent back as a filter — it has to be truncated to its
+date part first. A value read from a response is never directly reusable as
+a date filter.
+
 ## Index query parameters
 
 Powered by spatie/laravel-query-builder.
 
 - Filters: `series_number`, `customer` (partial match on `customer_name`),
-  `status`, `from_date`, `to_date`, `item_name` (partial match on item
-  `service_name`), and `cashier_id` (admin only).
+  `status`, `from_date`, `to_date` (both `Y-m-d` only — see above),
+  `item_name` (partial match on item `service_name`), and `cashier_id`
+  (admin only).
 - Sorts: `created_at`, `status`, `customer` (maps to `customer_name`),
   `series_number`. Default is `-created_at`.
 - Pagination: `per_page`; the response carries
@@ -202,6 +261,7 @@ parameter.
 ```
 POST   /login                                   (throttled)
 POST   /logout
+GET    /dashboard
 GET    /users/me
 GET    /users            POST /users            GET /users/{id}
        /suppliers        (full apiResource)
