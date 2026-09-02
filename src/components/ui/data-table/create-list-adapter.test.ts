@@ -36,17 +36,20 @@ describe("createListAdapter", () => {
         per_page: 10,
         page: 2,
         sort: "-name",
-        "filter[search]": undefined,
       },
     });
   });
 
-  it("forwards params.search as filter[search]", async () => {
+  it("forwards params.search as filter[search] when the endpoint supports search", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       data: { widgets: [], pagination: { total: 0 } },
     } as any);
 
-    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets");
+    const getWidgets = createListAdapter<{ id: string }>(
+      "/widgets",
+      "widgets",
+      { supportsSearch: true },
+    );
     await getWidgets({ ...baseParams, search: "gadget" });
 
     expect(apiClient.get).toHaveBeenCalledWith(
@@ -55,6 +58,34 @@ describe("createListAdapter", () => {
         params: expect.objectContaining({ "filter[search]": "gadget" }),
       }),
     );
+  });
+
+  it("never sends a search key for an endpoint that hasn't opted in", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { widgets: [], pagination: { total: 0 } },
+    } as any);
+
+    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets");
+    await getWidgets({ ...baseParams, search: "gadget" });
+
+    const [, config] = vi.mocked(apiClient.get).mock.calls[0];
+    expect(config!.params).not.toHaveProperty("filter[search]");
+  });
+
+  it("omits the search key when an opted-in endpoint has no search term", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { widgets: [], pagination: { total: 0 } },
+    } as any);
+
+    const getWidgets = createListAdapter<{ id: string }>(
+      "/widgets",
+      "widgets",
+      { supportsSearch: true },
+    );
+    await getWidgets(baseParams);
+
+    const [, config] = vi.mocked(apiClient.get).mock.calls[0];
+    expect(config!.params).not.toHaveProperty("filter[search]");
   });
 
   it("merges extra params on top of the standard ones", async () => {

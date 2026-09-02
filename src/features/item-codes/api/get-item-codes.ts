@@ -5,4 +5,5 @@ import type { ItemCode } from "@/api/item-codes";
 export const getItemCodes = createListAdapter<ItemCode>(
   "/item-codes",
   "item_codes",
+  { supportsSearch: true },
 );

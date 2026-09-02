@@ -32,7 +32,10 @@ export function ItemCodeTable({ onEdit }: ItemCodeTableProps) {
 
   return (
     <DataTable.Root title="Item Codes" state={tableState}>
-      <DataTable.Toolbar />
+      <DataTable.Toolbar>
+        <DataTable.PageSize />
+        <DataTable.Search />
+      </DataTable.Toolbar>
       <DataTable.Grid />
       <DataTable.Pagination />
     </DataTable.Root>

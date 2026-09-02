@@ -33,7 +33,10 @@ export function SeriesReceiptTable() {
 
   return (
     <DataTable.Root title="Series Receipts" state={tableState}>
-      <DataTable.Toolbar />
+      <DataTable.Toolbar>
+        <DataTable.PageSize />
+        <DataTable.Search />
+      </DataTable.Toolbar>
       <DataTable.Grid />
       <DataTable.Pagination />
     </DataTable.Root>
