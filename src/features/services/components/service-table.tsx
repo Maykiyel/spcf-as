@@ -1,3 +1,4 @@
+import { Divider } from "@mantine/core";
 import {
   DataTable,
   useServerTableState,
@@ -67,7 +68,12 @@ export function ServiceTable({ onEdit }: ServiceTableProps) {
 
   return (
     <DataTable.Root title="Services" state={tableState}>
-      <DataTable.Toolbar filters={<ServiceStatusFilter urlKey={URL_KEY} />} />
+      <DataTable.Toolbar>
+        <DataTable.PageSize />
+        <Divider orientation="vertical" visibleFrom="xs" />
+        <ServiceStatusFilter urlKey={URL_KEY} />
+        <DataTable.Search />
+      </DataTable.Toolbar>
       <DataTable.Grid />
       <DataTable.Pagination />
     </DataTable.Root>

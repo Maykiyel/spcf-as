@@ -80,8 +80,9 @@ consumer — tables and widgets alike — picks it up automatically.
 
 ## DataTable
 
-A compound component for tabular data: card wrapper, toolbar (entries-per-page +
-search), the table itself, and pagination. State (search query, sort, page) is
+A compound component for tabular data: card wrapper, toolbar (composed from
+an entries-per-page control, a search input, and whatever filters the feature
+supplies), the table itself, and pagination. State (search query, sort, page) is
 shared via context — no prop drilling between pieces. It also owns its own
 loading, error, and empty states, so consumers don't hand-roll any of that per
 table (see [Loading, error, and empty states](#loading-error-and-empty-states)
@@ -112,7 +113,10 @@ function SupplierTable({ data }: { data: Supplier[] }) {
 
   return (
     <DataTable.Root title="List of Supplier" state={tableState}>
-      <DataTable.Toolbar />
+      <DataTable.Toolbar>
+        <DataTable.PageSize />
+        <DataTable.Search />
+      </DataTable.Toolbar>
       <DataTable.Grid />
       <DataTable.Pagination />
     </DataTable.Root>
@@ -125,9 +129,46 @@ function SupplierTable({ data }: { data: Supplier[] }) {
 | Piece                  | Purpose                                                                                                  |
 | ---------------------- | -------------------------------------------------------------------------------------------------------- |
 | `DataTable.Root`       | Provides context, wraps children in `Card`. Takes `title` and `state`.                                   |
-| `DataTable.Toolbar`    | "Show N entries" select + search input. Omit for a table with no search/page-size controls.              |
+| `DataTable.Toolbar`    | A row of controls, composed from the pieces below. Omit entirely for a table with no controls at all.    |
+| `DataTable.PageSize`   | The "Show N entries" select. Omit for a table that doesn't let the user change the page size.            |
+| `DataTable.Search`     | The search input. Right-aligns itself. **Only compose this on an endpoint that accepts a search filter** — see below. |
 | `DataTable.Grid`       | The actual `<table>` — headers (with sort toggle if `sortable: true`), rows, loading/error/empty states. |
 | `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging.       |
+
+### Composing the toolbar
+
+`DataTable.Toolbar` requires children. There is no default set of pieces, and
+a childless toolbar renders nothing.
+
+That is deliberate, and it is about search. Only three endpoints in this API
+accept a `filter[search]` parameter — item codes, services and series
+receipts. Everywhere else an unknown filter key comes back as a 400 rather
+than being ignored, so a toolbar that rendered a search input by default would
+put a control on the page that fails the first moment a user types into it.
+Requiring the pieces to be named makes that a compile error instead.
+
+Filter controls are children too — a feature drops its own control in
+alongside the shared pieces, with no slot prop involved:
+
+```tsx
+<DataTable.Toolbar>
+  <DataTable.PageSize />
+  <Divider orientation="vertical" visibleFrom="xs" />
+  <ServiceStatusFilter urlKey={URL_KEY} />
+  <DataTable.Search />
+</DataTable.Toolbar>
+```
+
+**Don't add a boolean prop to vary this.** "Omit the piece you don't need" is
+how this component already varies; a `showSearch` flag would be a second,
+contradictory way to say the same thing, and the variation after that would
+want a third.
+
+The matching half of the rule lives on the list adapter: `createListAdapter`
+sends `filter[search]` only for endpoints that opt in with
+`{ supportsSearch: true }`. Composing `DataTable.Search` on a table whose
+adapter hasn't opted in gives you a box that does nothing, so the two go
+together.
 
 ### `ColumnDef<T>`
 
@@ -185,7 +226,8 @@ previous page's rows visible while the next request is in flight
 (`keepPreviousData`) instead of flashing to empty.
 
 Both hooks return the same shape (`DataTableContextValue<T>`), so
-`DataTable.Toolbar` / `.Grid` / `.Pagination` never change regardless of which
+`DataTable.Toolbar` / `.PageSize` / `.Search` / `.Grid` / `.Pagination` never
+change regardless of which
 one a given table uses. This is the `state-context-interface` pattern — the UI
 is dependency-injected with state, not coupled to one implementation. Swapping
 a table from one to the other later (e.g. a client-side list outgrows itself)

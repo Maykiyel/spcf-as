@@ -5,7 +5,9 @@ import {
 } from "@/components/ui/data-table";
 import type { Service } from "@/api/services";
 
-const listServices = createListAdapter<Service>("/services", "services");
+const listServices = createListAdapter<Service>("/services", "services", {
+  supportsSearch: true,
+});
 
 export const getServices = (
   params: ServerTableParams,

@@ -5,16 +5,28 @@ import type {
   ServerTableResponse,
 } from "./use-server-table-state";
 
+type ListAdapterOptions = {
+  /** Whether this endpoint accepts `filter[search]`. Only three do — item
+   * codes, services and series receipts. Everywhere else an unknown filter
+   * key is a 400, not a silently ignored parameter (see BACKEND_NOTES.md),
+   * so the key is never sent unless the endpoint says it takes one. */
+  supportsSearch?: boolean;
+};
+
 // Every server-backed DataTable list endpoint returns the same envelope:
 // `{ [responseKey]: T[], pagination: { total } }`, and is queried with the
-// same `per_page` / `page` / `sort` / `filter[search]` params. This factory
-// owns that shared shape so each feature's getX only has to name its own
-// endpoint and response key.
+// same `per_page` / `page` / `sort` params. This factory owns that shared
+// shape so each feature's getX only has to name its own endpoint and
+// response key.
 //
 // A caller with real per-endpoint variance (e.g. an extra filter no other
 // endpoint has) merges it in via `extra` on a call-by-call basis rather than
 // the factory growing a bespoke option for it — see getServices.
-export function createListAdapter<T>(url: string, responseKey: string) {
+export function createListAdapter<T>(
+  url: string,
+  responseKey: string,
+  { supportsSearch = false }: ListAdapterOptions = {},
+) {
   return async (
     params: ServerTableParams,
     extra?: Record<string, unknown>,
@@ -24,7 +36,9 @@ export function createListAdapter<T>(url: string, responseKey: string) {
         per_page: params.per_page,
         page: params.page,
         sort: encodeSortsForApi(params.sorts),
-        "filter[search]": params.search,
+        ...(supportsSearch && params.search
+          ? { "filter[search]": params.search }
+          : {}),
         ...extra,
       },
     });
