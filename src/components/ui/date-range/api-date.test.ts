@@ -41,6 +41,17 @@ describe("toApiDate", () => {
     expect(toApiDate("")).toBeNull();
   });
 
+  it("returns null for a date-shaped value that isn't a date", () => {
+    // Both match the date-only regex. Branding either would let a 422
+    // through the one type that exists to prevent them.
+    expect(toApiDate("2026-13-45")).toBeNull();
+    expect(toApiDate("2026-02-30")).toBeNull();
+  });
+
+  it("accepts a real leap day", () => {
+    expect(toApiDate("2028-02-29")).toBe("2028-02-29");
+  });
+
   it("returns null for an unparseable value rather than sending a 422", () => {
     expect(toApiDate("not-a-date")).toBeNull();
     expect(toApiDate(new Date("not-a-date"))).toBeNull();

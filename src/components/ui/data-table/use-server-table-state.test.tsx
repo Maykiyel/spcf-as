@@ -79,9 +79,10 @@ describe("useServerTableState filters", () => {
   });
 
   it("refetches on a filter change instead of serving the previous filter's rows", async () => {
-    // The failure this guards is silent: the workaround this replaced passed
-    // filters to the fetcher but left them out of the query key, so changing
-    // a filter re-rendered with the old filter's cached rows and no error.
+    // The failure this guards is silent. Passing filters to the fetcher
+    // without putting them in the query key re-renders with the old filter's
+    // cached rows and no error, which is what `createListAdapter`'s `extra`
+    // argument does unless the consumer adds them to its `queryKey` by hand.
     const { result } = renderHook(
       () =>
         useServerTableState({
@@ -294,5 +295,89 @@ describe("useServerTableState filter URL persistence", () => {
       expect(result.current.table.filters.status).toBe("completed"),
     );
     expect(result.current.search).toBe("");
+  });
+});
+
+describe("useServerTableState filter guards", () => {
+  let queryFn: ReturnType<typeof createFetcher>;
+
+  beforeEach(() => {
+    queryFn = createFetcher();
+  });
+
+  const options = (extra: Record<string, unknown>) =>
+    ({ queryKey: ["widgets"], queryFn, columns, ...extra }) as Parameters<
+      typeof useServerTableState<Row>
+    >[0];
+
+  // A date range needs both ends to agree. `DateRangeFilter` never emits a
+  // half-picked one, but a restored URL can still carry one, so the guard has
+  // to exist here as well as in the control.
+  const bothEndsOrNeither = (filters: TableFilters) =>
+    Boolean(filters.from_date) === Boolean(filters.to_date);
+
+  it("fires no request while the filters aren't usable", async () => {
+    const { result } = renderTable(
+      options({
+        urlKey: "tx",
+        initialFilters: { from_date: null, to_date: null },
+        filtersUsable: bothEndsOrNeither,
+      }),
+      ["/?tx_from_date=2026-08-01"],
+    );
+
+    await waitFor(() => expect(result.current.table.isLoading).toBe(false));
+    expect(queryFn).not.toHaveBeenCalled();
+    expect(result.current.table.rows).toEqual([]);
+  });
+
+  it("fires once the range is completed", async () => {
+    const { result } = renderTable(
+      options({
+        urlKey: "tx",
+        initialFilters: { from_date: null, to_date: null },
+        filtersUsable: bothEndsOrNeither,
+      }),
+      ["/?tx_from_date=2026-08-01"],
+    );
+
+    await waitFor(() => expect(result.current.table.isLoading).toBe(false));
+    expect(queryFn).not.toHaveBeenCalled();
+
+    act(() => result.current.table.setFilters({ to_date: "2026-08-31" }));
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalledTimes(1));
+    expect(queryFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: { from_date: "2026-08-01", to_date: "2026-08-31" },
+      }),
+    );
+  });
+
+  it("requests as normal when no predicate is given", async () => {
+    renderTable(
+      options({ urlKey: "tx", initialFilters: { from_date: null } }),
+      ["/?tx_from_date=2026-08-01"],
+    );
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalled());
+  });
+
+  it("ignores a write to a filter the table hasn't declared", async () => {
+    // Reading already ignores undeclared keys. Accepting one on write would
+    // put a param in the URL that nothing ever reads back.
+    const { result } = renderTable(
+      options({ urlKey: "tx", initialFilters: { status: null } }),
+    );
+
+    act(() =>
+      result.current.table.setFilters({ status: "completed", nonsense: "x" }),
+    );
+
+    await waitFor(() =>
+      expect(result.current.search).toContain("tx_status=completed"),
+    );
+    expect(result.current.search).not.toContain("nonsense");
+    expect(result.current.table.filters).toEqual({ status: "completed" });
   });
 });

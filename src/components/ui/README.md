@@ -188,16 +188,44 @@ const tableState = useServerTableState({
 merges a patch into them. Everything else follows from the declaration:
 
 - **The values are part of the query cache key.** This is the whole reason
-  the hook owns them. The workaround this replaced passed filter values to
-  the fetcher while leaving them out of the key, so changing a filter served
-  the previous filter's cached rows — with no error, which is the worst
-  available failure.
+  the hook owns them. The mechanism this replaces, `createListAdapter`'s
+  `extra` argument, hands the fetcher values it never puts in the key, so
+  every consumer has to remember to add them to its own `queryKey` by hand.
+  Services remembers. The next page to reach for `extra` might not, and
+  forgetting serves the previous filter's cached rows with no error at all,
+  which is the worst available failure.
 - **Changing a filter resets to page 1**, for the same reason changing
   search or sort does.
 - **They reach the wire as `filter[<key>]`**, which is what every filterable
   endpoint here calls them, so a feature's `getX` needs no mapping of its
   own. A `null` value is dropped from the request rather than sent empty —
   an unknown or empty filter key is a 400 here (see `BACKEND_NOTES.md`).
+- **Only declared keys move**, in both directions. A key absent from
+  `initialFilters` is ignored on read and dropped on write, so a hand-edited
+  URL can't inject one and a typo in a `setFilters` patch can't write a param
+  nothing will ever read back.
+
+### Filters that aren't usable yet
+
+Some filters only mean something complete. A date range with one end set is
+not a filter, and the API answers it with a 422 because `to_date` carries
+`after_or_equal:from_date`.
+
+`DateRangeFilter` never emits a half-picked range, so the control can't
+produce one. A restored URL still can, so the hook takes a guard too:
+
+```tsx
+useServerTableState({
+  ...,
+  initialFilters: { from_date: null, to_date: null },
+  filtersUsable: (f) => Boolean(f.from_date) === Boolean(f.to_date),
+});
+```
+
+While the predicate is false the query doesn't run, and the table shows its
+empty state rather than an error or a permanent spinner. Omit `filtersUsable`
+and the table always requests, which is right for filters whose values stand
+alone.
 
 Key the filters by the API's own filter name (`from_date`, not `dateFrom`)
 so that mapping stays a no-op. `TableFilters` values are `string | null` and
@@ -205,6 +233,11 @@ nothing else: they round-trip through the URL, which has only strings, so
 another type would need a per-filter decoder on the way back in. Converting
 to the shape the endpoint wants — a boolean as `0`/`1`, an id as a number —
 belongs in that feature's `getX` via the adapter's `extra` argument.
+
+**`ServiceStatusFilter`, in the "Composing the toolbar" example above,
+predates this and owns its own URL param.** It is the older way and it is on
+its way out; #59 kept the three existing tables out of scope. Copy the
+pattern below, not that one.
 
 Filter controls are toolbar children, wired by the page:
 
@@ -417,7 +450,7 @@ const [range, setRange] = useState(EMPTY_DATE_RANGE);
 | Export             | Purpose                                                                                     |
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | `DateRangeFilter`  | The control. Controlled — takes `value` / `onChange`, plus optional `label` and `placeholder`. |
-| `DateRangeValue`   | `{ from: ApiDate \| null; to: ApiDate \| null }`. Both ends or neither, never one.           |
+| `DateRangeValue`   | `{ from: ApiDate \| null; to: ApiDate \| null }`. Each end is either an `ApiDate` or absent. |
 | `EMPTY_DATE_RANGE` | The "no date filter" value. Use it as the initial value.                                     |
 | `toApiDate`        | Converts a `Date` or a response timestamp to `Y-m-d`. The only producer of `ApiDate`.        |
 | `nextDateRange`    | The pure emit rule the control uses. Exported for testing, not for call sites.               |

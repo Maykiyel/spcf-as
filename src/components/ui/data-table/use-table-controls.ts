@@ -23,6 +23,17 @@ export type TableControls = {
 
 type TableControlsAdapter = TableControls;
 
+// Both adapters drop keys the table didn't declare. Reading already ignores
+// them, so accepting one on write would put a param in the URL that nothing
+// ever reads back, or a value in the bag that never reaches the fetcher.
+const declaredOnly = (
+  patch: TableFilters,
+  initialFilters: TableFilters,
+): TableFilters =>
+  Object.fromEntries(
+    Object.entries(patch).filter(([key]) => key in initialFilters),
+  );
+
 // A filter's URL param is `<urlKey>_<filterKey>`, sharing a namespace with
 // the table's own `page`, `size`, `q` and `sort`. Filters are keyed by the
 // API's own filter names (`from_date`, `status`, `cashier_id`), none of
@@ -186,7 +197,9 @@ function useUrlAdapter(
   const setFilters = (patch: TableFilters) => {
     const updates: Record<string, string | null> = {};
 
-    for (const [key, value] of Object.entries(patch)) {
+    for (const [key, value] of Object.entries(
+      declaredOnly(patch, initialFilters),
+    )) {
       // A filter sitting at its declared default is absent from the URL
       // rather than written out. `?status=all` is noise in a shared link,
       // and it makes an unfiltered table look filtered.
@@ -248,7 +261,10 @@ function useLocalAdapter(
   const resetSort = () => setSorts([]);
 
   const setFilters = (patch: TableFilters) => {
-    setFiltersState((prev) => ({ ...prev, ...patch }));
+    setFiltersState((prev) => ({
+      ...prev,
+      ...declaredOnly(patch, initialFilters),
+    }));
     setPage(1);
   };
 

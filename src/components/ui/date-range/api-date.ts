@@ -9,6 +9,13 @@ export type ApiDate = string & { readonly __brand: "ApiDate" };
 
 // Matches a date-only value ("2026-08-24") as distinct from a full
 // timestamp ("2026-08-24T06:30:00.000000Z").
+//
+// `src/features/transactions/lib/transaction-date.ts` carries the same regex
+// and the same local-components rule for the same UTC+8 reason. The two are
+// deliberately not shared: this tier must not import from `features/*` (see
+// the README's dependency rule), and that one renders a date for a printed
+// receipt rather than formatting one for the wire. Change one, look at the
+// other.
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 // Leading date part of an ISO-8601 timestamp.
@@ -47,10 +54,10 @@ export function toApiDate(value: Date | string | null | undefined): ApiDate | nu
   if (value === null || value === undefined || value === "") return null;
 
   if (typeof value === "string") {
-    if (DATE_ONLY.test(value)) return value as ApiDate;
+    if (DATE_ONLY.test(value)) return brandIfReal(value);
 
     const isoDatePart = ISO_DATE_PART.exec(value);
-    if (isoDatePart) return isoDatePart[1] as ApiDate;
+    if (isoDatePart) return brandIfReal(isoDatePart[1]);
 
     // Not a shape the API ever sends. Parse it as a last resort rather than
     // guessing at its text, and fall through to the same local-components
@@ -62,6 +69,22 @@ export function toApiDate(value: Date | string | null | undefined): ApiDate | nu
 
   if (Number.isNaN(value.getTime())) return null;
   return fromLocalComponents(value);
+}
+
+// `2026-13-45` and `2026-02-30` both match the date-only shape without being
+// dates. Branding one would let a 422 through the single type that exists to
+// stop them, so the shape check is followed by an existence check: build the
+// calendar date and confirm it didn't roll over into another month.
+function brandIfReal(value: string): ApiDate | null {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  const isReal =
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day;
+
+  return isReal ? (value as ApiDate) : null;
 }
 
 function fromLocalComponents(date: Date): ApiDate {
