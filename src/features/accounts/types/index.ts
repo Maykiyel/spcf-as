@@ -8,11 +8,10 @@ import type { Role } from "@/features/auth/types";
  * signed-in user's own identity, and the two drift apart the moment either
  * side gains a field the other shouldn't have.
  *
- * **`is_active` is absent on purpose.** `GET /users` selects a fixed column
- * list that doesn't include it, and `UserResource` omits null values, so no
- * row from the directory endpoint carries an active status at all. See
- * `BACKEND_NOTES.md` — the column, and the activate/deactivate action, wait
- * on a backend change.
+ * `is_active` arrives as a real boolean: the directory endpoint selects the
+ * column and the model casts it, both as of backend `e355837`. Before that
+ * it was absent from every row here, which is why `BACKEND_NOTES.md` says
+ * more about this one field than the rest put together.
  */
 export type UserAccount = {
   id: number;
@@ -22,4 +21,5 @@ export type UserAccount = {
   user_name: string;
   email: string;
   role: Role;
+  is_active: boolean;
 };

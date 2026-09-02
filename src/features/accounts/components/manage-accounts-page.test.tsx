@@ -2,11 +2,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AxiosError } from "axios";
 import { MemoryRouter } from "react-router";
+import { Notifications } from "@mantine/notifications";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getUserAccounts } from "../api/get-user-accounts";
 import { createUserAccount } from "../api/create-user-account";
 import { deleteUserAccount } from "../api/delete-user-account";
+import { toggleUserAccountStatus } from "../api/toggle-user-account-status";
+import { useAuthStore } from "@/stores/auth-store";
+import type { AuthUser } from "@/features/auth/types";
 import { ManageAccountsPage } from "./manage-accounts-page";
 import type { UserAccount } from "../types";
 
@@ -32,6 +36,9 @@ const mockCreateUserAccount = vi.mocked(createUserAccount);
 vi.mock("../api/delete-user-account");
 const mockDeleteUserAccount = vi.mocked(deleteUserAccount);
 
+vi.mock("../api/toggle-user-account-status");
+const mockToggleStatus = vi.mocked(toggleUserAccountStatus);
+
 const DELETION_REFUSED =
   "User cannot be deleted because they have existing related records.";
 
@@ -54,6 +61,7 @@ const accounts: UserAccount[] = [
     user_name: "jaypee",
     email: "jaypee@spcf.edu.ph",
     role: "cashier",
+    is_active: true,
   },
   {
     id: 2,
@@ -63,14 +71,41 @@ const accounts: UserAccount[] = [
     user_name: "msantos",
     email: "maria@spcf.edu.ph",
     role: "admin",
+    is_active: true,
   },
 ];
 
+const deactivatedCashier: UserAccount = {
+  id: 4,
+  first_name: "Noli",
+  last_name: "Cruz",
+  full_name: "Noli Cruz",
+  user_name: "ncruz",
+  email: "noli@spcf.edu.ph",
+  role: "cashier",
+  is_active: false,
+};
+
+const signedInAdmin: AuthUser = {
+  id: 99,
+  first_name: "Mike",
+  last_name: "Bautista",
+  full_name: "Mike Bautista",
+  user_name: "mike",
+  email: "mike@spcf.edu.ph",
+  role: "admin",
+};
+
 function renderPage() {
   return renderWithQueryClient(
-    <MemoryRouter>
-      <ManageAccountsPage />
-    </MemoryRouter>,
+    <>
+      {/* Mounted the way the app mounts it, so a failure that surfaces
+          only as a toast is still visible to these tests. */}
+      <Notifications />
+      <MemoryRouter>
+        <ManageAccountsPage />
+      </MemoryRouter>
+    </>,
   );
 }
 
@@ -82,6 +117,7 @@ const newAccount: UserAccount = {
   user_name: "areyes",
   email: "ana@spcf.edu.ph",
   role: "admin",
+  is_active: true,
 };
 
 function validationError(errors: Record<string, string[]>): AxiosError {
@@ -130,6 +166,8 @@ beforeEach(() => {
   mockGetUserAccounts.mockResolvedValue(accounts);
   mockCreateUserAccount.mockResolvedValue(newAccount);
   mockDeleteUserAccount.mockResolvedValue(undefined);
+  mockToggleStatus.mockResolvedValue({ ...accounts[0], is_active: false });
+  useAuthStore.setState({ user: signedInAdmin, status: "authenticated" });
 });
 
 describe("ManageAccountsPage", () => {
@@ -145,6 +183,14 @@ describe("ManageAccountsPage", () => {
     expect(screen.getByText("msantos")).toBeInTheDocument();
     expect(screen.getByText("maria@spcf.edu.ph")).toBeInTheDocument();
     expect(screen.getByText("Admin")).toBeInTheDocument();
+  });
+
+  it("shows whether each account is active", async () => {
+    mockGetUserAccounts.mockResolvedValue([accounts[0], deactivatedCashier]);
+    renderPage();
+
+    expect(await screen.findByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("Inactive")).toBeInTheDocument();
   });
 
   it("narrows the list to matching accounts as the admin searches", async () => {
@@ -280,5 +326,93 @@ describe("ManageAccountsPage", () => {
 
     expect(await screen.findByText(DELETION_REFUSED)).toBeInTheDocument();
     expect(tableRows().getByText("Jaypee Pahayahay")).toBeInTheDocument();
+  });
+  it("warns about the series receipt before deactivating a cashier", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /^deactivate$/i })[0],
+    );
+    await screen.findByRole("button", { name: /deactivate account/i });
+
+    expect(screen.getByText(/series receipt/i)).toBeInTheDocument();
+    expect(screen.getByText(/suspended/i)).toBeInTheDocument();
+    expect(mockToggleStatus).not.toHaveBeenCalled();
+
+    mockGetUserAccounts.mockResolvedValue([
+      { ...accounts[0], is_active: false },
+      accounts[1],
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: /deactivate account/i }));
+
+    await waitFor(() => expect(mockToggleStatus).toHaveBeenCalledOnce());
+    expect(mockToggleStatus.mock.calls[0][0]).toEqual({
+      id: 1,
+      isActive: false,
+    });
+    expect(await tableRows().findByText("Inactive")).toBeInTheDocument();
+  });
+
+  it("changes nothing when the deactivate confirmation is cancelled", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /^deactivate$/i })[0],
+    );
+    await screen.findByRole("button", { name: /deactivate account/i });
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(mockToggleStatus).not.toHaveBeenCalled();
+  });
+
+  it("reactivates without asking first", async () => {
+    mockGetUserAccounts.mockResolvedValue([deactivatedCashier]);
+    mockToggleStatus.mockResolvedValue({
+      ...deactivatedCashier,
+      is_active: true,
+    });
+    renderPage();
+    await screen.findByText("Noli Cruz");
+
+    fireEvent.click(screen.getByRole("button", { name: /^activate$/i }));
+
+    await waitFor(() => expect(mockToggleStatus).toHaveBeenCalledOnce());
+    expect(mockToggleStatus.mock.calls[0][0]).toEqual({
+      id: 4,
+      isActive: true,
+    });
+  });
+
+  it("says so when a status change fails, rather than leaving the row looking changed", async () => {
+    mockGetUserAccounts.mockResolvedValue([deactivatedCashier]);
+    mockToggleStatus.mockRejectedValue(new Error("Network down"));
+    renderPage();
+    await screen.findByText("Noli Cruz");
+
+    fireEvent.click(screen.getByRole("button", { name: /^activate$/i }));
+
+    expect(
+      await screen.findByText("Couldn't change this account's status."),
+    ).toBeInTheDocument();
+    expect(tableRows().getByText("Inactive")).toBeInTheDocument();
+  });
+
+  it("offers no status or delete action on the signed-in admin's own row", async () => {
+    useAuthStore.setState({
+      user: { ...signedInAdmin, id: accounts[1].id },
+      status: "authenticated",
+    });
+    renderPage();
+    await screen.findByText("Maria Santos");
+
+    // One row still has its actions; the admin's own row has none.
+    expect(screen.getAllByRole("button", { name: /^delete$/i })).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getAllByRole("button", { name: /^deactivate$/i }),
+    ).toHaveLength(1);
   });
 });

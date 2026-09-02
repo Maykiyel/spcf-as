@@ -41,6 +41,15 @@ const columns: ColumnDef<UserAccount>[] = [
     ),
   },
   {
+    key: "is_active",
+    header: "Status",
+    render: (row) => (
+      <Badge color={row.is_active ? "success" : "danger"} variant="light">
+        {row.is_active ? "Active" : "Inactive"}
+      </Badge>
+    ),
+  },
+  {
     // Keyed on a column already declared above, not on `id`, so that the
     // client-side search doesn't quietly match user ids: it scans every
     // declared column's raw value, and nothing on screen shows an id.
