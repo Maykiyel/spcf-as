@@ -1,21 +1,29 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { MAX_SORT_COLUMNS, type SortEntry } from "./types";
+import { MAX_SORT_COLUMNS, type SortEntry, type TableFilters } from "./types";
 
 export type TableControls = {
   page: number;
   pageSize: number;
   searchQuery: string;
   sorts: SortEntry[];
+  filters: TableFilters;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSearchChange: (query: string) => void;
   onSort: (key: string) => void;
   resetSort: () => void;
+  /** Merges a patch into the current filters. A patch rather than a single
+   * key/value because a date range moves both of its ends at once, and two
+   * sequential single-key writes would mean two refetches for one user
+   * action. */
+  setFilters: (patch: TableFilters) => void;
 };
 
-type TableControlsAdapter = TableControls;
+// Filter state is held by `useTableControls` itself rather than by either
+// adapter, so both branches share one implementation.
+type TableControlsAdapter = Omit<TableControls, "filters" | "setFilters">;
 
 export function nextSorts(
   current: SortEntry[],
@@ -222,9 +230,21 @@ function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
 export function useTableControls(
   initialPageSize = 25,
   urlKey?: string,
+  initialFilters: TableFilters = {},
 ): TableControls {
   const urlAdapter = useUrlAdapter(initialPageSize, urlKey);
   const localAdapter = useLocalAdapter(initialPageSize);
+  const [filters, setFiltersState] = useState<TableFilters>(initialFilters);
 
-  return urlKey ? urlAdapter : localAdapter;
+  const adapter = urlKey ? urlAdapter : localAdapter;
+
+  const setFilters = (patch: TableFilters) => {
+    setFiltersState((prev) => ({ ...prev, ...patch }));
+    // Same reason changing search or sort resets the page: the row that was
+    // on page 7 of the old filter almost certainly isn't there under the new
+    // one, and a page past the end renders as empty rather than as an error.
+    adapter.onPageChange(1);
+  };
+
+  return { ...adapter, filters, setFilters };
 }

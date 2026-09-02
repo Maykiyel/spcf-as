@@ -170,6 +170,72 @@ sends `filter[search]` only for endpoints that opt in with
 adapter hasn't opted in gives you a box that does nothing, so the two go
 together.
 
+### Filtering a server-backed table
+
+Declare the table's filters once, with the values that mean "unfiltered":
+
+```tsx
+const tableState = useServerTableState({
+  queryKey: ["transactions"],
+  queryFn: getTransactions,
+  columns,
+  urlKey: URL_KEY,
+  initialFilters: { status: null, from_date: null, to_date: null },
+});
+```
+
+`tableState.filters` holds the current values and `tableState.setFilters`
+merges a patch into them. Everything else follows from the declaration:
+
+- **The values are part of the query cache key.** This is the whole reason
+  the hook owns them. The workaround this replaced passed filter values to
+  the fetcher while leaving them out of the key, so changing a filter served
+  the previous filter's cached rows — with no error, which is the worst
+  available failure.
+- **Changing a filter resets to page 1**, for the same reason changing
+  search or sort does.
+- **They reach the wire as `filter[<key>]`**, which is what every filterable
+  endpoint here calls them, so a feature's `getX` needs no mapping of its
+  own. A `null` value is dropped from the request rather than sent empty —
+  an unknown or empty filter key is a 400 here (see `BACKEND_NOTES.md`).
+
+Key the filters by the API's own filter name (`from_date`, not `dateFrom`)
+so that mapping stays a no-op. `TableFilters` values are `string | null` and
+nothing else: they round-trip through the URL, which has only strings, so
+another type would need a per-filter decoder on the way back in. Converting
+to the shape the endpoint wants — a boolean as `0`/`1`, an id as a number —
+belongs in that feature's `getX` via the adapter's `extra` argument.
+
+Filter controls are toolbar children, wired by the page:
+
+```tsx
+<DataTable.Root title="Transactions" state={tableState}>
+  <DataTable.Toolbar>
+    <DataTable.PageSize />
+    <DateRangeFilter
+      value={{
+        from: toApiDate(tableState.filters.from_date),
+        to: toApiDate(tableState.filters.to_date),
+      }}
+      onChange={(range) =>
+        tableState.setFilters({ from_date: range.from, to_date: range.to })
+      }
+    />
+  </DataTable.Toolbar>
+  ...
+```
+
+`toApiDate` on the way out rather than a cast: it is idempotent on a
+date-only string, so this re-establishes the `ApiDate` type instead of
+asserting it.
+
+**Filters are deliberately not on the `DataTable` context**, unlike page and
+sort. The toolbar's children are written by the same component that calls
+`useServerTableState`, so there is no prop drilling for a context to remove
+here — it would only add a second way to reach the same values. Page and
+sort are on the context because `DataTable.Pagination` and `DataTable.Grid`
+are shared pieces that genuinely can't be handed props by the page.
+
 ### `ColumnDef<T>`
 
 ```typescript

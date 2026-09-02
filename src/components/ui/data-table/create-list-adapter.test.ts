@@ -88,6 +88,46 @@ describe("createListAdapter", () => {
     expect(config!.params).not.toHaveProperty("filter[search]");
   });
 
+  it("sends declared filters as filter[key]", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { widgets: [], pagination: { total: 0 } },
+    } as any);
+
+    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets");
+    await getWidgets({
+      ...baseParams,
+      filters: { from_date: "2026-08-01", to_date: "2026-08-31" },
+    });
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/widgets",
+      expect.objectContaining({
+        params: expect.objectContaining({
+          "filter[from_date]": "2026-08-01",
+          "filter[to_date]": "2026-08-31",
+        }),
+      }),
+    );
+  });
+
+  it("omits an unset filter rather than sending it empty", async () => {
+    // An unknown or empty filter key is a 400 here, not a silently ignored
+    // parameter — so "not set" has to mean absent from the request.
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { widgets: [], pagination: { total: 0 } },
+    } as any);
+
+    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets");
+    await getWidgets({
+      ...baseParams,
+      filters: { status: "completed", from_date: null },
+    });
+
+    const [, config] = vi.mocked(apiClient.get).mock.calls[0];
+    expect(config!.params).toHaveProperty("filter[status]", "completed");
+    expect(config!.params).not.toHaveProperty("filter[from_date]");
+  });
+
   it("merges extra params on top of the standard ones", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       data: { widgets: [], pagination: { total: 0 } },
