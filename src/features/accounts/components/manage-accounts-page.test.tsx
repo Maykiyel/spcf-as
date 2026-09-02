@@ -205,6 +205,20 @@ describe("ManageAccountsPage", () => {
     expect(screen.queryByText("Jaypee Pahayahay")).not.toBeInTheDocument();
   });
 
+  it("doesn't match rows on values the table never shows", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    // Both fixtures are active. The search scans each column's raw value, so
+    // a status column keyed on `is_active` would make this match everyone,
+    // and an actions column keyed on `id` would make "1" match Jaypee.
+    fireEvent.change(screen.getByPlaceholderText("Search"), {
+      target: { value: "true" },
+    });
+
+    expect(screen.getByText("No entries found")).toBeInTheDocument();
+  });
+
   it("says so when the directory is empty", async () => {
     mockGetUserAccounts.mockResolvedValue([]);
     renderPage();

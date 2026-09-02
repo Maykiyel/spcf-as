@@ -9,7 +9,7 @@ import type { UserAccount } from "../types";
  * stops an admin creating a one-character password by hand; it is not a
  * substitute for the backend rule, which has been asked for.
  */
-export const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MIN_LENGTH = 8;
 
 /**
  * Field names are the request's own, not camelCase. Laravel's 422 body keys

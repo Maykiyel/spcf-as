@@ -41,7 +41,12 @@ const columns: ColumnDef<UserAccount>[] = [
     ),
   },
   {
-    key: "is_active",
+    // Borrows a declared key for the same reason as Actions below: the
+    // client-side search scans each column's raw value, and this one's is
+    // `true`/`false`, which is not what the badge says. Every key here
+    // therefore names a field whose raw value is what the user reads.
+    key: "role",
+    id: "status",
     header: "Status",
     render: (row) => (
       <Badge color={row.is_active ? "success" : "danger"} variant="light">
@@ -50,10 +55,10 @@ const columns: ColumnDef<UserAccount>[] = [
     ),
   },
   {
-    // Keyed on a column already declared above, not on `id`, so that the
-    // client-side search doesn't quietly match user ids: it scans every
-    // declared column's raw value, and nothing on screen shows an id.
-    // `id` disambiguates the duplicate key, as DataTable requires.
+    // Keyed on a column already declared above, not on `id`, so the
+    // client-side search doesn't quietly match user ids: nothing on screen
+    // shows one. `id` disambiguates the duplicate key, as DataTable
+    // requires.
     key: "full_name",
     id: "actions",
     header: "Actions",

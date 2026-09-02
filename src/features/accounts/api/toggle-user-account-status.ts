@@ -18,6 +18,9 @@ type ToggleUserAccountStatusArgs = {
  *
  * `isActive` is camelCase here and `is_active` on the wire, the same
  * translate-at-the-boundary rule the series receipt feature follows.
+ * `create-user-account.ts` deliberately goes the other way and names its
+ * fields for the wire, because they are also react-hook-form field names
+ * and the server's 422 bag is keyed by them.
  */
 export const toggleUserAccountStatus = async ({
   id,

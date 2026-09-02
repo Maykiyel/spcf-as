@@ -26,15 +26,12 @@ import { getServerFieldErrors } from "../lib/server-field-errors";
 
 // A 422 can name a field the form doesn't have (or the API could grow one).
 // Only these are settable on the form; anything else falls through to a
-// toast rather than being silently swallowed.
-const FORM_FIELDS = [
-  "first_name",
-  "last_name",
-  "username",
-  "email",
-  "password",
-  "role",
-] as const;
+// toast rather than being silently swallowed. Derived from the schema
+// rather than retyped, so a seventh field can't be added to one and not
+// the other and quietly lose its server-side error.
+const FORM_FIELDS = Object.keys(
+  createUserAccountSchema.shape,
+) as (keyof CreateUserAccountInput)[];
 
 const EMPTY_FORM: CreateUserAccountInput = {
   first_name: "",

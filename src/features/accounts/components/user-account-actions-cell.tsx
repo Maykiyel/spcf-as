@@ -180,9 +180,8 @@ export function UserAccountActionsCell({
         ) : (
           <Text size="sm">
             Delete the account for <strong>{account.full_name}</strong>? This
-            can't be undone. Accounts with any history — transactions, series
-            receipts, accounts they created — can't be deleted at all.
-            Deactivating is almost always what you want instead.
+            can't be undone, and the server refuses it for anyone with any
+            history. Deactivating is almost always what you want instead.
           </Text>
         )}
 
