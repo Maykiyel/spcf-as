@@ -281,6 +281,14 @@ type ColumnDef<T> = {
 };
 ```
 
+**A column's `key` also decides what `useClientTableState` searches.**
+Its search scans the raw value of every declared column, so a column
+keyed on a field the table never displays makes the search box match
+text nobody can see — an actions column keyed on `id` means typing `3`
+matches user 3. Key such a column on one already declared and give it
+an `id`, as `manage-accounts-page.tsx` does. Server-backed tables are
+unaffected: their search is a query param.
+
 **Always set `id` on an "Actions" column** (or any column reusing another
 column's `key`) — `DataTable.Grid` uses `col.id ?? col.key` as the React list
 key internally. Without `id`, duplicate keys cause silent rendering bugs on
@@ -412,6 +420,31 @@ not a filter-only one.
 | Query succeeds with 0 results                  | "No entries found"                                                           |
 | Query fails before any data has loaded         | The error message in place of rows                                           |
 | Any state, `useClientTableState`               | `isError` is always `false` — there's no network call to fail                |
+
+**A client-side table whose data comes from a query still has both
+states** — they just belong to the page, not to the hook.
+`useClientTableState` filters an array and has no request to report on,
+so it hardcodes `isLoading` and `isError` to `false`; the component that
+called `useQuery` is what knows. Spread the query's own flags over the
+state on the way in, and `DataTable.Grid` renders the skeleton and the
+error row exactly as it does for a server-backed table:
+
+```tsx
+const { data, isLoading, isError } = useQuery({ queryKey, queryFn });
+const tableState = useClientTableState({ data: data ?? NO_ROWS, columns });
+
+<DataTable.Root
+  title="User Accounts"
+  state={{ ...tableState, isLoading, isError, errorMessage: "..." }}
+>
+```
+
+Deliberately not passthrough options on the hook: the override is one
+line at the call site, it reads as exactly what it is, and the hook
+stays about filtering. See `manage-accounts-page.tsx`, its only consumer
+so far — and note `NO_ROWS`, a module-scope constant, because a literal
+`[]` fallback is a new array identity on every render and defeats the
+hook's memoised filter and sort passes.
 
 If you need a custom error message instead of the default "Couldn't load
 data. Please try again.", that comes from `errorMessage` in
