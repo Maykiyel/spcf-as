@@ -4,7 +4,7 @@ Reference for the API this frontend talks to. Describes **what the backend
 actually returns and enforces** — not why it was built that way.
 
 Source: `spcf-as-backend` (Laravel 12 + Sanctum + spatie/laravel-permission
-+ spatie/laravel-query-builder), read at commit `1f26bd8` (2026-08-27).
++ spatie/laravel-query-builder), read at commit `fbbb77f` (2026-08-27).
 That repo belongs to the backend developer and is read-only from here; this
 file is a transcription of it. When it changes, re-read and update this.
 
@@ -69,6 +69,11 @@ authenticated group, `throttle:reports` on reports.
 ### Statuses
 
 `pending`, `abandoned`, `completed`, `cancelled`, `returned`.
+
+**`abandoned` is reachable as of `fbbb77f`.** `POST /transactions` now
+abandons every one of that cashier's `pending` transactions before creating
+the new one, writing a `TRANSACTION_ABANDONED` activity entry for each. It
+was previously a declared-but-unused state.
 
 ### Which actions each status allows
 
@@ -143,6 +148,101 @@ not bugs to fix from here:
   08:00 local to 08:00 the next day — meaning transactions taken before 08:00
   Manila fall into the *previous* dashboard day.
 
+## Account active status (`fbbb77f`)
+
+Users now carry `is_active`. `EnsureAccountIsActive` is applied to the
+**entire** authenticated group and to the reports group, so a deactivated
+user is rejected on **every** endpoint with:
+
+```json
+{ "message": "User account is deactivated. Please ask admin to activate your account." }
+```
+
+**HTTP 403, in Laravel's plain shape — not the success envelope.**
+
+**Collision to handle deliberately:** this frontend already treats 403 as
+"you don't have access to *this resource*" (see `useTransactionDetail`).
+A deactivated account now produces 403 on every request, so without
+discrimination it reads as "you don't have access to this transaction"
+when the truth is "your account is switched off". Distinguish on the
+message, or on the fact that it happens everywhere at once.
+
+A deactivated user also remains "logged in" client-side — nothing revokes
+the token, so the session survives and every request fails.
+
+## Users: delete and toggle status (`a96743a`, `8a5fb1c`)
+
+```
+DELETE /users/{user}                  (admin)
+PATCH  /users/{user}/toggle-status    (admin)  body: {"is_active": bool}
+```
+
+- **Delete is conditional.** `canBeDeleted()` blocks a user holding any
+  related records — transactions, series receipts, accounts they created,
+  transactions they voided. Refusal is a **422** with
+  `{"message": "User cannot be deleted because they have existing related records."}`
+  in the plain shape. In practice any cashier who has ever worked is
+  undeletable, so treat delete as available only for mistakenly-created
+  accounts.
+- **Toggle cascades to series receipts.** Deactivating a cashier moves
+  their `active` series to `suspended`; reactivating moves a `suspended`
+  series back to `active`. `SeriesReceiptStatus` is now
+  `queued | active | exhausted | suspended`.
+- Returns the updated `UserResource`, which now includes `is_active`.
+- There is still **no update endpoint** — no rename, no email change, no
+  role change, no password reset.
+
+## Earnings reports (`fbbb77f`)
+
+Both admin-only, under `throttle:reports`.
+
+### `GET /reports/cashier-earnings`
+
+Per-cashier totals. Filters `from_date`/`to_date` (optional, `Y-m-d`).
+Sorts `total_earnings`, `cashier_name`; default `-total_earnings`.
+**`per_page` defaults to 5**, not the app default. Paginated with the
+usual `{earnings_per_cashier: [...], pagination: {...}}` envelope.
+
+Row: `{ id, full_name, total_earnings }`.
+
+Sums only `completed` transactions, windowed on **`completed_at`**.
+
+### `GET /reports/monthly-earnings`
+
+Takes `year` (optional, integer, min 2026, max next year; defaults to the
+current year). No filters, no sorts, **no pagination**.
+
+`data` is **the array itself** — not wrapped in a named key — and always
+holds exactly 12 entries, zero-filled for months with no earnings:
+
+```json
+[{ "month": "2026-01", "total_earnings": 0 }, ...]
+```
+
+Sums only `completed` transactions, but windowed on **`created_at`** —
+inconsistent with `cashier-earnings`, which uses `completed_at`. The two
+endpoints can therefore disagree about which month a transaction belongs
+to when it was initiated near a month boundary.
+
+Note the range is `>= startOfYear` and `< endOfYear`, so the final
+instants of 31 December fall outside it.
+
+## Known backend gaps (asked for, not yet landed)
+
+- **`servicesSold` still has no `defaultSort`.** `allowedSorts`
+  (`total_quantity`, `subtotal`, `service_name`) landed in `2a67f91`, but
+  the default did not, and it is a `groupBy` aggregate — so with no sort
+  applied, page order is undefined and pagination can repeat or skip rows.
+- **App timezone is still `UTC`**, so every "today"/"month" boundary is a
+  UTC one. In UTC+8 that is 08:00 Manila to 08:00.
+- **Password validation is still `['required', 'string']`** — no minimum
+  length, no complexity.
+- **No `search` filter** on `/activity-logs`, `/reports/*` or `/users`.
+  Activity logs remain date-only with `created_at` as the sole sort.
+- **`/reports/transactions` computes `total_earnings` from the same
+  builder instance `paginate()` was called on**, so the offset may leak
+  into the aggregate and zero the total on page 2 onward. Unverified.
+
 ## Response shapes
 
 ### `TransactionResource`
@@ -162,6 +262,8 @@ Mirrored by `TransactionDTO` in `src/features/transactions/types/index.ts`.
 | `change_amount` | column | cast to float |
 | `status` | enum | one of the five above |
 | `date` | **`created_at`** | full ISO-8601 timestamp, e.g. `2026-08-24T06:30:00.000000Z` |
+| `voided_at` | column | present only when non-null |
+| `voided_by` | relation | `{id, full_name}`; **omitted unless eager-loaded** |
 
 **`date` is `created_at`, not `completed_at`** — it is when the transaction
 was *initiated*, not when payment was confirmed. It is always a full
@@ -264,6 +366,8 @@ POST   /logout
 GET    /dashboard
 GET    /users/me
 GET    /users            POST /users            GET /users/{id}
+DELETE /users/{user}                                       (admin)
+PATCH  /users/{user}/toggle-status                         (admin)
        /suppliers        (full apiResource)
        /item-codes       (full apiResource)
        /services         (full apiResource)
@@ -283,6 +387,8 @@ GET    /activity-logs    GET /activity-logs/{activity}     (admin)
 GET    /reports/services-sold                              (admin)
 GET    /reports/services-sold/{service}                    (admin)
 GET    /reports/transactions                               (admin)
+GET    /reports/cashier-earnings                           (admin)
+GET    /reports/monthly-earnings                           (admin)
 ```
 
 There is no student or payer model — `customer_name` is a free-text string
