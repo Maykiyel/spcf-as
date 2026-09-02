@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useServerTableState } from "./use-server-table-state";
 import type { ColumnDef, TableFilters } from "./types";
@@ -17,18 +17,30 @@ const columns: ColumnDef<Row>[] = [
 // A Router is required even for a table with no `urlKey`: both adapters in
 // `useTableControls` are always instantiated so hook call order stays stable,
 // and the URL one calls `useSearchParams` regardless of which is returned.
-function createWrapper() {
+function createWrapper(initialEntries: string[] = ["/"]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </MemoryRouter>
     );
   };
+}
+
+/** Reads the query string alongside the hook, so a test can assert on what
+ * a shared link would actually carry rather than on internal state. */
+function renderTable(
+  options: Parameters<typeof useServerTableState<Row>>[0],
+  initialEntries?: string[],
+) {
+  return renderHook(
+    () => ({ table: useServerTableState(options), search: useLocation().search }),
+    { wrapper: createWrapper(initialEntries) },
+  );
 }
 
 /** A fetcher that answers with rows derived from the filters it was given,
@@ -151,5 +163,136 @@ describe("useServerTableState filters", () => {
 
     await waitFor(() => expect(queryFn).toHaveBeenCalled());
     expect(queryFn.mock.calls[0][0].filters).toEqual({});
+  });
+});
+
+describe("useServerTableState filter URL persistence", () => {
+  let queryFn: ReturnType<typeof createFetcher>;
+
+  beforeEach(() => {
+    queryFn = createFetcher();
+  });
+
+  const options = (extra: Record<string, unknown>) =>
+    ({ queryKey: ["widgets"], queryFn, columns, ...extra }) as Parameters<
+      typeof useServerTableState<Row>
+    >[0];
+
+  it("writes a changed filter to the URL, namespaced by urlKey", async () => {
+    const { result } = renderTable(
+      options({ urlKey: "tx", initialFilters: { status: null } }),
+    );
+
+    act(() => result.current.table.setFilters({ status: "completed" }));
+
+    await waitFor(() =>
+      expect(result.current.search).toContain("tx_status=completed"),
+    );
+  });
+
+  it("omits a filter sitting at its declared default", async () => {
+    // `?status=all` is noise in a shared link, and it makes an unfiltered
+    // table look filtered.
+    const { result } = renderTable(
+      options({ urlKey: "tx", initialFilters: { status: "all" } }),
+    );
+
+    act(() => result.current.table.setFilters({ status: "completed" }));
+    await waitFor(() =>
+      expect(result.current.search).toContain("tx_status=completed"),
+    );
+
+    act(() => result.current.table.setFilters({ status: "all" }));
+    await waitFor(() =>
+      expect(result.current.search).not.toContain("tx_status"),
+    );
+  });
+
+  it("restores filters from the URL", async () => {
+    // One assertion covering three criteria: a refresh, a pasted link and a
+    // history entry are all just "the hook is mounted at this URL".
+    const { result } = renderTable(
+      options({
+        urlKey: "tx",
+        initialFilters: { status: null, from_date: null },
+      }),
+      ["/?tx_status=completed&tx_from_date=2026-08-01"],
+    );
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalled());
+    expect(result.current.table.filters).toEqual({
+      status: "completed",
+      from_date: "2026-08-01",
+    });
+  });
+
+  it("keeps two tables on one page independent", async () => {
+    const { result } = renderHook(
+      () => ({
+        tx: useServerTableState({
+          queryKey: ["tx"],
+          queryFn,
+          columns,
+          urlKey: "tx",
+          initialFilters: { status: null },
+        }),
+        logs: useServerTableState({
+          queryKey: ["logs"],
+          queryFn,
+          columns,
+          urlKey: "logs",
+          initialFilters: { status: null },
+        }),
+        search: useLocation().search,
+      }),
+      { wrapper: createWrapper() },
+    );
+
+    act(() => result.current.tx.setFilters({ status: "completed" }));
+
+    await waitFor(() =>
+      expect(result.current.search).toContain("tx_status=completed"),
+    );
+    expect(result.current.logs.filters.status).toBeNull();
+    expect(result.current.search).not.toContain("logs_status");
+  });
+
+  it("clears the page param when a filter changes", async () => {
+    const { result } = renderTable(
+      options({ urlKey: "tx", initialFilters: { status: null } }),
+      ["/?tx_page=3"],
+    );
+
+    await waitFor(() => expect(result.current.table.page).toBe(3));
+
+    act(() => result.current.table.setFilters({ status: "completed" }));
+
+    await waitFor(() => expect(result.current.search).not.toContain("tx_page"));
+    expect(result.current.table.page).toBe(1);
+  });
+
+  it("ignores a URL param for a filter the table hasn't declared", async () => {
+    // Only declared keys are read, so a hand-edited link can't inject a
+    // filter key the endpoint would answer with a 400.
+    const { result } = renderTable(
+      options({ urlKey: "tx", initialFilters: { status: null } }),
+      ["/?tx_status=completed&tx_cashier_id=7"],
+    );
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalled());
+    expect(result.current.table.filters).toEqual({ status: "completed" });
+  });
+
+  it("keeps filters in local state when the table hasn't opted in", async () => {
+    const { result } = renderTable(
+      options({ initialFilters: { status: null } }),
+    );
+
+    act(() => result.current.table.setFilters({ status: "completed" }));
+
+    await waitFor(() =>
+      expect(result.current.table.filters.status).toBe("completed"),
+    );
+    expect(result.current.search).toBe("");
   });
 });

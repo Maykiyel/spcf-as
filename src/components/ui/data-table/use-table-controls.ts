@@ -21,9 +21,12 @@ export type TableControls = {
   setFilters: (patch: TableFilters) => void;
 };
 
-// Filter state is held by `useTableControls` itself rather than by either
-// adapter, so both branches share one implementation.
-type TableControlsAdapter = Omit<TableControls, "filters" | "setFilters">;
+type TableControlsAdapter = TableControls;
+
+// A filter's URL param is `<urlKey>_<filterKey>`, sharing a namespace with
+// the table's own `page`, `size`, `q` and `sort`. Filters are keyed by the
+// API's own filter names (`from_date`, `status`, `cashier_id`), none of
+// which collide — this is a note for whoever adds the first one that does.
 
 export function nextSorts(
   current: SortEntry[],
@@ -81,6 +84,7 @@ const parseSorts = (raw: string | null): SortEntry[] => {
 function useUrlAdapter(
   initialPageSize: number,
   urlKey: string | undefined,
+  initialFilters: TableFilters,
 ): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -141,6 +145,16 @@ function useUrlAdapter(
   );
   const sorts = parseSorts(searchParams.get(paramName("sort")));
 
+  // Derived from the URL on every render, exactly like page and sort above —
+  // which is what makes a refresh, a pasted link and a history entry all
+  // restore the same view without any of them being special-cased. Only
+  // declared keys are read, so a hand-edited URL can't inject a filter the
+  // endpoint would answer with a 400.
+  const filters: TableFilters = {};
+  for (const [key, defaultValue] of Object.entries(initialFilters)) {
+    filters[key] = searchParams.get(paramName(key)) ?? defaultValue;
+  }
+
   const onPageChange = (newPage: number) => {
     updateParams({
       [paramName("page")]: newPage > 1 ? String(newPage) : null,
@@ -169,25 +183,50 @@ function useUrlAdapter(
     updateParams({ [paramName("sort")]: null });
   };
 
+  const setFilters = (patch: TableFilters) => {
+    const updates: Record<string, string | null> = {};
+
+    for (const [key, value] of Object.entries(patch)) {
+      // A filter sitting at its declared default is absent from the URL
+      // rather than written out. `?status=all` is noise in a shared link,
+      // and it makes an unfiltered table look filtered.
+      updates[paramName(key)] =
+        value === initialFilters[key] ? null : value;
+    }
+
+    // Same reason changing search or sort resets the page: the row that was
+    // on page 7 of the old filter almost certainly isn't there under the new
+    // one, and a page past the end renders as empty rather than as an error.
+    updates[paramName("page")] = null;
+
+    updateParams(updates);
+  };
+
   return {
     page,
     pageSize,
     searchQuery: searchDraft,
     sorts,
+    filters,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
     onSort,
     resetSort,
+    setFilters,
   };
 }
 
 /** Local (component) state adapter, used when no `urlKey` is provided. */
-function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
+function useLocalAdapter(
+  initialPageSize: number,
+  initialFilters: TableFilters,
+): TableControlsAdapter {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [searchQuery, setSearchQuery] = useState("");
   const [sorts, setSorts] = useState<SortEntry[]>([]);
+  const [filters, setFiltersState] = useState<TableFilters>(initialFilters);
 
   const onPageChange = (newPage: number) => setPage(newPage);
 
@@ -208,16 +247,23 @@ function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
 
   const resetSort = () => setSorts([]);
 
+  const setFilters = (patch: TableFilters) => {
+    setFiltersState((prev) => ({ ...prev, ...patch }));
+    setPage(1);
+  };
+
   return {
     page,
     pageSize,
     searchQuery,
     sorts,
+    filters,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
     onSort,
     resetSort,
+    setFilters,
   };
 }
 
@@ -232,19 +278,8 @@ export function useTableControls(
   urlKey?: string,
   initialFilters: TableFilters = {},
 ): TableControls {
-  const urlAdapter = useUrlAdapter(initialPageSize, urlKey);
-  const localAdapter = useLocalAdapter(initialPageSize);
-  const [filters, setFiltersState] = useState<TableFilters>(initialFilters);
+  const urlAdapter = useUrlAdapter(initialPageSize, urlKey, initialFilters);
+  const localAdapter = useLocalAdapter(initialPageSize, initialFilters);
 
-  const adapter = urlKey ? urlAdapter : localAdapter;
-
-  const setFilters = (patch: TableFilters) => {
-    setFiltersState((prev) => ({ ...prev, ...patch }));
-    // Same reason changing search or sort resets the page: the row that was
-    // on page 7 of the old filter almost certainly isn't there under the new
-    // one, and a page past the end renders as empty rather than as an error.
-    adapter.onPageChange(1);
-  };
-
-  return { ...adapter, filters, setFilters };
+  return urlKey ? urlAdapter : localAdapter;
 }

@@ -313,9 +313,10 @@ ever need a third variant (e.g. something websocket-synced), build it on
 ### URL-persisted state
 
 Both `useClientTableState` and `useServerTableState` accept an optional
-`urlKey` string. When provided, page/pageSize/search/sort state is synced to
-the URL's search params instead of living in local `useState` — so filters
-survive a refresh, back/forward navigation, and are shareable as a link.
+`urlKey` string. When provided, page/pageSize/search/sort state — and, on
+`useServerTableState`, the declared filters — is synced to the URL's search
+params instead of living in local `useState`, so the view survives a
+refresh, comes back on a history entry, and is shareable as a link.
 
 ```tsx
 const tableState = useServerTableState({
@@ -333,7 +334,14 @@ existing tables changes unless you explicitly add the prop.
 **Namespaced per table.** Params are prefixed with `urlKey`, so multiple
 tables can live on the same page/URL without clashing —
 `suppliers_page`, `suppliers_q`, `suppliers_sort`, `suppliers_dir`,
-`suppliers_size`, not generic `page`/`q`/`sort`.
+`suppliers_size`, not generic `page`/`q`/`sort`. A filter joins the same
+namespace under its own key — `suppliers_status`, `suppliers_from_date` —
+so a filter must not be keyed `page`, `size`, `q` or `sort`. None of the
+API's filter names are, so this hasn't come up.
+
+**Only declared filters are read back.** A filter is read out of the URL
+only if it appears in `initialFilters`, so a hand-edited or stale link
+can't inject a filter key the endpoint would answer with a 400.
 
 **Two independent debounces on search.** Typing goes into a local draft
 first, debounced 400ms before it's written to the URL. For
@@ -342,12 +350,22 @@ debounce on top of that — they're deliberately decoupled, so URL sync isn't
 gated on request timing (or vice versa).
 
 **Defaults are omitted from the URL**, not written explicitly — page 1,
-the default page size, and an unsorted state all collapse to "no param"
-rather than `?page=1`. Keeps shareable URLs clean instead of noisy.
+the default page size, an unsorted state, and any filter sitting at the
+value it was declared with all collapse to "no param" rather than `?page=1`
+or `?status=all`. Keeps shareable URLs clean instead of noisy, and stops an
+unfiltered table from looking filtered.
 
-**Search and sort changes reset the page param.** Filtering or re-sorting
-with a stale page number would risk showing an empty page, so both clear
-`page` back to its default (omitted) whenever they fire.
+**Search, sort and filter changes reset the page param.** Narrowing or
+re-sorting with a stale page number would risk showing an empty page, so
+all three clear `page` back to its default (omitted) whenever they fire.
+
+**A filter change replaces the history entry rather than pushing one**, the
+same as every other control here — `setSearchParams` is called with
+`{ replace: true }` throughout. So navigating back from the table returns
+you to whatever preceded it, with the table's filters intact on its own
+entry; back is not an undo for an individual filter change. If per-change
+undo is wanted, that is a change to how all four controls write history,
+not a filter-only one.
 
 ### Loading, error, and empty states
 
