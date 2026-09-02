@@ -12,7 +12,12 @@ export type {
   ServerTableParams,
   ServerTableResponse,
 } from "./use-server-table-state";
-export type { ColumnDef, SortEntry, DataTableContextValue } from "./types";
+export type {
+  ColumnDef,
+  SortEntry,
+  TableFilters,
+  DataTableContextValue,
+} from "./types";
 export { MAX_SORT_COLUMNS } from "./types";
 export { encodeSortsForApi } from "./sort-params";
 export { createListAdapter } from "./create-list-adapter";

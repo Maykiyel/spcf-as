@@ -8,6 +8,12 @@
 // date-only value parsed as an instant is silently wrong rather than
 // loudly wrong — `new Date("2026-08-24")` is UTC midnight, which renders
 // as a fabricated clock time locally and rolls back a day west of UTC.
+//
+// `src/components/ui/date-range/api-date.ts` carries the same regex and the
+// same local-components rule for the same UTC+8 reason. The two are
+// deliberately not shared: the shared UI tier must not import from
+// `features/*`, and it formats a date for the wire rather than rendering one
+// for a printed receipt. Change one, look at the other.
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 // Date and time are formatted separately and joined here rather than asked

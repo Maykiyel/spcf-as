@@ -1,21 +1,43 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { MAX_SORT_COLUMNS, type SortEntry } from "./types";
+import { MAX_SORT_COLUMNS, type SortEntry, type TableFilters } from "./types";
 
 export type TableControls = {
   page: number;
   pageSize: number;
   searchQuery: string;
   sorts: SortEntry[];
+  filters: TableFilters;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSearchChange: (query: string) => void;
   onSort: (key: string) => void;
   resetSort: () => void;
+  /** Merges a patch into the current filters. A patch rather than a single
+   * key/value because a date range moves both of its ends at once, and two
+   * sequential single-key writes would mean two refetches for one user
+   * action. */
+  setFilters: (patch: TableFilters) => void;
 };
 
 type TableControlsAdapter = TableControls;
+
+// Both adapters drop keys the table didn't declare. Reading already ignores
+// them, so accepting one on write would put a param in the URL that nothing
+// ever reads back, or a value in the bag that never reaches the fetcher.
+const declaredOnly = (
+  patch: TableFilters,
+  initialFilters: TableFilters,
+): TableFilters =>
+  Object.fromEntries(
+    Object.entries(patch).filter(([key]) => key in initialFilters),
+  );
+
+// A filter's URL param is `<urlKey>_<filterKey>`, sharing a namespace with
+// the table's own `page`, `size`, `q` and `sort`. Filters are keyed by the
+// API's own filter names (`from_date`, `status`, `cashier_id`), none of
+// which collide — this is a note for whoever adds the first one that does.
 
 export function nextSorts(
   current: SortEntry[],
@@ -73,6 +95,7 @@ const parseSorts = (raw: string | null): SortEntry[] => {
 function useUrlAdapter(
   initialPageSize: number,
   urlKey: string | undefined,
+  initialFilters: TableFilters,
 ): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -133,6 +156,16 @@ function useUrlAdapter(
   );
   const sorts = parseSorts(searchParams.get(paramName("sort")));
 
+  // Derived from the URL on every render, exactly like page and sort above —
+  // which is what makes a refresh, a pasted link and a history entry all
+  // restore the same view without any of them being special-cased. Only
+  // declared keys are read, so a hand-edited URL can't inject a filter the
+  // endpoint would answer with a 400.
+  const filters: TableFilters = {};
+  for (const [key, defaultValue] of Object.entries(initialFilters)) {
+    filters[key] = searchParams.get(paramName(key)) ?? defaultValue;
+  }
+
   const onPageChange = (newPage: number) => {
     updateParams({
       [paramName("page")]: newPage > 1 ? String(newPage) : null,
@@ -161,25 +194,52 @@ function useUrlAdapter(
     updateParams({ [paramName("sort")]: null });
   };
 
+  const setFilters = (patch: TableFilters) => {
+    const updates: Record<string, string | null> = {};
+
+    for (const [key, value] of Object.entries(
+      declaredOnly(patch, initialFilters),
+    )) {
+      // A filter sitting at its declared default is absent from the URL
+      // rather than written out. `?status=all` is noise in a shared link,
+      // and it makes an unfiltered table look filtered.
+      updates[paramName(key)] =
+        value === initialFilters[key] ? null : value;
+    }
+
+    // Same reason changing search or sort resets the page: the row that was
+    // on page 7 of the old filter almost certainly isn't there under the new
+    // one, and a page past the end renders as empty rather than as an error.
+    updates[paramName("page")] = null;
+
+    updateParams(updates);
+  };
+
   return {
     page,
     pageSize,
     searchQuery: searchDraft,
     sorts,
+    filters,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
     onSort,
     resetSort,
+    setFilters,
   };
 }
 
 /** Local (component) state adapter, used when no `urlKey` is provided. */
-function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
+function useLocalAdapter(
+  initialPageSize: number,
+  initialFilters: TableFilters,
+): TableControlsAdapter {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [searchQuery, setSearchQuery] = useState("");
   const [sorts, setSorts] = useState<SortEntry[]>([]);
+  const [filters, setFiltersState] = useState<TableFilters>(initialFilters);
 
   const onPageChange = (newPage: number) => setPage(newPage);
 
@@ -200,16 +260,26 @@ function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
 
   const resetSort = () => setSorts([]);
 
+  const setFilters = (patch: TableFilters) => {
+    setFiltersState((prev) => ({
+      ...prev,
+      ...declaredOnly(patch, initialFilters),
+    }));
+    setPage(1);
+  };
+
   return {
     page,
     pageSize,
     searchQuery,
     sorts,
+    filters,
     onPageChange,
     onPageSizeChange,
     onSearchChange,
     onSort,
     resetSort,
+    setFilters,
   };
 }
 
@@ -222,9 +292,10 @@ function useLocalAdapter(initialPageSize: number): TableControlsAdapter {
 export function useTableControls(
   initialPageSize = 25,
   urlKey?: string,
+  initialFilters: TableFilters = {},
 ): TableControls {
-  const urlAdapter = useUrlAdapter(initialPageSize, urlKey);
-  const localAdapter = useLocalAdapter(initialPageSize);
+  const urlAdapter = useUrlAdapter(initialPageSize, urlKey, initialFilters);
+  const localAdapter = useLocalAdapter(initialPageSize, initialFilters);
 
   return urlKey ? urlAdapter : localAdapter;
 }

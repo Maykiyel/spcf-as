@@ -23,6 +23,18 @@ export type SortEntry = {
  * frontend only (see ADR 0002) — so this is the single source of truth for the limit. */
 export const MAX_SORT_COLUMNS = 2;
 
+/** A table's server-side filter values, keyed by the API's own filter name
+ * (`status`, `from_date`, `cashier_id`). `null` means "not set" and is what
+ * an unfiltered table sends.
+ *
+ * Values are strings and nothing else, on purpose. Filters round-trip
+ * through the URL (see `useTableControls`), which has only strings, so any
+ * other type would need a per-filter decoder on the way back in and the
+ * declaration site would have to name it. Converting to the shape the wire
+ * wants — a boolean as `0`/`1`, an id as a number — belongs in the feature's
+ * own `getX`, which already knows what its endpoint expects. */
+export type TableFilters = Record<string, string | null>;
+
 export type DataTableContextValue<T> = {
   columns: ColumnDef<T>[];
   rows: T[]; // current page's rows, already filtered/sorted/sliced
