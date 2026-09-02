@@ -317,6 +317,64 @@ worth confirming this is in place before relying on it.
 
 ---
 
+## DateRangeFilter
+
+A date-range picker for table filters, plus the one function in the app that
+knows what a date looks like on the wire.
+
+```tsx
+import { DateRangeFilter, EMPTY_DATE_RANGE } from "@/components/ui/date-range";
+
+const [range, setRange] = useState(EMPTY_DATE_RANGE);
+
+<DateRangeFilter value={range} onChange={setRange} />;
+```
+
+| Export             | Purpose                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `DateRangeFilter`  | The control. Controlled — takes `value` / `onChange`, plus optional `label` and `placeholder`. |
+| `DateRangeValue`   | `{ from: ApiDate \| null; to: ApiDate \| null }`. Both ends or neither, never one.           |
+| `EMPTY_DATE_RANGE` | The "no date filter" value. Use it as the initial value.                                     |
+| `toApiDate`        | Converts a `Date` or a response timestamp to `Y-m-d`. The only producer of `ApiDate`.        |
+| `nextDateRange`    | The pure emit rule the control uses. Exported for testing, not for call sites.               |
+
+### Why the wire format is a type
+
+The API accepts date filters only as `Y-m-d`, and rejects anything else with
+a 422 rather than coercing it (see `BACKEND_NOTES.md`). `ApiDate` is a
+branded string with exactly one producer, `toApiDate`, so a date filter in
+the wrong format is a compile error rather than a runtime 422 on a page
+nobody tested with a real date.
+
+**The asymmetry this guards:** responses carry full timestamps
+(`TransactionResource.date` is `created_at`), requests accept only date-only
+strings. A value read out of a response is never directly reusable as a
+filter — `toApiDate` is what makes it usable, and a "filter to this row's
+day" feature must go through it.
+
+`toApiDate` treats its two input kinds differently, on purpose. A `Date` came
+from a picker and is read in **local** calendar components: in UTC+8, a day
+picked as Aug 24 is `Aug 23T16:00Z`, so `toISOString()` would filter to the
+day before the one the user clicked. A string came from the API and is
+**truncated**, not reparsed: the backend runs on UTC, so its date comparisons
+are UTC-day comparisons, and a late-evening UTC timestamp reparsed locally
+would ask for a different day than the row is filed under.
+
+### A half-picked range is not a filter
+
+Selecting one end of the range updates the calendar and emits nothing. The
+API's `to_date` carries `after_or_equal:from_date`, so publishing a one-ended
+range would put an error on screen while the user is still choosing. The rule
+lives in `nextDateRange` as a pure function, and the half-picked state stays
+as draft state inside the control rather than being pushed up and filtered
+back out by every consumer.
+
+Clearing both ends *does* emit `EMPTY_DATE_RANGE`. That is a real value
+meaning "no date filter", and it is how a user gets back to the unfiltered
+view.
+
+---
+
 ## Where new global components go
 
 - Generic, reusable, no domain knowledge → `components/ui/<name>/`, compound
