@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { Box, Center, Loader, Stack, Text, UnstyledButton } from "@mantine/core";
+import { Box, Stack, Text, UnstyledButton } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
 import { AcknowledgementReceiptCopy } from "./acknowledgement-receipt-copy";
+import { TransactionDetailFallback } from "./transaction-detail-fallback";
 
 // How long to wait for the receipt's images (the school logo, rendered
 // once per copy) to finish loading before printing anyway. Bounded
@@ -22,6 +23,11 @@ function waitForImage(img: HTMLImageElement): Promise<void> {
     setTimeout(done, IMAGE_READY_TIMEOUT_MS);
   });
 }
+// This @page size is only honored on a real printer if a matching 8.5x4in
+// custom size has been registered in that workstation's printer driver
+// first — the driver, not this rule, decides the physical page. Not
+// enforceable from here: see docs/operations/printer-setup.md for the
+// per-machine procedure, and ADR 0003 for why it cannot live in code.
 // Custom paper size confirmed with the accounting office (their actual
 // receipt stock). An explicit small margin matters here: without one,
 // the browser's default page margin (often 0.4-1in per side) is applied
@@ -30,10 +36,16 @@ function waitForImage(img: HTMLImageElement): Promise<void> {
 // longer transaction can never split a table row across the
 // Accounting/Student boundary — only the first copy needs the trailing
 // break, since a break after the last copy would print a blank page.
+// Injected inline rather than declared in src/index.css alongside the
+// app's other global classes, on purpose: `@page` has no selector and
+// cannot be scoped, so putting it in the global stylesheet would force
+// every printable page in the app onto 8.5x4in receipt stock. Mounting it
+// with this component is what keeps it page-scoped. `.no-print` did move
+// to index.css, since a second consumer (the Notifications portal) now
+// needs it.
 const PRINT_STYLES = `
   @page { size: 8.5in 4in; margin: 0.15in; }
   @media print {
-    .no-print { display: none; }
     .print-page-root { padding: 0 !important; }
   }
 `;
@@ -41,8 +53,8 @@ const PRINT_STYLES = `
 export function PrintAcknowledgementReceiptPage() {
   const { controlId } = useParams<{ controlId: string }>();
   const id = Number(controlId);
-  const { transaction, isLoading, isForbidden, isError } =
-    useTransactionDetail(id);
+  const detail = useTransactionDetail(id);
+  const { transaction, isUnavailable } = detail;
   const navigate = useNavigate();
 
   const hasPrintedRef = useRef(false);
@@ -117,21 +129,10 @@ export function PrintAcknowledgementReceiptPage() {
         </Text>
       </UnstyledButton>
 
-      {isLoading ? (
-        <Center py="xl">
-          <Loader size="sm" />
-          <Text size="sm" c="dimmed" ml="xs">
-            Loading transaction...
-          </Text>
-        </Center>
-      ) : isForbidden ? (
-        <Text ta="center" c="danger" py="xl">
-          You don't have access to this transaction.
-        </Text>
-      ) : isError || !transaction ? (
-        <Text ta="center" c="danger" py="xl">
-          Couldn't load this transaction. Please try again.
-        </Text>
+      {/* `!transaction` is redundant with isUnavailable at runtime — it's
+          here to narrow the type for the branch below. */}
+      {isUnavailable || !transaction ? (
+        <TransactionDetailFallback detail={detail} />
       ) : (
         <Stack gap={0}>
           <Box style={{ breakAfter: "page", pageBreakAfter: "always" }}>

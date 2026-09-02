@@ -13,7 +13,7 @@ import {
   calculateTotal,
   canConfirmTransaction,
   getMissingRequirements,
-} from "../lib/receipt";
+} from "../lib/transaction-draft";
 import { useLineItemSync } from "../hooks/use-line-item-sync";
 import type {
   FeeCatalogItem,
@@ -23,9 +23,9 @@ import type {
 } from "../types";
 import {
   CatalogBuilderContext,
-  ReceiptBuilderContext,
+  TransactionDraftContext,
   type CatalogBuilderValue,
-  type ReceiptBuilderValue,
+  type TransactionDraftValue,
 } from "./transaction-builder-context-value";
 
 // Stable empty-array reference so `catalog` doesn't change identity every
@@ -82,12 +82,12 @@ export function TransactionBuilderProvider({
   // Not gated on isSyncing (unlike Confirm) — Cancel should feel instant;
   // useLineItemSync.cancel() resolves internally (drains in-flight
   // adds, resolves the transaction id, calls the cancel API, resets its
-  // own state). This wrapper only owns the receipt-level fields.
+  // own state). This wrapper only owns the draft-level fields.
   //
   // Uses the destructured lineItemSyncCancel, not lineItemSync.cancel()
   // directly — oxlint's exhaustive-deps flags method calls on an object
   // dependency as needing the whole object, which would be unstable.
-  const cancelReceipt = useCallback(async () => {
+  const cancelDraft = useCallback(async () => {
     setIsCancelling(true);
     try {
       await lineItemSyncCancel();
@@ -121,14 +121,21 @@ export function TransactionBuilderProvider({
           amount_paid: amountPaid,
         });
         notifySuccess(
+          // "Series No.", not "Series receipt #": per CONTEXT.md a Series
+          // receipt is the pre-numbered *block* of sheets, while
+          // series_number is one sheet number drawn from it. Matches the
+          // label the View Transaction page already uses for this field.
           saved.series_number
-            ? `Transaction completed — Receipt #${saved.series_number}.`
+            ? `Transaction completed — Series No. ${saved.series_number}.`
             : "Transaction completed successfully.",
         );
+        // Before the resets, per spec: the caller navigates away on this
+        // callback, and handing it the saved transaction first keeps the
+        // hand-off independent of teardown ordering below.
+        onSuccess?.(saved);
         lineItemSyncReset();
         setPayerName(INITIAL_PAYER_NAME);
         setAmountPaid(INITIAL_AMOUNT_PAID);
-        onSuccess?.(saved);
       } catch (error) {
         notifyMutationError(
           error,
@@ -171,7 +178,7 @@ export function TransactionBuilderProvider({
       amountPaid,
     }) && !lineItemSync.isSyncing;
 
-  // Memoized on catalog/filter state only, so receipt-side changes don't
+  // Memoized on catalog/filter state only, so draft-side changes don't
   // re-render FiltersPanel/FeeCatalogPanel. addFeeItem is stable (see
   // use-line-item-sync.ts) so it's safe to include.
   //
@@ -208,11 +215,11 @@ export function TransactionBuilderProvider({
     ],
   );
 
-  // Memoized on receipt state only, so catalog-side changes don't
-  // re-render ReceiptPanel. missingRequirements is computed inline
+  // Memoized on draft state only, so catalog-side changes don't
+  // re-render TransactionDraftPanel. missingRequirements is computed inline
   // (not listed as a dep) since a fresh array every render would defeat
   // the memo regardless of its content.
-  const receiptValue: ReceiptBuilderValue = useMemo(
+  const draftValue: TransactionDraftValue = useMemo(
     () => ({
       state: {
         transactionId: lineItemSync.transactionId,
@@ -225,7 +232,7 @@ export function TransactionBuilderProvider({
         setAmountPaid,
         setLineItemQuantity: lineItemSync.setLineItemQuantity,
         removeLineItem: lineItemSync.removeLineItem,
-        cancelReceipt,
+        cancelDraft,
         confirmTransaction,
       },
       meta: {
@@ -256,7 +263,7 @@ export function TransactionBuilderProvider({
       lineItemSync.lineItems,
       lineItemSync.setLineItemQuantity,
       lineItemSync.removeLineItem,
-      cancelReceipt,
+      cancelDraft,
       confirmTransaction,
       total,
       change,
@@ -271,9 +278,9 @@ export function TransactionBuilderProvider({
 
   return (
     <CatalogBuilderContext value={catalogValue}>
-      <ReceiptBuilderContext value={receiptValue}>
+      <TransactionDraftContext value={draftValue}>
         {children}
-      </ReceiptBuilderContext>
+      </TransactionDraftContext>
     </CatalogBuilderContext>
   );
 }

@@ -1,16 +1,17 @@
-import { Center, Group, Loader, Stack, Text } from "@mantine/core";
+import { Center, Group, Stack, Text } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/ui/button";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
-import { ReceiptItemsTable } from "./receipt-items-table";
+import { TransactionItemsTable } from "./transaction-items-table";
+import { TransactionDetailFallback } from "./transaction-detail-fallback";
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
   const id = Number(controlId);
-  const { transaction, isLoading, isForbidden, isError } =
-    useTransactionDetail(id);
+  const detail = useTransactionDetail(id);
+  const { transaction, isUnavailable } = detail;
   const navigate = useNavigate();
 
   return (
@@ -18,23 +19,8 @@ export function ViewTransactionPage() {
       <Card.Header title="View Transaction" />
       <Card.Divider />
       <Card.Body>
-        {isLoading ? (
-          <Center py="xl">
-            <Group gap="xs">
-              <Loader size="sm" />
-              <Text size="sm" c="dimmed">
-                Loading transaction...
-              </Text>
-            </Group>
-          </Center>
-        ) : isForbidden ? (
-          <Text ta="center" c="danger" py="xl">
-            You don't have access to this transaction.
-          </Text>
-        ) : isError || !transaction ? (
-          <Text ta="center" c="danger" py="xl">
-            Couldn't load this transaction. Please try again.
-          </Text>
+        {isUnavailable || !transaction ? (
+          <TransactionDetailFallback detail={detail} />
         ) : (
           <Stack gap="md">
             <Group justify="space-between" align="flex-start">
@@ -56,7 +42,7 @@ export function ViewTransactionPage() {
               </Stack>
             </Group>
 
-            <ReceiptItemsTable
+            <TransactionItemsTable
               items={transaction.items}
               total={transaction.total ?? 0}
               amountPaid={transaction.amount_paid}

@@ -2,20 +2,20 @@ import { createContext } from "react";
 import type {
   FeeCatalogItem,
   PriceRangeValue,
-  ReceiptLineItem,
+  DraftLineItem,
   SortByValue,
   TransactionDTO,
 } from "../types";
 
 // Split into two contexts along who actually reads what: FiltersPanel and
 // FeeCatalogPanel only ever touch the catalog/filter fields below;
-// ReceiptPanel only ever touches the receipt fields further down. Keeping
+// TransactionDraftPanel only ever touches the draft fields further down. Keeping
 // them in one context meant every keystroke in either side re-rendered
 // all three panels. addFeeItem is the one exception — it's triggered from
-// the catalog side but mutates receipt state, so it lives in
+// the catalog side but mutates draft state, so it lives in
 // CatalogBuilderActions with a stabilized identity (see
 // use-line-item-sync.ts) rather than pulling FeeCatalogPanel into the
-// receipt context just to reach it.
+// draft context just to reach it.
 
 export type CatalogBuilderState = {
   search: string;
@@ -45,32 +45,32 @@ export type CatalogBuilderValue = {
   meta: CatalogBuilderMeta;
 };
 
-export type ReceiptBuilderState = {
+export type TransactionDraftState = {
   transactionId: number | null;
   payerName: string;
   amountPaid: number;
-  lineItems: ReceiptLineItem[];
+  lineItems: DraftLineItem[];
 };
 
-export type ReceiptBuilderActions = {
+export type TransactionDraftActions = {
   setPayerName: (payerName: string) => void;
   setAmountPaid: (amountPaid: number) => void;
   setLineItemQuantity: (lineItemId: string, quantity: number) => void;
   removeLineItem: (lineItemId: string) => void;
-  cancelReceipt: () => void;
+  cancelDraft: () => void;
   confirmTransaction: (
     onSuccess?: (transaction: TransactionDTO) => void,
   ) => void;
 };
 
-export type ReceiptBuilderMeta = {
+export type TransactionDraftMeta = {
   total: number;
   change: number;
   canConfirm: boolean;
   missingRequirements: string[];
   isConfirming: boolean;
   isCancelling: boolean;
-  // Outstanding backend-sync work for the receipt — see isSyncing in
+  // Outstanding backend-sync work for the draft — see isSyncing in
   // transaction-builder-context.tsx.
   isSyncing: boolean;
   // Fees with outstanding add activity — locks their line (isLineItemLocked).
@@ -80,15 +80,15 @@ export type ReceiptBuilderMeta = {
   pendingRemovalFeeItemIds: ReadonlySet<number>;
 };
 
-export type ReceiptBuilderValue = {
-  state: ReceiptBuilderState;
-  actions: ReceiptBuilderActions;
-  meta: ReceiptBuilderMeta;
+export type TransactionDraftValue = {
+  state: TransactionDraftState;
+  actions: TransactionDraftActions;
+  meta: TransactionDraftMeta;
 };
 
 // Split out so transaction-builder-context.tsx only exports a component
 // (react-refresh constraint — same pattern as use-item-code-search.ts).
 export const CatalogBuilderContext =
   createContext<CatalogBuilderValue | null>(null);
-export const ReceiptBuilderContext =
-  createContext<ReceiptBuilderValue | null>(null);
+export const TransactionDraftContext =
+  createContext<TransactionDraftValue | null>(null);

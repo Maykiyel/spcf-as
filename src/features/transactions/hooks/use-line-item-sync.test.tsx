@@ -129,7 +129,7 @@ describe("useLineItemSync — initial state", () => {
 });
 
 describe("useLineItemSync — addFeeItem", () => {
-  it("bumps the receipt optimistically, before the debounce fires or any network call happens", () => {
+  it("bumps the draft optimistically, before the debounce fires or any network call happens", () => {
     mockAddTransactionItem.mockReturnValue(deferred<TransactionItemDTO>().promise);
 
     const { result } = renderHook(() => useLineItemSync());
@@ -392,10 +392,10 @@ describe("useLineItemSync — cancel", () => {
     amount_paid: 0,
     change_amount: 0,
     status: "cancelled",
-    date: "2026-08-21",
+    date: "2026-08-21T06:30:00.000000Z",
   };
 
-  it("cancels a settled transaction and clears the receipt", async () => {
+  it("cancels a settled transaction and clears the draft", async () => {
     mockCancelTransaction.mockResolvedValue(fakeCancelledTransaction);
 
     const { result } = await renderWithSettledLine();
@@ -451,7 +451,7 @@ describe("useLineItemSync — cancel", () => {
 });
 
 describe("useLineItemSync — reset", () => {
-  it("clears the receipt synchronously without calling any API", async () => {
+  it("clears the draft synchronously without calling any API", async () => {
     const { result } = await renderWithSettledLine();
     act(() => result.current.reset());
 

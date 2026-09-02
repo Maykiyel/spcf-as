@@ -11,7 +11,14 @@ type MantineProviderProps = {
 export const MantineProvider = ({ children }: MantineProviderProps) => {
   return (
     <BaseMantineProvider theme={theme}>
-      <Notifications position="bottom-center" zIndex={1000} />
+      {/* no-print: this portal mounts above AppRouter, so it is in the
+          Print Acknowledgement Receipt page's tree too — without the
+          exclusion an open toast prints onto the receipt. */}
+      <Notifications
+        position="bottom-center"
+        zIndex={1000}
+        classNames={{ root: "no-print" }}
+      />
       {children}
     </BaseMantineProvider>
   );

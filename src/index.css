@@ -89,3 +89,15 @@ html {
 .dark-dropdown-item.danger:hover {
   background-color: #fa525233;
 }
+
+/* Excluded from printed output. Global rather than page-local because two
+   unrelated trees rely on it: the Print Acknowledgement Receipt page's
+   back link, and the app-wide <Notifications /> portal — which mounts in
+   MantineProvider *above* the router, so it is in the print page's tree
+   despite that page being outside AppLayoutRoute, and an open toast would
+   otherwise print onto the receipt. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

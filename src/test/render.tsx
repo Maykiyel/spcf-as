@@ -28,25 +28,39 @@ function renderWithProviders(
 // each other. retry is forced off regardless of the app's real
 // queryConfig (src/lib/react-query/react-query.ts): a test asserting on a
 // mocked rejection shouldn't have to also account for 2 retry attempts.
-function renderWithQueryClient(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper">,
-) {
-  const queryClient = new QueryClient({
+function makeQueryClient() {
+  return new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+}
 
-  function Providers({ children }: { children: ReactNode }) {
+// The same provider tree as renderWithQueryClient, exposed on its own for
+// renderHook, which takes a `wrapper` rather than rendering an element.
+// Hook tests used to hand-roll this; sharing it is what keeps a hook test
+// and a component test agreeing about retry and cache isolation.
+function createQueryWrapper() {
+  const queryClient = makeQueryClient();
+
+  return function QueryWrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         <MantineProvider theme={theme}>{children}</MantineProvider>
       </QueryClientProvider>
     );
-  }
+  };
+}
 
-  return render(ui, { wrapper: Providers, ...options });
+function renderWithQueryClient(
+  ui: ReactElement,
+  options?: Omit<RenderOptions, "wrapper">,
+) {
+  return render(ui, { wrapper: createQueryWrapper(), ...options });
 }
 
 // Re-export everything from RTL so test files only need one import source.
 export * from "@testing-library/react";
-export { renderWithProviders as render, renderWithQueryClient };
+export {
+  renderWithProviders as render,
+  renderWithQueryClient,
+  createQueryWrapper,
+};
