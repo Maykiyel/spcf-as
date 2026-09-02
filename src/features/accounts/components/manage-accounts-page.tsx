@@ -1,16 +1,20 @@
-import { Badge, Stack, Title } from "@mantine/core";
+import { Badge, Group, Stack, Title } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
+import { IconPlus } from "@tabler/icons-react";
 import {
   DataTable,
   useClientTableState,
   type ColumnDef,
 } from "@/components/ui/data-table";
+import { PrimaryButton } from "@/components/ui/button";
 import type { Role } from "@/features/auth/types";
 import {
   getUserAccounts,
   USER_ACCOUNTS_QUERY_KEY,
 } from "../api/get-user-accounts";
 import type { UserAccount } from "../types";
+import { CreateAccountModal } from "./create-account-modal";
 
 const URL_KEY = "accounts";
 
@@ -42,6 +46,9 @@ const columns: ColumnDef<UserAccount>[] = [
 const NO_ACCOUNTS: UserAccount[] = [];
 
 export function ManageAccountsPage() {
+  const [createOpen, { open: openCreate, close: closeCreate }] =
+    useDisclosure(false);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: USER_ACCOUNTS_QUERY_KEY,
     queryFn: getUserAccounts,
@@ -55,7 +62,17 @@ export function ManageAccountsPage() {
 
   return (
     <Stack gap="lg">
-      <Title order={3}>Manage Accounts</Title>
+      <Group justify="space-between" wrap="wrap">
+        <Title order={3}>Manage Accounts</Title>
+        <PrimaryButton
+          onClick={openCreate}
+          leftSection={<IconPlus size={16} />}
+        >
+          New Account
+        </PrimaryButton>
+      </Group>
+
+      <CreateAccountModal opened={createOpen} onClose={closeCreate} />
 
       {/* `useClientTableState` hardcodes `isLoading`/`isError` to false —
           it filters an array and has no network call of its own to report

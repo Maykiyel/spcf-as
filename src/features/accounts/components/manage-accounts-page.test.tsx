@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { AxiosError } from "axios";
 import { MemoryRouter } from "react-router";
-import { fireEvent } from "@testing-library/react";
+import { fireEvent, waitFor } from "@testing-library/react";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getUserAccounts } from "../api/get-user-accounts";
+import { createUserAccount } from "../api/create-user-account";
 import { ManageAccountsPage } from "./manage-accounts-page";
 import type { UserAccount } from "../types";
 
@@ -16,9 +18,19 @@ import type { UserAccount } from "../types";
 vi.mock("../api/get-user-accounts");
 const mockGetUserAccounts = vi.mocked(getUserAccounts);
 
-// Mantine's Select (the page-size control, and the role field) renders its
-// dropdown inside a ScrollArea, which subscribes to a ResizeObserver on
-// mount — jsdom doesn't implement one. Same stub as service-form.test.tsx.
+vi.mock("../api/create-user-account", async () => {
+  // The schema is the form's own validation, not a collaborator — mocking it
+  // would mean the password rule and the required fields were never exercised.
+  const actual = await vi.importActual<
+    typeof import("../api/create-user-account")
+  >("../api/create-user-account");
+  return { ...actual, createUserAccount: vi.fn() };
+});
+const mockCreateUserAccount = vi.mocked(createUserAccount);
+
+// Mantine's Select (the toolbar's page-size control) renders its dropdown
+// inside a ScrollArea, which subscribes to a ResizeObserver on mount —
+// jsdom doesn't implement one. Same stub as service-form.test.tsx.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -55,9 +67,51 @@ function renderPage() {
   );
 }
 
+const newAccount: UserAccount = {
+  id: 3,
+  first_name: "Ana",
+  last_name: "Reyes",
+  full_name: "Ana Reyes",
+  user_name: "areyes",
+  email: "ana@spcf.edu.ph",
+  role: "admin",
+};
+
+function validationError(errors: Record<string, string[]>): AxiosError {
+  const error = new AxiosError("The given data was invalid.");
+  error.response = {
+    status: 422,
+    data: { message: "The given data was invalid.", errors },
+  } as AxiosError["response"];
+  return error;
+}
+
+/** Opens the create modal and fills every field. Returns nothing — each
+ * test asserts on what it cares about after submitting. */
+async function fillCreateForm(
+  overrides: Partial<Record<string, string>> = {},
+) {
+  fireEvent.click(screen.getByRole("button", { name: /new account/i }));
+  await screen.findByLabelText("First Name"); // Mantine's modal transition
+
+  const values = {
+    "First Name": "Ana",
+    "Last Name": "Reyes",
+    Username: "areyes",
+    "Email Address": "ana@spcf.edu.ph",
+    Password: "sup3rsecret",
+    ...overrides,
+  };
+
+  for (const [label, value] of Object.entries(values)) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetUserAccounts.mockResolvedValue(accounts);
+  mockCreateUserAccount.mockResolvedValue(newAccount);
 });
 
 describe("ManageAccountsPage", () => {
@@ -108,5 +162,58 @@ describe("ManageAccountsPage", () => {
     expect(
       await screen.findByText("Couldn't load accounts. Please try again."),
     ).toBeInTheDocument();
+  });
+
+  it("creates an account with the values entered and shows it in the list", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    await fillCreateForm();
+    fireEvent.click(screen.getByLabelText("Admin"));
+
+    mockGetUserAccounts.mockResolvedValue([...accounts, newAccount]);
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    // Asserting on the payload alone, not the whole call: react-query passes
+    // a mutation context as a second argument that the fetcher ignores.
+    await waitFor(() => expect(mockCreateUserAccount).toHaveBeenCalledOnce());
+    expect(mockCreateUserAccount.mock.calls[0][0]).toEqual({
+      first_name: "Ana",
+      last_name: "Reyes",
+      username: "areyes",
+      email: "ana@spcf.edu.ph",
+      password: "sup3rsecret",
+      role: "admin",
+    });
+
+    expect(await screen.findByText("Ana Reyes")).toBeInTheDocument();
+  });
+
+  it("shows the server's duplicate-username message against the username field", async () => {
+    mockCreateUserAccount.mockRejectedValue(
+      validationError({ username: ["The username has already been taken."] }),
+    );
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    await fillCreateForm({ Username: "jaypee" });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(
+      await screen.findByText("The username has already been taken."),
+    ).toBeInTheDocument();
+  });
+
+  it("won't submit a password shorter than the client-side minimum", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    await fillCreateForm({ Password: "short" });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(
+      await screen.findByText(/at least 8 characters/i),
+    ).toBeInTheDocument();
+    expect(mockCreateUserAccount).not.toHaveBeenCalled();
   });
 });
