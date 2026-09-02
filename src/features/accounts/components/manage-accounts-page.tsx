@@ -15,6 +15,7 @@ import {
 } from "../api/get-user-accounts";
 import type { UserAccount } from "../types";
 import { CreateAccountModal } from "./create-account-modal";
+import { UserAccountActionsCell } from "./user-account-actions-cell";
 
 const URL_KEY = "accounts";
 
@@ -38,6 +39,16 @@ const columns: ColumnDef<UserAccount>[] = [
         {ROLE_LABEL[row.role]}
       </Badge>
     ),
+  },
+  {
+    // Keyed on a column already declared above, not on `id`, so that the
+    // client-side search doesn't quietly match user ids: it scans every
+    // declared column's raw value, and nothing on screen shows an id.
+    // `id` disambiguates the duplicate key, as DataTable requires.
+    key: "full_name",
+    id: "actions",
+    header: "Actions",
+    render: (row) => <UserAccountActionsCell account={row} />,
   },
 ];
 

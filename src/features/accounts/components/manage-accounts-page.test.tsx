@@ -2,10 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AxiosError } from "axios";
 import { MemoryRouter } from "react-router";
-import { fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, waitFor, within } from "@testing-library/react";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getUserAccounts } from "../api/get-user-accounts";
 import { createUserAccount } from "../api/create-user-account";
+import { deleteUserAccount } from "../api/delete-user-account";
 import { ManageAccountsPage } from "./manage-accounts-page";
 import type { UserAccount } from "../types";
 
@@ -27,6 +28,12 @@ vi.mock("../api/create-user-account", async () => {
   return { ...actual, createUserAccount: vi.fn() };
 });
 const mockCreateUserAccount = vi.mocked(createUserAccount);
+
+vi.mock("../api/delete-user-account");
+const mockDeleteUserAccount = vi.mocked(deleteUserAccount);
+
+const DELETION_REFUSED =
+  "User cannot be deleted because they have existing related records.";
 
 // Mantine's Select (the toolbar's page-size control) renders its dropdown
 // inside a ScrollArea, which subscribes to a ResizeObserver on mount —
@@ -108,10 +115,21 @@ async function fillCreateForm(
   }
 }
 
+/** Opens the delete confirmation for the first row (Jaypee Pahayahay). */
+async function openDeleteConfirmation() {
+  fireEvent.click(screen.getAllByRole("button", { name: /^delete$/i })[0]);
+  await screen.findByRole("button", { name: /delete account/i });
+}
+
+/** The rows themselves, so an assertion about the list can't be satisfied
+ * by the same name appearing inside the open confirmation dialog. */
+const tableRows = () => within(screen.getByRole("table"));
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetUserAccounts.mockResolvedValue(accounts);
   mockCreateUserAccount.mockResolvedValue(newAccount);
+  mockDeleteUserAccount.mockResolvedValue(undefined);
 });
 
 describe("ManageAccountsPage", () => {
@@ -215,5 +233,52 @@ describe("ManageAccountsPage", () => {
       await screen.findByText(/at least 8 characters/i),
     ).toBeInTheDocument();
     expect(mockCreateUserAccount).not.toHaveBeenCalled();
+  });
+
+  it("deletes nothing until the admin confirms", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    await openDeleteConfirmation();
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    expect(mockDeleteUserAccount).not.toHaveBeenCalled();
+    expect(tableRows().getByText("Jaypee Pahayahay")).toBeInTheDocument();
+  });
+
+  it("removes the account from the list once deletion is confirmed", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    await openDeleteConfirmation();
+    mockGetUserAccounts.mockResolvedValue([accounts[1]]);
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+
+    await waitFor(() => expect(mockDeleteUserAccount).toHaveBeenCalledOnce());
+    expect(mockDeleteUserAccount.mock.calls[0][0]).toBe(1);
+
+    await waitFor(() =>
+      expect(
+        tableRows().queryByText("Jaypee Pahayahay"),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it("states the server's refusal as given and leaves the account in the list", async () => {
+    const refusal = new AxiosError(DELETION_REFUSED);
+    refusal.response = {
+      status: 422,
+      data: { message: DELETION_REFUSED },
+    } as AxiosError["response"];
+    mockDeleteUserAccount.mockRejectedValue(refusal);
+
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    await openDeleteConfirmation();
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+
+    expect(await screen.findByText(DELETION_REFUSED)).toBeInTheDocument();
+    expect(tableRows().getByText("Jaypee Pahayahay")).toBeInTheDocument();
   });
 });
