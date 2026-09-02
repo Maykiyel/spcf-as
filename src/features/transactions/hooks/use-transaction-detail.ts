@@ -39,10 +39,20 @@ export function useTransactionDetail(controlId: number) {
   const isForbidden =
     isError && error instanceof AxiosError && error.response?.status === 403;
 
+  const resolvedIsLoading = canFetch && isLoading;
+  const resolvedIsError = !canFetch || isError;
+
   return {
     transaction: data,
-    isLoading: canFetch && isLoading,
-    isError: !canFetch || isError,
+    isLoading: resolvedIsLoading,
+    isError: resolvedIsError,
     isForbidden,
+    // "There is nothing to render yet" — the single source of truth for
+    // that question. Both pages branch on it, and TransactionDetailFallback
+    // assumes it: previously each of the three re-derived the same
+    // four-term condition, which left the fallback's own null-return
+    // unreachable and the condition free to drift between them.
+    isUnavailable:
+      resolvedIsLoading || isForbidden || resolvedIsError || !data,
   };
 }

@@ -11,7 +11,7 @@ export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
   const id = Number(controlId);
   const detail = useTransactionDetail(id);
-  const { transaction, isLoading, isForbidden, isError } = detail;
+  const { transaction, isUnavailable } = detail;
   const navigate = useNavigate();
 
   return (
@@ -19,7 +19,7 @@ export function ViewTransactionPage() {
       <Card.Header title="View Transaction" />
       <Card.Divider />
       <Card.Body>
-        {isLoading || isForbidden || isError || !transaction ? (
+        {isUnavailable || !transaction ? (
           <TransactionDetailFallback detail={detail} />
         ) : (
           <Stack gap="md">

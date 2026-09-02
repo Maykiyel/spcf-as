@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { createQueryWrapper } from "@/test/render";
 import { useTransactionDetail } from "./use-transaction-detail";
 import { getTransaction } from "../api/get-transaction";
 import type { TransactionDTO } from "../types";
@@ -12,17 +11,18 @@ vi.mock("../api/get-transaction");
 
 const mockGetTransaction = vi.mocked(getTransaction);
 
-const savedTransaction = {
-  id: 62598,
+const savedTransaction: TransactionDTO = {
   control_id: 62598,
+  cashier: { id: 1, full_name: "Jaypee Pahayahay" },
   series_number: 42,
   customer_name: "Juan Dela Cruz",
-  date: "2026-08-24T06:30:00.000000Z",
+  items: [],
   total: 200,
   amount_paid: 500,
-  change: 300,
-  items: [],
-} as unknown as TransactionDTO;
+  change_amount: 300,
+  status: "completed",
+  date: "2026-08-24T06:30:00.000000Z",
+};
 
 function makeAxiosError(status: number): AxiosError {
   const error = new AxiosError("request failed");
@@ -30,19 +30,15 @@ function makeAxiosError(status: number): AxiosError {
   return error;
 }
 
-// A fresh client per render so cached query state can't leak between
-// tests, mirroring renderWithQueryClient in src/test/render.tsx.
-function wrapper({ children }: { children: ReactNode }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
+// Rebuilt per test, so each test gets its own QueryClient and cached
+// query state can't leak between them. Shared with the component-test
+// helper rather than hand-rolled, so hook and component tests can't
+// disagree about retry or cache isolation.
+let wrapper: ReturnType<typeof createQueryWrapper>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  wrapper = createQueryWrapper();
 });
 
 describe("useTransactionDetail", () => {

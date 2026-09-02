@@ -182,7 +182,7 @@ describe("TransactionBuilderProvider — confirmTransaction", () => {
       amount_paid: 200,
     });
     expect(mockNotifySuccess).toHaveBeenCalledWith(
-      "Transaction completed — Series receipt #42.",
+      "Transaction completed — Series No. 42.",
     );
     expect(screen.getByTestId("payer-name").textContent).toBe("");
     expect(screen.getByTestId("line-count").textContent).toBe("0");

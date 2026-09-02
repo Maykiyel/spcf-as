@@ -121,8 +121,12 @@ export function TransactionBuilderProvider({
           amount_paid: amountPaid,
         });
         notifySuccess(
+          // "Series No.", not "Series receipt #": per CONTEXT.md a Series
+          // receipt is the pre-numbered *block* of sheets, while
+          // series_number is one sheet number drawn from it. Matches the
+          // label the View Transaction page already uses for this field.
           saved.series_number
-            ? `Transaction completed — Series receipt #${saved.series_number}.`
+            ? `Transaction completed — Series No. ${saved.series_number}.`
             : "Transaction completed successfully.",
         );
         // Before the resets, per spec: the caller navigates away on this

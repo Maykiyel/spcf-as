@@ -54,7 +54,7 @@ export function PrintAcknowledgementReceiptPage() {
   const { controlId } = useParams<{ controlId: string }>();
   const id = Number(controlId);
   const detail = useTransactionDetail(id);
-  const { transaction, isLoading, isForbidden, isError } = detail;
+  const { transaction, isUnavailable } = detail;
   const navigate = useNavigate();
 
   const hasPrintedRef = useRef(false);
@@ -129,7 +129,9 @@ export function PrintAcknowledgementReceiptPage() {
         </Text>
       </UnstyledButton>
 
-      {isLoading || isForbidden || isError || !transaction ? (
+      {/* `!transaction` is redundant with isUnavailable at runtime — it's
+          here to narrow the type for the branch below. */}
+      {isUnavailable || !transaction ? (
         <TransactionDetailFallback detail={detail} />
       ) : (
         <Stack gap={0}>

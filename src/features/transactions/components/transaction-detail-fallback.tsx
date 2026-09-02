@@ -15,12 +15,13 @@ type TransactionDetailFallbackProps = {
 // the same classification differently, which is the drift the hook was
 // extracted to prevent.
 //
-// Returns null once there's a transaction to show, so callers can render
-// it alongside their real content rather than branching twice.
+// Render this only when `detail.isUnavailable` is true; it always renders
+// one of the three states below and never returns null. The hook owns that
+// condition so the two pages and this component can't disagree about it.
 export function TransactionDetailFallback({
   detail,
 }: TransactionDetailFallbackProps) {
-  const { transaction, isLoading, isForbidden, isError } = detail;
+  const { isLoading, isForbidden } = detail;
 
   if (isLoading) {
     return (
@@ -43,13 +44,9 @@ export function TransactionDetailFallback({
     );
   }
 
-  if (isError || !transaction) {
-    return (
-      <Text ta="center" c="danger" py="xl">
-        Couldn't load this transaction. Please try again.
-      </Text>
-    );
-  }
-
-  return null;
+  return (
+    <Text ta="center" c="danger" py="xl">
+      Couldn't load this transaction. Please try again.
+    </Text>
+  );
 }
