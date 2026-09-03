@@ -64,7 +64,12 @@ function resolveLeafRoles(
 
 // Undeclared roles mean everyone. A declared list needs a signed-in role
 // that is on it — a user with no role at all matches nothing.
-function isAllowedForRole(
+//
+// Exported because `ProtectedRoute` asks the same question of the roles it
+// reads off the matched route's `handle`. It used to hand-roll the test,
+// which left the enforcement point free to drift from the two derivations
+// below — the exact drift they resolve through one function to avoid.
+export function isAllowedForRole(
   roles: Role[] | undefined,
   role: Role | undefined,
 ): boolean {

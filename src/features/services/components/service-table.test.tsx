@@ -181,6 +181,48 @@ describe("ServiceTable", () => {
     );
   });
 
+  it("keeps the status filter when the page changes", async () => {
+    // 60 rows over a page size of 25, so there is a second page to ask for.
+    mockGetServices.mockResolvedValue({ data: services, total: 60 });
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    chooseStatus("Active");
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({ filters: { is_active: "1" } }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        page: 2,
+        filters: { is_active: "1" },
+      }),
+    );
+  });
+
+  it("goes back to the first page when the status changes", async () => {
+    mockGetServices.mockResolvedValue({ data: services, total: 60 });
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
+    await waitFor(() => expect(lastRequest()).toMatchObject({ page: 2 }));
+
+    // Behaviour the shared mechanism adds — the bespoke hook left
+    // `services_page` alone, which could land the user on a page number
+    // the narrowed result set no longer has.
+    chooseStatus("Inactive");
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        page: 1,
+        filters: { is_active: "0" },
+      }),
+    );
+  });
+
   it("keeps the status filter when a column is sorted", async () => {
     renderTable();
     await screen.findByText("SHS GRADUATION FEE");

@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation, useMatches } from "react-router";
 import { useAuthStore } from "@/stores/auth-store";
-import { DASHBOARD_PATH, LOGIN_PATH } from "@/config/pages";
+import { DASHBOARD_PATH, isAllowedForRole, LOGIN_PATH } from "@/config/pages";
 import { Suspense, useEffect } from "react";
 import { AppLoader } from "../ui/loader";
 import { notifyWarning } from "@/lib/notifications/notifications";
@@ -20,18 +20,26 @@ export function ProtectedRoute() {
 
   const isUnauthenticated = status === "unauthenticated";
 
-  const requiredRoles = matches.find(
-    (match) => (match.handle as RouteHandle | undefined)?.roles,
-  )?.handle as RouteHandle | undefined;
+  // The roles themselves, not the handle that carries them — reading
+  // `requiredRoles.roles` off something named for the roles is what made
+  // the old version hard to follow.
+  const requiredRoles = matches
+    .map((match) => (match.handle as RouteHandle | undefined)?.roles)
+    .find((roles) => roles !== undefined);
 
   // Signed in and permitted, but not for *this* route. Distinct from
   // being signed out, and distinct again from a deactivated account —
   // which is signed in and permitted, and refused by the server on every
   // request instead (see `authSession.end`).
+  //
+  // Asks `pages.ts` the membership question rather than repeating it. The
+  // registry's two derivations resolve through that function so a hidden
+  // link and a reachable route can't disagree; the enforcement point has
+  // to resolve through it as well or it is free to drift from both.
   const isForbidden =
     !isUnauthenticated &&
-    requiredRoles?.roles !== undefined &&
-    (!role || !requiredRoles.roles.includes(role));
+    requiredRoles !== undefined &&
+    !isAllowedForRole(requiredRoles, role);
 
   // Keyed on the path as well, so two forbidden routes in a row each get
   // their own explanation rather than the second passing in silence.
