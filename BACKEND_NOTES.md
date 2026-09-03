@@ -4,7 +4,7 @@ Reference for the API this frontend talks to. Describes **what the backend
 actually returns and enforces** — not why it was built that way.
 
 Source: `spcf-as-backend` (Laravel 12 + Sanctum + spatie/laravel-permission
-+ spatie/laravel-query-builder), read at commit `fbbb77f` (2026-08-27).
++ spatie/laravel-query-builder), read at commit `e355837` (2026-09-02).
 That repo belongs to the backend developer and is read-only from here; this
 file is a transcription of it. When it changes, re-read and update this.
 
@@ -189,6 +189,15 @@ PATCH  /users/{user}/toggle-status    (admin)  body: {"is_active": bool}
   series back to `active`. `SeriesReceiptStatus` is now
   `queued | active | exhausted | suspended`.
 - Returns the updated `UserResource`, which now includes `is_active`.
+- **`GET /users` returns `is_active` too, as of `e355837`.** `index`
+  narrows the query with `->select($fields)`; that commit appends
+  `is_active` unconditionally, next to `id`, so it arrives whether or
+  not `fields[]` was passed (it is still not a value `fields[]` accepts,
+  and doesn't need to be). The same commit casts it to `boolean` on the
+  model, so every endpoint now returns `true`/`false` rather than the
+  index returning `1`/`0` and `toggle-status` returning a real bool.
+  Before it, the field was absent from every row of the directory:
+  unselected, and `UserResource` wraps it in `whenNotNull`.
 - There is still **no update endpoint** — no rename, no email change, no
   role change, no password reset.
 
@@ -236,7 +245,9 @@ instants of 31 December fall outside it.
 - **App timezone is still `UTC`**, so every "today"/"month" boundary is a
   UTC one. In UTC+8 that is 08:00 Manila to 08:00.
 - **Password validation is still `['required', 'string']`** — no minimum
-  length, no complexity.
+  length, no complexity. The Manage Accounts create form imposes 8
+  characters client-side, which does nothing for anything calling the
+  API directly.
 - **No `search` filter** on `/activity-logs`, `/reports/*` or `/users`.
   Activity logs remain date-only with `created_at` as the sole sort.
 - **`/reports/transactions` computes `total_earnings` from the same

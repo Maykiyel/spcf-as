@@ -131,7 +131,7 @@ function SupplierTable({ data }: { data: Supplier[] }) {
 | `DataTable.Root`       | Provides context, wraps children in `Card`. Takes `title` and `state`.                                   |
 | `DataTable.Toolbar`    | A row of controls, composed from the pieces below. Omit entirely for a table with no controls at all.    |
 | `DataTable.PageSize`   | The "Show N entries" select. Omit for a table that doesn't let the user change the page size.            |
-| `DataTable.Search`     | The search input. Right-aligns itself. **Only compose this on an endpoint that accepts a search filter** — see below. |
+| `DataTable.Search`     | The search input. Right-aligns itself. **On a server-backed table, only compose this on an endpoint that accepts a search filter** — see below. Always safe on a client-side one. |
 | `DataTable.Grid`       | The actual `<table>` — headers (with sort toggle if `sortable: true`), rows, loading/error/empty states. |
 | `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging.       |
 
@@ -163,6 +163,14 @@ alongside the shared pieces, with no slot prop involved:
 how this component already varies; a `showSearch` flag would be a second,
 contradictory way to say the same thing, and the variation after that would
 want a third.
+
+**That rule is about server-backed tables only.** A client-side table has
+no endpoint in the loop: `useClientTableState` filters rows already in the
+browser, so `DataTable.Search` always works there — and it is the honest
+control, because searching the loaded array *is* searching the whole
+dataset, with none of the page-scoping that made every server-backed page
+without a `search` filter drop the box. `manage-accounts-page.tsx` is the
+only such table today.
 
 The matching half of the rule lives on the list adapter: `createListAdapter`
 sends `filter[search]` only for endpoints that opt in with
@@ -280,6 +288,14 @@ type ColumnDef<T> = {
   render?: (row: T) => ReactNode; // custom cell content — omit to just print the raw field value
 };
 ```
+
+**A column's `key` also decides what `useClientTableState` searches.**
+Its search scans the raw value of every declared column, so a column
+keyed on a field the table never displays makes the search box match
+text nobody can see — an actions column keyed on `id` means typing `3`
+matches user 3. Key such a column on one already declared and give it
+an `id`, as `manage-accounts-page.tsx` does. Server-backed tables are
+unaffected: their search is a query param.
 
 **Always set `id` on an "Actions" column** (or any column reusing another
 column's `key`) — `DataTable.Grid` uses `col.id ?? col.key` as the React list
@@ -412,6 +428,33 @@ not a filter-only one.
 | Query succeeds with 0 results                  | "No entries found"                                                           |
 | Query fails before any data has loaded         | The error message in place of rows                                           |
 | Any state, `useClientTableState`               | `isError` is always `false` — there's no network call to fail                |
+
+**A client-side table whose data comes from a query still has both
+states** — they just belong to the page, not to the hook.
+`useClientTableState` filters an array and has no request to report on,
+so it hardcodes `isLoading` and `isError` to `false`; the component that
+called `useQuery` is what knows. Spread the query's own flags over the
+state on the way in, and `DataTable.Grid` renders the skeleton and the
+error row exactly as it does for a server-backed table:
+
+```tsx
+const { data, isLoading, isError } = useQuery({ queryKey, queryFn });
+const tableState = useClientTableState({ data: data ?? NO_ROWS, columns });
+
+<DataTable.Root
+  title="User Accounts"
+  state={{ ...tableState, isLoading, isError, errorMessage: "..." }}
+>
+```
+
+Deliberately not passthrough options on the hook: the override is one
+line at the call site, it reads as exactly what it is, and the hook
+stays about filtering. See `manage-accounts-page.tsx`, its only consumer
+so far. Note `columns` at module scope there: it feeds the memo deps of
+the hook's filter and sort passes, so rebuilding it per render re-filters
+and re-sorts the whole dataset every time. Its `NO_ROWS` fallback is the
+same habit applied where it saves nothing — the array is empty by
+definition — kept only so the two read alike.
 
 If you need a custom error message instead of the default "Couldn't load
 data. Please try again.", that comes from `errorMessage` in

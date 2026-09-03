@@ -8,6 +8,7 @@ import {
   IconPlus,
   IconReceiptFilled,
   IconReportAnalytics,
+  IconUserCog,
   IconUsersGroup,
   type Icon,
 } from "@tabler/icons-react";
@@ -124,6 +125,13 @@ export const pages: TopLevelPage[] = [
     icon: IconUsersGroup,
     roles: ["admin"],
     children: [
+      {
+        key: "manageAccounts",
+        path: "/accounts/manage",
+        lazyImport: () => import("@/app/routes/app/accounts/manage"),
+        label: "Manage Accounts",
+        icon: IconUserCog,
+      },
       {
         key: "seriesReceipts",
         path: "/accounts/series-receipts",
