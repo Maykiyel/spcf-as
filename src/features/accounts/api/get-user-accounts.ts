@@ -14,9 +14,8 @@ import type { UserAccount } from "../types";
  * `invalidateQueries` matches on, so the mutations need no change. */
 export const USER_ACCOUNTS_QUERY_KEY = ["user-accounts"] as const;
 
-/** The row as `GET /users` sends it. `role` is absent in practice — the
- * index no longer eager-loads the roles relation — but the resource still
- * declares it, so this stays optional rather than being dropped. */
+/** The row as `GET /users` sends it: `UserAccount` with the wire's own
+ * `user_name` in place of the renamed `username`. */
 type UserAccountWireRow = Omit<UserAccount, "username"> & {
   user_name: string;
 };

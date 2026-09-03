@@ -49,9 +49,9 @@ const mockToggleStatus = vi.mocked(toggleUserAccountStatus);
 const DELETION_REFUSED =
   "User cannot be deleted because they have existing related records.";
 
-// Mantine's Select (the toolbar's page-size control) renders its dropdown
-// inside a ScrollArea, which subscribes to a ResizeObserver on mount —
-// jsdom doesn't implement one. Same stub as service-form.test.tsx.
+// `DataTable.Grid` renders its rows inside a ScrollArea, which subscribes
+// to a ResizeObserver on mount — jsdom doesn't implement one. Same stub as
+// service-form.test.tsx.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -295,7 +295,10 @@ describe("ManageAccountsPage", () => {
     renderPage();
 
     expect(
-      await screen.findByText("Couldn't load accounts. Please try again."),
+      // The shared message from `useServerTableState`. The README is
+      // explicit that this isn't a per-table prop: custom wording is
+      // edited there, for every table at once.
+      await screen.findByText("Couldn't load data. Please try again."),
     ).toBeInTheDocument();
   });
 

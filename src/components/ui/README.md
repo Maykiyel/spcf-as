@@ -291,6 +291,15 @@ lit, and the first click on that column runs `nextSorts` from the top,
 which sends `asc` and reads as reversing a sort the table never admitted
 to. Declare it instead:
 
+**An endpoint with no default of its own is the second case for this, and
+it is the stronger one.** `/users` declares no `defaultSort`, so an
+unsorted request returns rows in whatever order the database gives — which
+is not stable across pages, so the same row can appear twice and another
+never. There is no server default to match, so the table names the
+column's obvious order itself. `manage-accounts-page.tsx` sends
+`full_name` ascending for this reason. Inventing a sort is right here and
+wrong wherever the endpoint already has one.
+
 ```tsx
 // Module scope, like `columns` — it seeds state and is compared on read.
 const INITIAL_SORTS: SortEntry[] = [

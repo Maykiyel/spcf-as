@@ -14,7 +14,10 @@ import {
   USER_ACCOUNTS_QUERY_KEY,
 } from "../api/get-user-accounts";
 import type { UserAccount } from "../types";
-import { AccountRoleFilter, AccountStatusFilter } from "./account-filters";
+import {
+  UserAccountRoleFilter,
+  UserAccountStatusFilter,
+} from "./user-account-filters";
 import { CreateAccountModal } from "./create-account-modal";
 import { UserAccountActionsCell } from "./user-account-actions-cell";
 
@@ -35,6 +38,16 @@ const INITIAL_SORTS: SortEntry[] = [{ key: "full_name", direction: "asc" }];
  * `null` is what each sends when unfiltered. Module scope for the same
  * reason: `useServerTableState` keys its query on this object. */
 const INITIAL_FILTERS = { role: null, is_active: null };
+
+/** `config('pagination.per_page')`, which is the only page size `/users`
+ * will serve. Its `index` validates `per_page` and then reads it off a
+ * `$validated` it never assigned, so the parameter does nothing (see
+ * `BACKEND_NOTES.md`). Sending anything else is worse than useless: the
+ * server still returns 25 while `DataTable.Pagination` divides the total
+ * by whatever was asked for, so a page size of 50 over 60 users reports
+ * two pages and makes the last ten unreachable. Pinned here, and the
+ * `DataTable.PageSize` control is left out, until that line is fixed. */
+const PAGE_SIZE = 25;
 
 // Module scope, not rebuilt per render: `useServerTableState` memoises on
 // this array's identity.
@@ -88,6 +101,7 @@ export function ManageAccountsPage() {
     queryFn: getUserAccounts,
     columns,
     urlKey: URL_KEY,
+    initialPageSize: PAGE_SIZE,
     initialSorts: INITIAL_SORTS,
     initialFilters: INITIAL_FILTERS,
   });
@@ -106,28 +120,20 @@ export function ManageAccountsPage() {
 
       <CreateAccountModal opened={createOpen} onClose={closeCreate} />
 
-      <DataTable.Root
-        title="User Accounts"
-        state={{
-          ...tableState,
-          errorMessage: tableState.isError
-            ? "Couldn't load accounts. Please try again."
-            : null,
-        }}
-      >
-        {/* No search box. `/users` accepts no `filter[search]`, and an
+      <DataTable.Root title="User Accounts" state={tableState}>
+        {/* Two of the three shared toolbar pieces are deliberately absent.
+            No search box: `/users` accepts no `filter[search]`, and an
             unknown filter key is a 400 here rather than an ignored
-            parameter — so the control would fail the first time anyone
-            typed into it. The two filters are what narrows this table
-            now. */}
+            parameter, so the control would fail the first time anyone
+            typed into it. No page size: see `PAGE_SIZE`. The two filters
+            are what narrows this table. */}
         <DataTable.Toolbar>
-          <DataTable.PageSize />
-          <Divider orientation="vertical" visibleFrom="xs" />
-          <AccountRoleFilter
+          <UserAccountRoleFilter
             value={tableState.filters.role}
             onChange={(role) => tableState.setFilters({ role })}
           />
-          <AccountStatusFilter
+          <Divider orientation="vertical" visibleFrom="xs" />
+          <UserAccountStatusFilter
             value={tableState.filters.is_active}
             onChange={(is_active) => tableState.setFilters({ is_active })}
           />
