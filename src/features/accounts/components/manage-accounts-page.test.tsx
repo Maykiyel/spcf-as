@@ -49,8 +49,9 @@ const mockToggleStatus = vi.mocked(toggleUserAccountStatus);
 const DELETION_REFUSED =
   "User cannot be deleted because they have existing related records.";
 
-// `DataTable.Grid` renders its rows inside a ScrollArea, which subscribes
-// to a ResizeObserver on mount — jsdom doesn't implement one. Same stub as
+// Mantine's Select (the toolbar's page-size control) renders its dropdown
+// inside a ScrollArea, and so does `DataTable.Grid`; both subscribe to a
+// ResizeObserver on mount, which jsdom doesn't implement. Same stub as
 // service-form.test.tsx.
 class ResizeObserverStub {
   observe() {}
@@ -58,6 +59,12 @@ class ResizeObserverStub {
   disconnect() {}
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+
+// Mantine's Combobox scrolls its active option into view on open, and
+// jsdom implements no scrolling. Without this the page-size Select throws
+// outside the assertion, as an unhandled rejection — every test stays
+// green while the run exits non-zero. Same stub as dashboard-page.test.tsx.
+Element.prototype.scrollIntoView = vi.fn();
 
 const accounts: UserAccount[] = [
   {
@@ -215,6 +222,29 @@ describe("ManageAccountsPage", () => {
     // An unknown `filter[]` key is a 400 here, not an ignored parameter, so
     // a search box on this table would fail the first time anyone typed.
     expect(screen.queryByPlaceholderText("Search")).not.toBeInTheDocument();
+  });
+
+  it("sends the page size the admin picks", async () => {
+    // `/users` validates `per_page` and then discarded it for three
+    // commits, because `index` never assigned `$request->validate(...)`.
+    // While that was true this control had to be left out entirely: the
+    // server kept returning 25 while `DataTable.Pagination` divided the
+    // total by whatever was asked for, so a larger page size reported
+    // pages whose rows were unreachable. Backend `0cecdbd` assigned it.
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    // By role, not display value: Mantine's Select renders a hidden input
+    // carrying the same value alongside the visible combobox. And the
+    // options need `hidden: true` — floating-ui measures every element as
+    // zero by zero in jsdom, so the dropdown never loses `display: none`
+    // even once `aria-expanded` is true. Same pair of quirks as the year
+    // Select in dashboard-page.test.tsx.
+    fireEvent.click(screen.getByRole("combobox"));
+    const options = await screen.findAllByRole("option", { hidden: true });
+    fireEvent.click(options.find((o) => o.textContent === "50")!);
+
+    await waitFor(() => expect(lastRequest()).toMatchObject({ per_page: 50 }));
   });
 
   it("asks for the directory unfiltered and ordered by name", async () => {

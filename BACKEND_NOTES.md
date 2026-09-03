@@ -4,7 +4,7 @@ Reference for the API this frontend talks to. Describes **what the backend
 actually returns and enforces** — not why it was built that way.
 
 Source: `spcf-as-backend` (Laravel 12 + Sanctum + spatie/laravel-permission
-+ spatie/laravel-query-builder), read at commit `e660349` (2026-09-03).
++ spatie/laravel-query-builder), read at commit `0d81988` (2026-09-03).
 That repo belongs to the backend developer and is read-only from here; this
 file is a transcription of it. When it changes, re-read and update this.
 
@@ -202,7 +202,7 @@ PATCH  /users/{user}/toggle-status    (admin)  body: {"is_active": bool}
 - There is still **no update endpoint** — no rename, no role change, no
   password reset.
 
-## Users: the index was rewritten (`4955f19`, `29b913d`, `e660349`)
+## Users: the index was rewritten (`4955f19` through `0d81988`)
 
 ```
 GET /users     (admin only now)
@@ -236,34 +236,39 @@ cashier picker uses, with `is_active=1`, because `POST /series-receipts`
 answers an inactive cashier with a 403 (`Cannot assign Series Receipt to
 inactive cashier account`).
 
-### `role` came back, and it hangs on one line
+Its two fields come from `CashierResource` as of `a474c13`, where they
+used to come from a `->get(['id', 'full_name'])` column select. Same shape
+either way, but the resource is the more stable of the two: a column added
+to the select would have leaked into the response, and now it cannot.
 
-`4955f19` dropped the `->with('roles')` the old index did. Because
-`UserResource.role` is `whenLoaded('roles')`, that made the key absent
-from every row of `GET /users` — silently, since the backend's own
-structure assertion does not name `role`. `e660349` restored it as
-`$users->load('roles')` after `paginate()`. Worth knowing if the field
-ever goes missing again: nothing on either side fails loudly when it
-does.
+`email` is fully gone: no column, no `$fillable` entry, no `UserResource`
+field, and as of `0cecdbd` no `store` validation rule or write either.
+`Supplier` still has one; that is a different model.
 
-### Two defects still live
+### Three bugs this rewrite shipped, all since fixed
 
-1. **`POST /users` should 500 on every request.** `store` still validates
-   `'email' => [..., 'unique:users,email']` and still writes `email`, but
-   `4955f19` dropped the column from the `users` migration and `email`
-   from `$fillable`. The unique rule queries a column that no longer
-   exists. (The `email` column still in that migration file belongs to
-   `password_reset_tokens`, not `users`.) The backend's own `store` tests
-   send a payload with no email, so they 422 before reaching it and the
-   break is invisible there.
-2. **`per_page` is validated and then ignored.** `index` calls
-   `$request->validate([...])` without assigning the result, then reads
-   `$validated['per_page']`. `$validated` is undefined, so the expression
-   is always the config default and the parameter does nothing.
+Recorded because each was silent, and two of them would come back the
+same way.
 
-`email` is otherwise fully gone: no column, no `$fillable` entry, no
-`UserResource` field. `Supplier` still has one; that is a different
-model.
+1. **`role` went missing from `GET /users`.** `UserResource.role` is
+   `whenLoaded('roles')`, and `4955f19` dropped the `->with('roles')` the
+   old index did, so the key was absent from every row. `e660349`
+   restored it as `$users->load('roles')` after `paginate()`. **It still
+   hangs on that one line**, and nothing on either side fails loudly if
+   it goes: the backend's own structure assertion does not name `role`.
+2. **`POST /users` was a SQL error.** `store` kept validating
+   `'email' => [..., 'unique:users,email']` and writing `email` after
+   `4955f19` dropped the column, so the unique rule queried a column that
+   no longer existed. Invisible to their suite, whose `store` payload has
+   no email and so 422s first. Fixed in `0cecdbd`. (The `email` column
+   still in that migration file belongs to `password_reset_tokens`.)
+3. **`per_page` was validated and then discarded.** `index` called
+   `$request->validate([...])` without assigning it, then read
+   `$validated['per_page']`. Undefined variable, so the expression was
+   always the config default. Silent because `??` has `isset()`
+   semantics and suppresses the warning — without it, Laravel's
+   `HandleExceptions` (which sets `error_reporting(-1)`) would have
+   thrown an `ErrorException` and made it a 500. Fixed in `0cecdbd`.
 
 ## Earnings reports (`fbbb77f`)
 

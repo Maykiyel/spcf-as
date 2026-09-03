@@ -19,11 +19,9 @@ const PASSWORD_MIN_LENGTH = 8;
  *
  * There is no `email` field. Backend `4955f19` dropped the column from the
  * `users` table and the field from `UserResource`, so there is nowhere for
- * one to go. `POST /users` has not caught up — it still validates `email`
- * as required and still writes it — which means account creation is broken
- * server-side until it does. Sending an email would not rescue it: the
- * write it feeds targets a column that no longer exists, and the
- * `unique:users,email` rule queries it first. See `BACKEND_NOTES.md`.
+ * one to go. `store` kept validating and writing it for three commits,
+ * which made every `POST /users` a SQL error against a column that no
+ * longer existed; `0cecdbd` removed both lines.
  */
 export const createUserAccountSchema = z.object({
   first_name: z.string().trim().min(1, "First name is required").max(255),
