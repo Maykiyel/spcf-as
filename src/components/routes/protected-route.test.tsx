@@ -17,7 +17,6 @@ const cashier: AuthUser = {
   last_name: "Ier",
   full_name: "Cash Ier",
   user_name: "cashier1",
-  email: "cashier@example.com",
   role: "cashier",
 };
 

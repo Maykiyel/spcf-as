@@ -27,7 +27,7 @@ import { getServerFieldErrors } from "../lib/server-field-errors";
 // A 422 can name a field the form doesn't have (or the API could grow one).
 // Only these are settable on the form; anything else falls through to a
 // toast rather than being silently swallowed. Derived from the schema
-// rather than retyped, so a seventh field can't be added to one and not
+// rather than retyped, so a sixth field can't be added to one and not
 // the other and quietly lose its server-side error.
 const FORM_FIELDS = Object.keys(
   createUserAccountSchema.shape,
@@ -37,7 +37,6 @@ const EMPTY_FORM: CreateUserAccountInput = {
   first_name: "",
   last_name: "",
   username: "",
-  email: "",
   password: "",
   role: "cashier",
 };
@@ -93,7 +92,7 @@ export function CreateAccountModal({
         setError(field, { message: fieldErrors[field] });
       }
 
-      // A duplicate username or email belongs on the input that caused it.
+      // A duplicate username belongs on the input that caused it.
       // Anything else — a 500, a dropped connection — has no field to sit
       // under, so it surfaces the way every other failed mutation does.
       if (named.length === 0) {
@@ -145,17 +144,6 @@ export function CreateAccountModal({
                 label="Username"
                 {...field}
                 error={errors.username?.message}
-              />
-            )}
-          />
-          <Controller
-            name="email"
-            control={control}
-            render={({ field }) => (
-              <TextInput
-                label="Email Address"
-                {...field}
-                error={errors.email?.message}
               />
             )}
           />

@@ -18,13 +18,13 @@ describe("getServerFieldErrors", () => {
       message: "The given data was invalid.",
       errors: {
         username: ["The username has already been taken.", "Second message."],
-        email: ["The email has already been taken."],
+        role: ["The selected role is invalid."],
       },
     });
 
     expect(getServerFieldErrors(error)).toEqual({
       username: "The username has already been taken.",
-      email: "The email has already been taken.",
+      role: "The selected role is invalid.",
     });
   });
 

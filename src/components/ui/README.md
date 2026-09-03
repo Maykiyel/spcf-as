@@ -169,8 +169,10 @@ no endpoint in the loop: `useClientTableState` filters rows already in the
 browser, so `DataTable.Search` always works there — and it is the honest
 control, because searching the loaded array *is* searching the whole
 dataset, with none of the page-scoping that made every server-backed page
-without a `search` filter drop the box. `manage-accounts-page.tsx` is the
-only such table today.
+without a `search` filter drop the box. **There is no such table today.**
+Manage Accounts was the last one, and backend `4955f19` paginated `/users`
+underneath it, so it moved to `useServerTableState` and dropped its search
+box with everything else that had no `filter[search]` behind it.
 
 The matching half of the rule lives on the list adapter: `createListAdapter`
 sends `filter[search]` only for endpoints that opt in with
@@ -289,6 +291,15 @@ lit, and the first click on that column runs `nextSorts` from the top,
 which sends `asc` and reads as reversing a sort the table never admitted
 to. Declare it instead:
 
+**An endpoint with no default of its own is the second case for this, and
+it is the stronger one.** `/users` declares no `defaultSort`, so an
+unsorted request returns rows in whatever order the database gives — which
+is not stable across pages, so the same row can appear twice and another
+never. There is no server default to match, so the table names the
+column's obvious order itself. `manage-accounts-page.tsx` sends
+`full_name` ascending for this reason. Inventing a sort is right here and
+wrong wherever the endpoint already has one.
+
 ```tsx
 // Module scope, like `columns` — it seeds state and is compared on read.
 const INITIAL_SORTS: SortEntry[] = [
@@ -341,8 +352,9 @@ Its search scans the raw value of every declared column, so a column
 keyed on a field the table never displays makes the search box match
 text nobody can see — an actions column keyed on `id` means typing `3`
 matches user 3. Key such a column on one already declared and give it
-an `id`, as `manage-accounts-page.tsx` does. Server-backed tables are
-unaffected: their search is a query param.
+an `id`. Server-backed tables are unaffected: their search is a query
+param — which is every table here today, so this rule is currently
+dormant rather than live.
 
 **Always set `id` on an "Actions" column** (or any column reusing another
 column's `key`) — `DataTable.Grid` uses `col.id ?? col.key` as the React list
@@ -378,7 +390,9 @@ whatever `render` function each feature provides, per row.
 ### State: client-side vs. server-side
 
 `useClientTableState` filters, sorts, and paginates an in-memory array — use it
-for small, bounded datasets (suppliers, categories, user accounts).
+for small, bounded datasets that arrive in one response. Nothing uses it
+today: every list endpoint in this API is paginated, `/users` included as
+of backend `4955f19`.
 
 `useServerTableState` wraps a `useQuery` call and sends `page`/`search`/`sort`
 as API query params instead of filtering in-browser — use it for large,
@@ -481,7 +495,8 @@ not a filter-only one.
 | Any state, `useClientTableState`               | `isError` is always `false` — there's no network call to fail                |
 
 **A client-side table whose data comes from a query still has both
-states** — they just belong to the page, not to the hook.
+states** — they just belong to the page, not to the hook. No table does
+this today; the example below is the shape, not a pointer to live code.
 `useClientTableState` filters an array and has no request to report on,
 so it hardcodes `isLoading` and `isError` to `false`; the component that
 called `useQuery` is what knows. Spread the query's own flags over the
@@ -500,12 +515,14 @@ const tableState = useClientTableState({ data: data ?? NO_ROWS, columns });
 
 Deliberately not passthrough options on the hook: the override is one
 line at the call site, it reads as exactly what it is, and the hook
-stays about filtering. See `manage-accounts-page.tsx`, its only consumer
-so far. Note `columns` at module scope there: it feeds the memo deps of
-the hook's filter and sort passes, so rebuilding it per render re-filters
-and re-sorts the whole dataset every time. Its `NO_ROWS` fallback is the
-same habit applied where it saves nothing — the array is empty by
-definition — kept only so the two read alike.
+stays about filtering. Note `columns` at module scope: it feeds the memo
+deps of the hook's filter and sort passes, so rebuilding it per render
+re-filters and re-sorts the whole dataset every time.
+
+**`useClientTableState` has no consumers.** It is kept, not deprecated:
+it is half of the swap this folder is built around, `useTableControls`
+keeps the two behaviourally identical for free, and the next bounded
+in-memory list wants it. Delete it only when that stops being true.
 
 If you need a custom error message instead of the default "Couldn't load
 data. Please try again.", that comes from `errorMessage` in

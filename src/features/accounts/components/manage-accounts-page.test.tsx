@@ -18,7 +18,14 @@ import type { UserAccount } from "../types";
 // boundary. What an admin can see and do — which rows render, what the
 // create form submits, what the server's delete refusal looks like on
 // screen. Nothing here asserts on modal internals or table plumbing;
-// DataTable and useClientTableState have their own tests.
+// DataTable and useServerTableState have their own tests.
+//
+// The table is server-backed since backend `4955f19` paginated `/users`,
+// so `getUserAccounts` now takes params and answers `{data, total}`. The
+// filters are asserted through the params it was called with, because
+// that *is* what a server filter does — the rows come back already
+// narrowed, and a test that stubbed narrowed rows would pass whatever the
+// page sent.
 
 vi.mock("../api/get-user-accounts");
 const mockGetUserAccounts = vi.mocked(getUserAccounts);
@@ -43,8 +50,9 @@ const DELETION_REFUSED =
   "User cannot be deleted because they have existing related records.";
 
 // Mantine's Select (the toolbar's page-size control) renders its dropdown
-// inside a ScrollArea, which subscribes to a ResizeObserver on mount —
-// jsdom doesn't implement one. Same stub as service-form.test.tsx.
+// inside a ScrollArea, and so does `DataTable.Grid`; both subscribe to a
+// ResizeObserver on mount, which jsdom doesn't implement. Same stub as
+// service-form.test.tsx.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -52,14 +60,19 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
+// Mantine's Combobox scrolls its active option into view on open, and
+// jsdom implements no scrolling. Without this the page-size Select throws
+// outside the assertion, as an unhandled rejection — every test stays
+// green while the run exits non-zero. Same stub as dashboard-page.test.tsx.
+Element.prototype.scrollIntoView = vi.fn();
+
 const accounts: UserAccount[] = [
   {
     id: 1,
     first_name: "Jaypee",
     last_name: "Pahayahay",
     full_name: "Jaypee Pahayahay",
-    user_name: "jaypee",
-    email: "jaypee@spcf.edu.ph",
+    username: "jaypee",
     role: "cashier",
     is_active: true,
   },
@@ -68,8 +81,7 @@ const accounts: UserAccount[] = [
     first_name: "Maria",
     last_name: "Santos",
     full_name: "Maria Santos",
-    user_name: "msantos",
-    email: "maria@spcf.edu.ph",
+    username: "msantos",
     role: "admin",
     is_active: true,
   },
@@ -80,8 +92,7 @@ const deactivatedCashier: UserAccount = {
   first_name: "Noli",
   last_name: "Cruz",
   full_name: "Noli Cruz",
-  user_name: "ncruz",
-  email: "noli@spcf.edu.ph",
+  username: "ncruz",
   role: "cashier",
   is_active: false,
 };
@@ -92,7 +103,6 @@ const signedInAdmin: AuthUser = {
   last_name: "Bautista",
   full_name: "Mike Bautista",
   user_name: "mike",
-  email: "mike@spcf.edu.ph",
   role: "admin",
 };
 
@@ -114,8 +124,7 @@ const newAccount: UserAccount = {
   first_name: "Ana",
   last_name: "Reyes",
   full_name: "Ana Reyes",
-  user_name: "areyes",
-  email: "ana@spcf.edu.ph",
+  username: "areyes",
   role: "admin",
   is_active: true,
 };
@@ -131,9 +140,7 @@ function validationError(errors: Record<string, string[]>): AxiosError {
 
 /** Opens the create modal and fills every field. Returns nothing — each
  * test asserts on what it cares about after submitting. */
-async function fillCreateForm(
-  overrides: Partial<Record<string, string>> = {},
-) {
+async function fillCreateForm(overrides: Partial<Record<string, string>> = {}) {
   fireEvent.click(screen.getByRole("button", { name: /new account/i }));
   await screen.findByLabelText("First Name"); // Mantine's modal transition
 
@@ -141,7 +148,6 @@ async function fillCreateForm(
     "First Name": "Ana",
     "Last Name": "Reyes",
     Username: "areyes",
-    "Email Address": "ana@spcf.edu.ph",
     Password: "sup3rsecret",
     ...overrides,
   };
@@ -161,9 +167,22 @@ async function openDeleteConfirmation() {
  * by the same name appearing inside the open confirmation dialog. */
 const tableRows = () => within(screen.getByRole("table"));
 
+/** One page of the directory, in the shape `useServerTableState` expects.
+ * Every fixture is small enough to be its own single page. */
+const page = (rows: UserAccount[]) => ({ data: rows, total: rows.length });
+
+/** The params of the most recent request, which is where a filter change
+ * is observable. */
+const lastRequest = () =>
+  mockGetUserAccounts.mock.calls[mockGetUserAccounts.mock.calls.length - 1][0];
+
+/** Mantine renders each `SegmentedControl` choice as a radio. */
+const chooseFilter = (label: string) =>
+  fireEvent.click(screen.getByRole("radio", { name: label }));
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetUserAccounts.mockResolvedValue(accounts);
+  mockGetUserAccounts.mockResolvedValue(page(accounts));
   mockCreateUserAccount.mockResolvedValue(newAccount);
   mockDeleteUserAccount.mockResolvedValue(undefined);
   mockToggleStatus.mockResolvedValue({ ...accounts[0], is_active: false });
@@ -171,56 +190,124 @@ beforeEach(() => {
 });
 
 describe("ManageAccountsPage", () => {
-  it("renders a row per account with its name, username, email and role", async () => {
+  it("renders a row per account with its name, username and role", async () => {
     renderPage();
 
     expect(await screen.findByText("Jaypee Pahayahay")).toBeInTheDocument();
     expect(screen.getByText("jaypee")).toBeInTheDocument();
-    expect(screen.getByText("jaypee@spcf.edu.ph")).toBeInTheDocument();
-    expect(screen.getByText("Cashier")).toBeInTheDocument();
+    expect(tableRows().getByText("Cashier")).toBeInTheDocument();
 
     expect(screen.getByText("Maria Santos")).toBeInTheDocument();
     expect(screen.getByText("msantos")).toBeInTheDocument();
-    expect(screen.getByText("maria@spcf.edu.ph")).toBeInTheDocument();
-    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(tableRows().getByText("Admin")).toBeInTheDocument();
   });
 
   it("shows whether each account is active", async () => {
-    mockGetUserAccounts.mockResolvedValue([accounts[0], deactivatedCashier]);
+    mockGetUserAccounts.mockResolvedValue(
+      page([accounts[0], deactivatedCashier]),
+    );
     renderPage();
 
-    expect(await screen.findByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("Inactive")).toBeInTheDocument();
+    await screen.findByText("Jaypee Pahayahay");
+    // Scoped to the table: the status filter's own segments are labelled
+    // "Active" and "Inactive" too.
+    expect(tableRows().getByText("Active")).toBeInTheDocument();
+    expect(tableRows().getByText("Inactive")).toBeInTheDocument();
   });
 
-  it("narrows the list to matching accounts as the admin searches", async () => {
+  it("offers no search box, because /users has no search filter", async () => {
     renderPage();
     await screen.findByText("Jaypee Pahayahay");
 
-    fireEvent.change(screen.getByPlaceholderText("Search"), {
-      target: { value: "maria" },
-    });
-
-    expect(screen.getByText("Maria Santos")).toBeInTheDocument();
-    expect(screen.queryByText("Jaypee Pahayahay")).not.toBeInTheDocument();
+    // An unknown `filter[]` key is a 400 here, not an ignored parameter, so
+    // a search box on this table would fail the first time anyone typed.
+    expect(screen.queryByPlaceholderText("Search")).not.toBeInTheDocument();
   });
 
-  it("doesn't match rows on values the table never shows", async () => {
+  it("sends the page size the admin picks", async () => {
+    // `/users` validates `per_page` and then discarded it for three
+    // commits, because `index` never assigned `$request->validate(...)`.
+    // While that was true this control had to be left out entirely: the
+    // server kept returning 25 while `DataTable.Pagination` divided the
+    // total by whatever was asked for, so a larger page size reported
+    // pages whose rows were unreachable. Backend `0cecdbd` assigned it.
     renderPage();
     await screen.findByText("Jaypee Pahayahay");
 
-    // Both fixtures are active. The search scans each column's raw value, so
-    // a status column keyed on `is_active` would make this match everyone,
-    // and an actions column keyed on `id` would make "1" match Jaypee.
-    fireEvent.change(screen.getByPlaceholderText("Search"), {
-      target: { value: "true" },
-    });
+    // By role, not display value: Mantine's Select renders a hidden input
+    // carrying the same value alongside the visible combobox. And the
+    // options need `hidden: true` — floating-ui measures every element as
+    // zero by zero in jsdom, so the dropdown never loses `display: none`
+    // even once `aria-expanded` is true. Same pair of quirks as the year
+    // Select in dashboard-page.test.tsx.
+    fireEvent.click(screen.getByRole("combobox"));
+    const options = await screen.findAllByRole("option", { hidden: true });
+    fireEvent.click(options.find((o) => o.textContent === "50")!);
 
-    expect(screen.getByText("No entries found")).toBeInTheDocument();
+    await waitFor(() => expect(lastRequest()).toMatchObject({ per_page: 50 }));
+  });
+
+  it("asks for the directory unfiltered and ordered by name", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    // `/users` declares no default sort, so unsorted pages arrive in an
+    // order the database chooses and rows can repeat across pages.
+    expect(lastRequest()).toMatchObject({
+      page: 1,
+      sorts: [{ key: "full_name", direction: "asc" }],
+      filters: { role: null, is_active: null },
+    });
+  });
+
+  it("narrows the directory to one role at the endpoint", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    chooseFilter("Cashier");
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { role: "cashier", is_active: null },
+      }),
+    );
+  });
+
+  it("narrows the directory to one status at the endpoint", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    // `1`/`0`, not `active`/`inactive`: `filter[is_active]` is a boolean
+    // rule over a tinyint, so these are the values the wire takes.
+    chooseFilter("Inactive");
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { role: null, is_active: "0" },
+      }),
+    );
+  });
+
+  it("keeps both filters when only one of them changes", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    chooseFilter("Admin");
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({ filters: { role: "admin" } }),
+    );
+
+    chooseFilter("Active");
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { role: "admin", is_active: "1" },
+      }),
+    );
   });
 
   it("says so when the directory is empty", async () => {
-    mockGetUserAccounts.mockResolvedValue([]);
+    mockGetUserAccounts.mockResolvedValue(page([]));
     renderPage();
 
     expect(await screen.findByText("No entries found")).toBeInTheDocument();
@@ -238,7 +325,10 @@ describe("ManageAccountsPage", () => {
     renderPage();
 
     expect(
-      await screen.findByText("Couldn't load accounts. Please try again."),
+      // The shared message from `useServerTableState`. The README is
+      // explicit that this isn't a per-table prop: custom wording is
+      // edited there, for every table at once.
+      await screen.findByText("Couldn't load data. Please try again."),
     ).toBeInTheDocument();
   });
 
@@ -247,9 +337,11 @@ describe("ManageAccountsPage", () => {
     await screen.findByText("Jaypee Pahayahay");
 
     await fillCreateForm();
-    fireEvent.click(screen.getByLabelText("Admin"));
+    // Scoped to the modal: the toolbar's role filter has an "Admin" segment
+    // of its own, and picking that one would filter the table instead.
+    fireEvent.click(within(screen.getByRole("dialog")).getByLabelText("Admin"));
 
-    mockGetUserAccounts.mockResolvedValue([...accounts, newAccount]);
+    mockGetUserAccounts.mockResolvedValue(page([...accounts, newAccount]));
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     // Asserting on the payload alone, not the whole call: react-query passes
@@ -259,7 +351,6 @@ describe("ManageAccountsPage", () => {
       first_name: "Ana",
       last_name: "Reyes",
       username: "areyes",
-      email: "ana@spcf.edu.ph",
       password: "sup3rsecret",
       role: "admin",
     });
@@ -311,7 +402,7 @@ describe("ManageAccountsPage", () => {
     await screen.findByText("Jaypee Pahayahay");
 
     await openDeleteConfirmation();
-    mockGetUserAccounts.mockResolvedValue([accounts[1]]);
+    mockGetUserAccounts.mockResolvedValue(page([accounts[1]]));
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
 
     await waitFor(() => expect(mockDeleteUserAccount).toHaveBeenCalledOnce());
@@ -354,11 +445,12 @@ describe("ManageAccountsPage", () => {
     expect(screen.getByText(/suspended/i)).toBeInTheDocument();
     expect(mockToggleStatus).not.toHaveBeenCalled();
 
-    mockGetUserAccounts.mockResolvedValue([
-      { ...accounts[0], is_active: false },
-      accounts[1],
-    ]);
-    fireEvent.click(screen.getByRole("button", { name: /deactivate account/i }));
+    mockGetUserAccounts.mockResolvedValue(
+      page([{ ...accounts[0], is_active: false }, accounts[1]]),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /deactivate account/i }),
+    );
 
     await waitFor(() => expect(mockToggleStatus).toHaveBeenCalledOnce());
     expect(mockToggleStatus.mock.calls[0][0]).toEqual({
@@ -366,6 +458,20 @@ describe("ManageAccountsPage", () => {
       isActive: false,
     });
     expect(await tableRows().findByText("Inactive")).toBeInTheDocument();
+  });
+
+  it("omits the series-receipt warning when deactivating an admin", async () => {
+    // Only cashiers hold a series, so an admin would be told something
+    // untrue. The other half of this pair is "warns about the series
+    // receipt before deactivating a cashier", above.
+    mockGetUserAccounts.mockResolvedValue(page([accounts[1]]));
+    renderPage();
+    await screen.findByText("Maria Santos");
+
+    fireEvent.click(screen.getByRole("button", { name: /^deactivate$/i }));
+    await screen.findByRole("button", { name: /deactivate account/i });
+
+    expect(screen.queryByText(/series receipt/i)).not.toBeInTheDocument();
   });
 
   it("changes nothing when the deactivate confirmation is cancelled", async () => {
@@ -382,7 +488,7 @@ describe("ManageAccountsPage", () => {
   });
 
   it("reactivates without asking first", async () => {
-    mockGetUserAccounts.mockResolvedValue([deactivatedCashier]);
+    mockGetUserAccounts.mockResolvedValue(page([deactivatedCashier]));
     mockToggleStatus.mockResolvedValue({
       ...deactivatedCashier,
       is_active: true,
@@ -400,7 +506,7 @@ describe("ManageAccountsPage", () => {
   });
 
   it("says so when a status change fails, rather than leaving the row looking changed", async () => {
-    mockGetUserAccounts.mockResolvedValue([deactivatedCashier]);
+    mockGetUserAccounts.mockResolvedValue(page([deactivatedCashier]));
     mockToggleStatus.mockRejectedValue(new Error("Network down"));
     renderPage();
     await screen.findByText("Noli Cruz");

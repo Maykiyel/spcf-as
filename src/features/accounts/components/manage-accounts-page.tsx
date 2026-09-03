@@ -1,11 +1,11 @@
-import { Badge, Group, Stack, Title } from "@mantine/core";
+import { Badge, Divider, Group, Stack, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { useQuery } from "@tanstack/react-query";
 import { IconPlus } from "@tabler/icons-react";
 import {
   DataTable,
-  useClientTableState,
+  useServerTableState,
   type ColumnDef,
+  type SortEntry,
 } from "@/components/ui/data-table";
 import { PrimaryButton } from "@/components/ui/button";
 import type { Role } from "@/features/auth/types";
@@ -14,6 +14,10 @@ import {
   USER_ACCOUNTS_QUERY_KEY,
 } from "../api/get-user-accounts";
 import type { UserAccount } from "../types";
+import {
+  UserAccountRoleFilter,
+  UserAccountStatusFilter,
+} from "./user-account-filters";
 import { CreateAccountModal } from "./create-account-modal";
 import { UserAccountActionsCell } from "./user-account-actions-cell";
 
@@ -24,27 +28,42 @@ const ROLE_LABEL: Record<Role, string> = {
   cashier: "Cashier",
 };
 
-// Module scope, not rebuilt per render: `useClientTableState` memoises its
-// filtered/sorted passes on this array's identity, so a fresh one every
-// render would re-filter and re-sort the whole directory every time.
+/** `/users` declares no `defaultSort`, so unsorted rows arrive in whatever
+ * order the database gives — which is not stable across pages. Naming the
+ * directory's obvious order fixes that and puts a caret on the header
+ * saying so. Module scope, like `columns`. */
+const INITIAL_SORTS: SortEntry[] = [{ key: "full_name", direction: "asc" }];
+
+/** `role` and `is_active` are the only two filters `/users` allows, and
+ * `null` is what each sends when unfiltered. Module scope for the same
+ * reason: `useServerTableState` keys its query on this object. */
+const INITIAL_FILTERS = { role: null, is_active: null };
+// Module scope, not rebuilt per render: `useServerTableState` memoises on
+// this array's identity.
+//
+// Every sortable key here is one `/users` allow-lists — `first_name`,
+// `last_name`, `full_name`, `username`. A key it doesn't know is a 400 on
+// the first header click, which is why `username` is renamed at the fetcher
+// rather than carrying the wire's `user_name`.
 const columns: ColumnDef<UserAccount>[] = [
   { key: "full_name", header: "Name", sortable: true },
-  { key: "user_name", header: "Username", sortable: true },
-  { key: "email", header: "Email", sortable: true },
+  { key: "username", header: "Username", sortable: true },
   {
     key: "role",
     header: "Role",
     render: (row) => (
-      <Badge color={row.role === "admin" ? "primary" : "tertiary"} variant="light">
+      <Badge
+        color={row.role === "admin" ? "primary" : "tertiary"}
+        variant="light"
+      >
         {ROLE_LABEL[row.role]}
       </Badge>
     ),
   },
   {
-    // Borrows a declared key for the same reason as Actions below: the
-    // client-side search scans each column's raw value, and this one's is
-    // `true`/`false`, which is not what the badge says. Every key here
-    // therefore names a field whose raw value is what the user reads.
+    // Borrows a declared key, as `id` requires: `key` names the field the
+    // cell reads, and this one's raw value is `true`/`false`, not what the
+    // badge says.
     key: "role",
     id: "status",
     header: "Status",
@@ -55,10 +74,6 @@ const columns: ColumnDef<UserAccount>[] = [
     ),
   },
   {
-    // Keyed on a column already declared above, not on `id`, so the
-    // client-side search doesn't quietly match user ids: nothing on screen
-    // shows one. `id` disambiguates the duplicate key, as DataTable
-    // requires.
     key: "full_name",
     id: "actions",
     header: "Actions",
@@ -66,23 +81,17 @@ const columns: ColumnDef<UserAccount>[] = [
   },
 ];
 
-// Same reason as `columns`: a literal `[]` fallback would be a new array on
-// every render while the query is loading or failed.
-const NO_ACCOUNTS: UserAccount[] = [];
-
 export function ManageAccountsPage() {
   const [createOpen, { open: openCreate, close: closeCreate }] =
     useDisclosure(false);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: USER_ACCOUNTS_QUERY_KEY,
+  const tableState = useServerTableState({
+    queryKey: [...USER_ACCOUNTS_QUERY_KEY],
     queryFn: getUserAccounts,
-  });
-
-  const tableState = useClientTableState({
-    data: data ?? NO_ACCOUNTS,
     columns,
     urlKey: URL_KEY,
+    initialSorts: INITIAL_SORTS,
+    initialFilters: INITIAL_FILTERS,
   });
 
   return (
@@ -99,23 +108,24 @@ export function ManageAccountsPage() {
 
       <CreateAccountModal opened={createOpen} onClose={closeCreate} />
 
-      {/* `useClientTableState` hardcodes `isLoading`/`isError` to false —
-          it filters an array and has no network call of its own to report
-          on. The fetch belongs to this page, so this page is what knows,
-          and DataTable.Grid renders the skeleton and error rows from
-          context either way. */}
-      <DataTable.Root
-        title="User Accounts"
-        state={{
-          ...tableState,
-          isLoading,
-          isError,
-          errorMessage: "Couldn't load accounts. Please try again.",
-        }}
-      >
+      <DataTable.Root title="User Accounts" state={tableState}>
+        {/* No search box. `/users` accepts no `filter[search]`, and an
+            unknown filter key is a 400 here rather than an ignored
+            parameter, so the control would fail the first time anyone
+            typed into it. The two filters are what narrows this table
+            instead. */}
         <DataTable.Toolbar>
           <DataTable.PageSize />
-          <DataTable.Search />
+          <Divider orientation="vertical" visibleFrom="xs" />
+          <UserAccountRoleFilter
+            value={tableState.filters.role}
+            onChange={(role) => tableState.setFilters({ role })}
+          />
+          <Divider orientation="vertical" visibleFrom="xs" />
+          <UserAccountStatusFilter
+            value={tableState.filters.is_active}
+            onChange={(is_active) => tableState.setFilters({ is_active })}
+          />
         </DataTable.Toolbar>
         <DataTable.Grid />
         <DataTable.Pagination />
