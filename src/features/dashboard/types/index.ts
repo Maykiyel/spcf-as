@@ -13,3 +13,19 @@ export type DashboardToday = {
   earnings_today: number;
   transactions_today: number;
 };
+
+/** One row of `GET /reports/cashier-earnings`, admin-only.
+ *
+ * `cashier_name` is this frontend's name for the endpoint's `full_name`,
+ * translated in `get-cashier-earnings.ts` because it is also the sort key
+ * the endpoint allow-lists. The reasoning lives there.
+ *
+ * Windowed on `completed_at`, unlike the monthly earnings endpoint, which
+ * windows on `created_at`. Two figures on this page can therefore put a
+ * month-boundary transaction in different periods. Neither is wrong; they
+ * answer slightly different questions. */
+export type CashierEarnings = {
+  id: number;
+  cashier_name: string;
+  total_earnings: number;
+};

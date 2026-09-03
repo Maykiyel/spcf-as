@@ -1,4 +1,6 @@
 import { Stack, Title } from "@mantine/core";
+import { useAuthStore } from "@/stores/auth-store";
+import { CashierEarningsTable } from "./cashier-earnings-table";
 import { TodayFigures } from "./today-figures";
 
 /**
@@ -12,17 +14,20 @@ import { TodayFigures } from "./today-figures";
  * each admin-only section is its own component holding its own query:
  * unmounted, it never fires.
  *
- * The branch itself arrives with the first admin-only section rather than
- * as an empty `role === "admin" &&` waiting for one. What makes the
- * structure extensible is where the queries live, not a conditional with
- * nothing on one side of it.
+ * The branch reads the role from the auth store rather than from the
+ * route, because `/dashboard` is a page both roles reach — `pages.ts`
+ * gives it no `roles`, and it should stay that way.
  */
 export function DashboardPage() {
+  const isAdmin = useAuthStore((state) => state.user?.role) === "admin";
+
   return (
     <Stack gap="lg">
       <Title order={3}>Dashboard</Title>
 
       <TodayFigures />
+
+      {isAdmin && <CashierEarningsTable />}
     </Stack>
   );
 }
