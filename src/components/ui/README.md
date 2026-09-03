@@ -154,7 +154,10 @@ alongside the shared pieces, with no slot prop involved:
 <DataTable.Toolbar>
   <DataTable.PageSize />
   <Divider orientation="vertical" visibleFrom="xs" />
-  <ServiceStatusFilter urlKey={URL_KEY} />
+  <ServiceStatusFilter
+    value={tableState.filters.is_active}
+    onChange={(is_active) => tableState.setFilters({ is_active })}
+  />
   <DataTable.Search />
 </DataTable.Toolbar>
 ```
@@ -201,9 +204,11 @@ merges a patch into them. Everything else follows from the declaration:
   the hook owns them. The mechanism this replaces, `createListAdapter`'s
   `extra` argument, hands the fetcher values it never puts in the key, so
   every consumer has to remember to add them to its own `queryKey` by hand.
-  Services remembers. The next page to reach for `extra` might not, and
-  forgetting serves the previous filter's cached rows with no error at all,
-  which is the worst available failure.
+  Services was the only one that ever did, and it remembered; #84 moved it
+  onto this and `extra` now has **no consumers**. It stays for a parameter
+  that genuinely isn't a `filter[...]`, but a filter is not that case, and
+  forgetting the key serves the previous filter's cached rows with no error
+  at all — the worst available failure.
 - **Changing a filter resets to page 1**, for the same reason changing
   search or sort does.
 - **They reach the wire as `filter[<key>]`**, which is what every filterable
@@ -240,14 +245,17 @@ alone.
 Key the filters by the API's own filter name (`from_date`, not `dateFrom`)
 so that mapping stays a no-op. `TableFilters` values are `string | null` and
 nothing else: they round-trip through the URL, which has only strings, so
-another type would need a per-filter decoder on the way back in. Converting
-to the shape the endpoint wants — a boolean as `0`/`1`, an id as a number —
-belongs in that feature's `getX` via the adapter's `extra` argument.
+another type would need a per-filter decoder on the way back in.
 
-**`ServiceStatusFilter`, in the "Composing the toolbar" example above,
-predates this and owns its own URL param.** It is the older way and it is on
-its way out; #59 kept the three existing tables out of scope. Copy the
-pattern below, not that one.
+**A boolean filter carries `1`/`0` as its value**, not `active`/`inactive`,
+and that is a departure from the sentence above. `filter[is_active]` is a
+`boolean` rule over a `tinyint`, so `1`/`0` is what the endpoint takes.
+Converting in the feature's `getX` instead would leave the URL reading
+`accounts_is_active=active` — the wire's key against a value the wire won't
+accept — and put back the per-consumer mapping step this mechanism removed.
+`UserAccountStatusFilter` and `ServiceStatusFilter` both do it this way,
+and both say so at their declaration. A value that genuinely can't survive
+the URL as a string is the case `getX` is still for; a boolean isn't one.
 
 Filter controls are toolbar children, wired by the page:
 

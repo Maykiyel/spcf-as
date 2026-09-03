@@ -91,8 +91,8 @@ export function useServerTableState<T extends Record<string, any>>({
   // point of the hook owning them. The mechanism this replaces —
   // `createListAdapter(params, extra)` — hands the fetcher values it never
   // puts in the key, so every consumer has to remember to add them to its own
-  // `queryKey` by hand. Services remembers (see `service-table.tsx`); the
-  // next page to use `extra` might not, and forgetting serves the previous
+  // `queryKey` by hand. Services was the only one that ever did, and #84
+  // moved it here; a filter that misses the key serves the previous
   // filter's cached rows with no error at all.
   const { data, isLoading, isFetching, isError, error } = useQuery({
     queryKey: [...queryKey, page, pageSize, debouncedSearch, sorts, filters],

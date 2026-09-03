@@ -64,10 +64,10 @@ export function UserAccountRoleFilter(props: FilterProps) {
  * else. Converting in `getUserAccounts` would leave the URL reading
  * `accounts_is_active=active` — the wire's key against a value the wire
  * won't accept — and put back the per-consumer mapping step #59 removed.
- * #84 decides exactly this for the same filter on services
- * (`/services?services_is_active=1`); note that services today still uses
- * the older bespoke hook and reads `services_status=active`, so the
- * precedent is that issue's decision, not the code on `main`. */
+ * #84 made the same call for the same filter on services, and shipped it:
+ * `ServiceStatusFilter` is the other half of this precedent, and
+ * `TableFilters` in `data-table/types.ts` now carries the carve-out
+ * itself. */
 export function UserAccountStatusFilter(props: FilterProps) {
   return (
     <TableFilterSegments
