@@ -211,15 +211,30 @@ describe("DashboardPage", () => {
       expect(mockGetCashierEarnings).not.toHaveBeenCalled();
     });
 
-    it("leaves the default order to the endpoint", async () => {
+    it("orders by highest earnings first", async () => {
       signIn(admin);
       renderPage();
 
       await screen.findByText("Jaypee Pahayahay");
-      // No sort is sent, so `/reports/cashier-earnings` applies its own
-      // `-total_earnings`. Sending one from here would be this page
-      // asserting a default the endpoint already owns.
-      expect(lastEarningsParams().sorts).toEqual([]);
+      // The endpoint would apply this itself given no sort. It is sent
+      // anyway so the header carries a caret, rather than the rows being
+      // ordered by a column that looks unsorted.
+      expect(lastEarningsParams().sorts).toEqual([
+        { key: "total_earnings", direction: "desc" },
+      ]);
+    });
+
+    it("marks Total Earnings as the sorted column", async () => {
+      signIn(admin);
+      renderPage();
+
+      const header = await screen.findByRole("columnheader", {
+        name: /total earnings/i,
+      });
+      expect(header).toHaveAttribute("aria-sort", "descending");
+      expect(
+        screen.getByRole("columnheader", { name: /cashier/i }),
+      ).toHaveAttribute("aria-sort", "none");
     });
 
     it("sorts by cashier name", async () => {
@@ -231,19 +246,29 @@ describe("DashboardPage", () => {
       // `cashier_name`, not `full_name`: a column's key is both what the
       // cell reads and what the sort click sends, and the endpoint
       // allow-lists `cashier_name`.
+      //
+      // It joins the declared earnings sort as the tiebreaker rather than
+      // replacing it — two columns is the documented cap, so neither is
+      // evicted.
       await waitFor(() =>
         expect(lastEarningsParams().sorts).toEqual([
+          { key: "total_earnings", direction: "desc" },
           { key: "cashier_name", direction: "asc" },
         ]),
       );
     });
 
-    it("sorts by earnings", async () => {
+    it("cycles the earnings sort off and back round", async () => {
       signIn(admin);
       renderPage();
 
+      // The column starts descending, so the first click takes it off
+      // rather than reversing it — that is `nextSorts`' asc, desc, gone
+      // cycle entered at its last step.
       fireEvent.click(await screen.findByText("Total Earnings"));
+      await waitFor(() => expect(lastEarningsParams().sorts).toEqual([]));
 
+      fireEvent.click(screen.getByText("Total Earnings"));
       await waitFor(() =>
         expect(lastEarningsParams().sorts).toEqual([
           { key: "total_earnings", direction: "asc" },

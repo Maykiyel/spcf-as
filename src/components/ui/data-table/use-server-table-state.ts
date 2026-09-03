@@ -29,6 +29,24 @@ type UseServerTableStateOptions<T> = {
    * once here; caching, page reset and (given a `urlKey`) URL persistence
    * follow from it. */
   initialFilters?: TableFilters;
+  /** The sort this table starts on, and the one it treats as its default.
+   *
+   * Declare it when the endpoint has a `defaultSort` the user should be
+   * able to see: without it the table sends no sort, the endpoint applies
+   * its own, and the header shows no caret while the rows are plainly
+   * ordered by that column — so the first click on it appears to do
+   * nothing but reverse a sort nobody indicated was there.
+   *
+   * Declared here rather than passed to the fetcher because it is a
+   * default, and defaults belong where page size and filter defaults
+   * already are: omitted from the URL, restored on a fresh visit, and
+   * still overridable. Turning the sort off writes an explicit marker,
+   * since an absent param means "use this".
+   *
+   * Keys must be ones the endpoint allow-lists, exactly like `sortable`
+   * columns — this one reaches the wire on the very first request, so
+   * getting it wrong is a 422 before the user touches anything. */
+  initialSorts?: SortEntry[];
   /** Whether the current filter values are worth a request. Defaults to
    * always.
    *
@@ -47,6 +65,7 @@ export function useServerTableState<T extends Record<string, any>>({
   initialPageSize = 25,
   urlKey,
   initialFilters,
+  initialSorts,
   filtersUsable,
 }: UseServerTableStateOptions<T>) {
   const {
@@ -61,7 +80,7 @@ export function useServerTableState<T extends Record<string, any>>({
     onSort,
     resetSort,
     setFilters,
-  } = useTableControls(initialPageSize, urlKey, initialFilters);
+  } = useTableControls(initialPageSize, urlKey, initialFilters, initialSorts);
 
   // Debounce search before it ever reaches the network. Independent of the
   // debounce (if any) `useTableControls` applies before writing to the URL —

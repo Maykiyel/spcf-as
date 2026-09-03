@@ -48,7 +48,19 @@ export function DataTableGrid<T extends Record<string, any>>() {
               const showPriorityBadge = active && sorts.length > 1;
 
               return (
-                <Table.Th key={col.id ?? col.key}>
+                // The carets are drawn with opacity, so the sorted state
+                // is invisible to a screen reader and to a test. This is
+                // the handle for both.
+                <Table.Th
+                  key={col.id ?? col.key}
+                  aria-sort={
+                    active
+                      ? direction === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
+                >
                   <UnstyledButton onClick={() => onSort(col.key)}>
                     <Group gap={4} wrap="nowrap">
                       <Text fw={600} size="sm">
