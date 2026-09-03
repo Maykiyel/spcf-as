@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActionIcon, Loader, NumberInput, Table, Text } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
-import { formatCurrency } from "../lib/currency";
+import { formatCurrency } from "@/utils/currency";
 import { calculateLineSubtotal } from "../lib/transaction-draft";
 import type { DraftLineItem } from "../types";
 

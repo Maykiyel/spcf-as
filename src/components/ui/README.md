@@ -277,6 +277,53 @@ here — it would only add a second way to reach the same values. Page and
 sort are on the context because `DataTable.Pagination` and `DataTable.Grid`
 are shared pieces that genuinely can't be handed props by the page.
 
+### Declaring the default sort
+
+Several endpoints here carry a `defaultSort` of their own —
+`/reports/cashier-earnings` sorts by `-total_earnings`, for instance. A
+table that sends no sort still gets those rows in that order, so it is
+tempting to leave the default to the server and write nothing.
+
+Don't. The rows arrive sorted and the header says they aren't: no caret is
+lit, and the first click on that column runs `nextSorts` from the top,
+which sends `asc` and reads as reversing a sort the table never admitted
+to. Declare it instead:
+
+```tsx
+// Module scope, like `columns` — it seeds state and is compared on read.
+const INITIAL_SORTS: SortEntry[] = [
+  { key: "total_earnings", direction: "desc" },
+];
+
+useServerTableState({
+  ...,
+  initialSorts: INITIAL_SORTS,
+});
+```
+
+**Match the endpoint's own default** rather than inventing one. This
+value reaches the wire on the first request, before the user touches
+anything, so a key the endpoint doesn't allow-list is a 422 on load
+rather than on a click.
+
+**It behaves as a default, not as a starting value.** Like page 1 and an
+unfiltered filter, it is omitted from the URL and restored on a fresh
+visit. Turning the sort off has to be representable separately, since an
+absent param means "use the declared sort" — so that state writes
+`<urlKey>_sort=none`. Nothing else uses that word: a real entry is always
+`key:dir`.
+
+**Clicking a declared descending column takes it straight off**, because
+`nextSorts` cycles asc, desc, gone and the column is entering that cycle
+at its last step. The click after that starts it again at ascending.
+
+**A second column joins it rather than replacing it**, up to
+`MAX_SORT_COLUMNS`, exactly as it would if the first sort had been
+clicked rather than declared.
+
+Omit `initialSorts` and the table starts unsorted, sends no `sort` param,
+and behaves as it always has.
+
 ### `ColumnDef<T>`
 
 ```typescript
@@ -399,10 +446,14 @@ debounce on top of that — they're deliberately decoupled, so URL sync isn't
 gated on request timing (or vice versa).
 
 **Defaults are omitted from the URL**, not written explicitly — page 1,
-the default page size, an unsorted state, and any filter sitting at the
-value it was declared with all collapse to "no param" rather than `?page=1`
-or `?status=all`. Keeps shareable URLs clean instead of noisy, and stops an
-unfiltered table from looking filtered.
+the default page size, the declared sort (an unsorted state, unless
+`initialSorts` says otherwise), and any filter sitting at the value it was
+declared with all collapse to "no param" rather than `?page=1` or
+`?status=all`. Keeps shareable URLs clean instead of noisy, and stops an
+unfiltered table from looking filtered. The one marker written rather than
+omitted is `sort=none`, which a table with an `initialSorts` needs to say
+"the user turned this off" — see [Declaring the default
+sort](#declaring-the-default-sort).
 
 **Search, sort and filter changes reset the page param.** Narrowing or
 re-sorting with a stale page number would risk showing an empty page, so

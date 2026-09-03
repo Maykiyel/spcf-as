@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { formatCurrency, roundToCents } from "./currency";
+import {
+  formatCompactCurrency,
+  formatCurrency,
+  roundToCents,
+} from "./currency";
 
 describe("formatCurrency", () => {
   it("prefixes the peso sign and pads two decimals", () => {
@@ -35,5 +39,29 @@ describe("roundToCents", () => {
   it("rounds a genuine fraction of a centavo to the nearest centavo", () => {
     expect(roundToCents(1000.005)).toBe(1000.01);
     expect(roundToCents(1000.004)).toBe(1000);
+  });
+});
+
+describe("formatCompactCurrency", () => {
+  // For chart axis ticks, where a full "₱11,501,690.00" is wider than the
+  // plot area it labels. The tooltip keeps the exact figure.
+  it("leaves a small amount readable in full", () => {
+    expect(formatCompactCurrency(950)).toBe("₱950");
+  });
+
+  it("shortens thousands", () => {
+    expect(formatCompactCurrency(1200)).toBe("₱1.2K");
+  });
+
+  it("shortens millions", () => {
+    expect(formatCompactCurrency(11501690)).toBe("₱11.5M");
+  });
+
+  it("formats zero without a suffix", () => {
+    expect(formatCompactCurrency(0)).toBe("₱0");
+  });
+
+  it("drops the decimal on a round value", () => {
+    expect(formatCompactCurrency(2000000)).toBe("₱2M");
   });
 });

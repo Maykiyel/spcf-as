@@ -70,16 +70,50 @@ const clampPageSize = (value: string | null, fallback: number): number => {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : fallback;
 };
 
+/** Marks "the user turned the sort off" in the URL, as distinct from "no
+ * param, so use the declared sort".
+ *
+ * Only meaningful for a table that declares an `initialSorts`. Without it,
+ * such a table could never be unsorted: `nextSorts` takes a descending
+ * column to removed, an empty list would write no param, and no param
+ * would read back as the declared sort again on the next render. Not a
+ * possible sort key, since a key never contains a colon and no endpoint
+ * here allow-lists `none`. */
+const NO_SORT = "none";
+
+/** Module scope so the default parameter is one array rather than a fresh
+ * one per render — it seeds `useState` and is compared on every read. */
+const NO_SORTS: SortEntry[] = [];
+
+const sameSorts = (a: SortEntry[], b: SortEntry[]): boolean =>
+  a.length === b.length &&
+  a.every(
+    (entry, index) =>
+      entry.key === b[index].key && entry.direction === b[index].direction,
+  );
+
 // Encodes the ordered sort list as `key:dir,key:dir` in a single param —
 // order in the string is the priority order, so no separate index/priority
-// field is needed. Defensively re-capped on parse in case a shared/pasted
-// URL was hand-edited past the current limit.
-const encodeSorts = (sorts: SortEntry[]): string | null =>
-  sorts.length === 0
-    ? null
-    : sorts.map((s) => `${s.key}:${s.direction}`).join(",");
+// field is needed. The declared sort is omitted rather than written out,
+// the same as page 1 and an unfiltered filter, so a shared link stays
+// clean and a table at its default doesn't look re-sorted.
+const encodeSorts = (
+  sorts: SortEntry[],
+  initialSorts: SortEntry[],
+): string | null => {
+  if (sameSorts(sorts, initialSorts)) return null;
+  if (sorts.length === 0) return initialSorts.length === 0 ? null : NO_SORT;
+  return sorts.map((s) => `${s.key}:${s.direction}`).join(",");
+};
 
-const parseSorts = (raw: string | null): SortEntry[] => {
+// Defensively re-capped on parse in case a shared/pasted URL was
+// hand-edited past the current limit.
+const parseSorts = (
+  raw: string | null,
+  initialSorts: SortEntry[],
+): SortEntry[] => {
+  if (raw === null) return initialSorts;
+  if (raw === NO_SORT) return [];
   if (!raw) return [];
   return raw
     .split(",")
@@ -96,6 +130,7 @@ function useUrlAdapter(
   initialPageSize: number,
   urlKey: string | undefined,
   initialFilters: TableFilters,
+  initialSorts: SortEntry[],
 ): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -154,7 +189,7 @@ function useUrlAdapter(
     searchParams.get(paramName("size")),
     initialPageSize,
   );
-  const sorts = parseSorts(searchParams.get(paramName("sort")));
+  const sorts = parseSorts(searchParams.get(paramName("sort")), initialSorts);
 
   // Derived from the URL on every render, exactly like page and sort above —
   // which is what makes a refresh, a pasted link and a history entry all
@@ -185,13 +220,16 @@ function useUrlAdapter(
 
   const onSort = (key: string) => {
     updateParams({
-      [paramName("sort")]: encodeSorts(nextSorts(sorts, key)),
+      [paramName("sort")]: encodeSorts(nextSorts(sorts, key), initialSorts),
       [paramName("page")]: null,
     });
   };
 
+  // Recovery from a 422, so it has to mean "unsorted" outright. Falling
+  // back to the declared sort would re-send the key the server just
+  // rejected, if that is the one the table declared.
   const resetSort = () => {
-    updateParams({ [paramName("sort")]: null });
+    updateParams({ [paramName("sort")]: encodeSorts([], initialSorts) });
   };
 
   const setFilters = (patch: TableFilters) => {
@@ -234,11 +272,12 @@ function useUrlAdapter(
 function useLocalAdapter(
   initialPageSize: number,
   initialFilters: TableFilters,
+  initialSorts: SortEntry[],
 ): TableControlsAdapter {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sorts, setSorts] = useState<SortEntry[]>([]);
+  const [sorts, setSorts] = useState<SortEntry[]>(initialSorts);
   const [filters, setFiltersState] = useState<TableFilters>(initialFilters);
 
   const onPageChange = (newPage: number) => setPage(newPage);
@@ -293,9 +332,19 @@ export function useTableControls(
   initialPageSize = 25,
   urlKey?: string,
   initialFilters: TableFilters = {},
+  initialSorts: SortEntry[] = NO_SORTS,
 ): TableControls {
-  const urlAdapter = useUrlAdapter(initialPageSize, urlKey, initialFilters);
-  const localAdapter = useLocalAdapter(initialPageSize, initialFilters);
+  const urlAdapter = useUrlAdapter(
+    initialPageSize,
+    urlKey,
+    initialFilters,
+    initialSorts,
+  );
+  const localAdapter = useLocalAdapter(
+    initialPageSize,
+    initialFilters,
+    initialSorts,
+  );
 
   return urlKey ? urlAdapter : localAdapter;
 }

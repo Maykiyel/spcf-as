@@ -16,7 +16,7 @@ import { IconCash, IconReceipt, IconUser } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
 import { useTransactionDraft } from "./use-transaction-draft";
 import { TransactionLineItemRow } from "./transaction-line-item-row";
-import { formatCurrency } from "../lib/currency";
+import { formatCurrency } from "@/utils/currency";
 
 export function TransactionDraftPanel() {
   const { state, actions, meta } = useTransactionDraft();

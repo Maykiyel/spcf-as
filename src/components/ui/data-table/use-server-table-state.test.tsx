@@ -5,7 +5,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useServerTableState } from "./use-server-table-state";
-import type { ColumnDef, TableFilters } from "./types";
+import type { ColumnDef, SortEntry, TableFilters } from "./types";
 
 type Row = { id: string; name: string };
 
@@ -379,5 +379,100 @@ describe("useServerTableState filter guards", () => {
     );
     expect(result.current.search).not.toContain("nonsense");
     expect(result.current.table.filters).toEqual({ status: "completed" });
+  });
+});
+
+describe("useServerTableState initial sort", () => {
+  let queryFn: ReturnType<typeof createFetcher>;
+
+  const DEFAULT_SORTS: SortEntry[] = [
+    { key: "name", direction: "desc" },
+  ];
+
+  beforeEach(() => {
+    queryFn = createFetcher();
+  });
+
+  it("sends the declared sort on the first request", async () => {
+    renderTable({
+      queryKey: ["widgets"],
+      queryFn,
+      columns,
+      initialSorts: DEFAULT_SORTS,
+    });
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalled());
+    expect(queryFn).toHaveBeenCalledWith(
+      expect.objectContaining({ sorts: DEFAULT_SORTS }),
+    );
+  });
+
+  it("reports the declared sort so the header can show its caret", async () => {
+    const { result } = renderTable({
+      queryKey: ["widgets"],
+      queryFn,
+      columns,
+      initialSorts: DEFAULT_SORTS,
+    });
+
+    expect(result.current.table.sorts).toEqual(DEFAULT_SORTS);
+  });
+
+  it("keeps the declared sort out of the URL, like every other default", async () => {
+    const { result } = renderTable({
+      queryKey: ["widgets"],
+      queryFn,
+      columns,
+      urlKey: "tx",
+      initialSorts: DEFAULT_SORTS,
+    });
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalled());
+    expect(result.current.search).toBe("");
+  });
+
+  it("cycles a declared descending column straight to unsorted", async () => {
+    // `nextSorts` takes desc to removed. The point of this test is that
+    // "removed" survives a round trip through the URL: without a marker
+    // for it, an absent param would read back as the declared sort and
+    // the column could never be turned off.
+    const { result } = renderTable({
+      queryKey: ["widgets"],
+      queryFn,
+      columns,
+      urlKey: "tx",
+      initialSorts: DEFAULT_SORTS,
+    });
+
+    act(() => result.current.table.onSort("name"));
+
+    await waitFor(() => expect(result.current.table.sorts).toEqual([]));
+    expect(queryFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sorts: [] }),
+    );
+  });
+
+  it("restores an explicitly unsorted table from the URL", async () => {
+    const { result } = renderTable(
+      {
+        queryKey: ["widgets"],
+        queryFn,
+        columns,
+        urlKey: "tx",
+        initialSorts: DEFAULT_SORTS,
+      },
+      ["/?tx_sort=none"],
+    );
+
+    expect(result.current.table.sorts).toEqual([]);
+  });
+
+  it("leaves a table that declares no sort unsorted", async () => {
+    renderTable({ queryKey: ["widgets"], queryFn, columns });
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalled());
+    expect(queryFn).toHaveBeenCalledWith(
+      expect.objectContaining({ sorts: [] }),
+    );
   });
 });

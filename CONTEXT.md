@@ -21,6 +21,10 @@ This repository is a Vite + React + TypeScript application for the SPCF AS proje
 The single interface (`login`, `restore`, `logout`, `end`) that owns all writes to the auth store. UI, route guards, and the HTTP client call it; nothing else calls the store's setters directly. `end` is the session ending without the user asking — the server stopped accepting them mid-session, on a 401 or because their account was deactivated. It is not `logout`, and `logout` cannot stand in for it, because that method's own `POST /logout` is one of the requests being refused.
 _Avoid_: auth store (that's the state container it manages, not the module itself), auth context
 
+**Dashboard (page)**:
+The page at `/dashboard` that everyone lands on after signing in. Everyone sees today's transaction count and today's earnings, scoped to them by the endpoint. An admin additionally sees a monthly earnings bar chart for a chosen year and a table of earnings per cashier. **The role branch is forced by the API, not chosen for design reasons**: `GET /dashboard` scopes itself and serves both roles, but `/reports/*` is admin-only and answers a cashier with a 403, so a cashier's dashboard must not request those at all. That is why each admin-only section is a component holding its own query — unmounted, it never fires — rather than one page-level fetch with the results hidden. The same structure gives each section its own loading and error state, so one failing request does not blank the other two.
+_Avoid_: home, landing page (the login screen is what people mean by those); "the reports page" (`/reports` is a separate, unbuilt page)
+
 **Item code**:
 A category of billable service or fee (e.g. "GRADUATION FEE", "RENTAL"). Owns a `name` and `description`; has many Services. Managed on its own catalog page, independent of adding Services.
 _Avoid_: item, product, SKU
@@ -40,6 +44,10 @@ _Avoid_: category list, item code manager
 **`src/api/` (shared API tier)**:
 A dedicated location for API calls genuinely needed by more than one feature, sitting outside `src/features/*` — per the project's reference architecture (bulletproof-react), which explicitly allows this as an alternative to duplicating a call across features. Distinct from `components/ui`: this tier is allowed to know about domain concepts (it currently holds `item-codes.ts`, exporting the shared `ItemCode` type and `searchItemCodes`), whereas `components/ui` must stay domain-agnostic. Only promote something here once a second real feature actually needs it — don't pre-build shared modules for hypothetical future consumers (e.g. the item-code combobox UI itself stayed feature-local to Services for exactly this reason; only the type + fetcher moved here).
 _Avoid_: treating this as a place for anything reusable in general — it's specifically for cross-feature API calls, not a catch-all
+
+**`src/utils/` (shared helpers)**:
+The same idea as `src/api/`, one tier over: pure functions with no API call and no React in them, needed by more than one feature. It holds `currency.ts` (`formatCurrency`, `roundToCents`), which lived in `features/transactions/lib/` until the Dashboard needed to format money too — a feature importing from another feature is the thing this tier exists to avoid. Same promotion rule as `src/api/`: move something here when a second feature actually needs it, not before.
+_Avoid_: a dumping ground for anything that isn't a component — a helper used by one feature stays in that feature's `lib/`
 
 **Transaction draft**:
 The in-progress transaction a cashier assembles on the New Transaction page — line items, payer name, amount paid — before Confirm saves it. Distinct from the confirmed `TransactionDTO` the View Transaction and Print pages load.
