@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Badge, Group, Stack, Text } from "@mantine/core";
 import { IconCheck, IconPlus } from "@tabler/icons-react";
 import { useHover } from "@mantine/hooks";
-import { formatCurrency } from "../lib/currency";
+import { formatCurrency } from "@/utils/currency";
 import type { FeeCatalogItem } from "../types";
 
 const ADDED_STATE_DURATION_MS = 1400;

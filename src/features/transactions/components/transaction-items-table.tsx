@@ -1,5 +1,5 @@
 import { Group, Stack, Table, Text } from "@mantine/core";
-import { formatCurrency } from "../lib/currency";
+import { formatCurrency } from "@/utils/currency";
 import type { TransactionItemDTO } from "../types";
 
 type TransactionItemsTableProps = {

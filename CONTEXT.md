@@ -41,6 +41,10 @@ _Avoid_: category list, item code manager
 A dedicated location for API calls genuinely needed by more than one feature, sitting outside `src/features/*` — per the project's reference architecture (bulletproof-react), which explicitly allows this as an alternative to duplicating a call across features. Distinct from `components/ui`: this tier is allowed to know about domain concepts (it currently holds `item-codes.ts`, exporting the shared `ItemCode` type and `searchItemCodes`), whereas `components/ui` must stay domain-agnostic. Only promote something here once a second real feature actually needs it — don't pre-build shared modules for hypothetical future consumers (e.g. the item-code combobox UI itself stayed feature-local to Services for exactly this reason; only the type + fetcher moved here).
 _Avoid_: treating this as a place for anything reusable in general — it's specifically for cross-feature API calls, not a catch-all
 
+**`src/utils/` (shared helpers)**:
+The same idea as `src/api/`, one tier over: pure functions with no API call and no React in them, needed by more than one feature. It holds `currency.ts` (`formatCurrency`, `roundToCents`), which lived in `features/transactions/lib/` until the Dashboard needed to format money too — a feature importing from another feature is the thing this tier exists to avoid. Same promotion rule as `src/api/`: move something here when a second feature actually needs it, not before.
+_Avoid_: a dumping ground for anything that isn't a component — a helper used by one feature stays in that feature's `lib/`
+
 **Transaction draft**:
 The in-progress transaction a cashier assembles on the New Transaction page — line items, payer name, amount paid — before Confirm saves it. Distinct from the confirmed `TransactionDTO` the View Transaction and Print pages load.
 _Avoid_: receipt, cart, basket — in code. On screen the builder panel deliberately still reads "Receipt", which is the cashiers’ word from the legacy system; this rule governs identifiers and types, not the UI copy.
