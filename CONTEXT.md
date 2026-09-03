@@ -18,7 +18,7 @@ This repository is a Vite + React + TypeScript application for the SPCF AS proje
 ## Language
 
 **Auth session module**:
-The single interface (`login`, `restore`, `logout`) that owns all writes to the auth store. UI, route guards, and the HTTP client call it; nothing else calls the store's setters directly.
+The single interface (`login`, `restore`, `logout`, `end`) that owns all writes to the auth store. UI, route guards, and the HTTP client call it; nothing else calls the store's setters directly. `end` is the session ending without the user asking — the server stopped accepting them mid-session, on a 401 or because their account was deactivated. It is not `logout`, and `logout` cannot stand in for it, because that method's own `POST /logout` is one of the requests being refused.
 _Avoid_: auth store (that's the state container it manages, not the module itself), auth context
 
 **Item code**:

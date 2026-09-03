@@ -17,19 +17,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      useAuthStore.getState().setUnauthenticated();
+      authSession.end();
     });
     // A deactivated account keeps a token that still authenticates, so
-    // nothing signs the user out on its own — clearing the session here is
-    // what sends ProtectedRoute back to the login screen. The toast mounts
-    // above the router, so it survives that navigation and is still on
-    // screen when they land. The interceptor has already made sure this
-    // runs once, however many requests the page had in flight.
+    // nothing signs the user out on its own. Ending the session here is
+    // what sends ProtectedRoute back to the login screen, and the toast
+    // mounts above the router, so it survives that navigation and is
+    // still on screen when the user lands. The interceptor has already
+    // made sure this runs once, however many requests were in flight.
     setAccountDeactivatedHandler((message) => {
-      useAuthStore.getState().setUnauthenticated();
+      authSession.end();
       // The server's own copy already says the account is deactivated and
       // to ask an admin to reactivate it. It does not auto-close: it is
-      // the only explanation the user gets for why they were signed out.
+      // the only explanation the user gets for why they were signed out,
+      // and it has to outlive the redirect that follows it.
       notifyError(message, {
         title: "Account deactivated",
         autoClose: false,

@@ -35,22 +35,30 @@ export const setAccountDeactivatedHandler = (
 
 /** `EnsureAccountIsActive` answers a deactivated user on **every**
  * endpoint, with a 403 in Laravel's plain shape (see BACKEND_NOTES.md).
- * That status is shared with genuine per-record policy denials, which
- * must keep their own more specific handling — so the message is what
- * tells the two apart.
+ * That status is shared with per-record policy denials, which must keep
+ * their own more specific handling, so the message is what tells them
+ * apart.
  *
- * Matched on the one word rather than the sentence: the backend's copy is
- * a translatable string that can be reworded, and the only other 403 body
- * this API produces is "You do not have permission to perform this
- * action.", which cannot collide with it.
+ * Matched on the phrase rather than the word "deactivated" alone. The API
+ * has a third 403, "Cannot assign Series Receipt to inactive cashier
+ * account", which is about somebody *else's* account on the admin's own
+ * working session. It says "inactive" today and so misses a bare word
+ * match by luck; the phrase does not depend on that luck.
  *
  * Returns the message rather than a boolean so the caller reports the
  * server's own copy without reaching back into the response for it. */
+const DEACTIVATED_ACCOUNT = /user account is deactivated/i;
+
 function accountDeactivatedMessage(error: AxiosError): string | null {
   if (error.response?.status !== 403) return null;
+  // `POST /login` answers a deactivated user with its own version of this
+  // message. There is no session to end there, and the login form already
+  // shows the server's message itself, so intercepting it would sign
+  // nobody out and put a second toast on screen saying the same thing.
+  if (error.config?.url === "/login") return null;
   const message = (error.response.data as { message?: string } | undefined)
     ?.message;
-  return typeof message === "string" && /deactivated/i.test(message)
+  return typeof message === "string" && DEACTIVATED_ACCOUNT.test(message)
     ? message
     : null;
 }
@@ -73,10 +81,7 @@ let csrfRefreshPromise: Promise<unknown> | null = null;
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => config);
 
 // Response interceptor
-api.interceptors.response.use(
-  (response) => handleResponseSuccess(response),
-  (error: AxiosError) => handleResponseError(error),
-);
+api.interceptors.response.use(handleResponseSuccess, handleResponseError);
 
 /** Latches once a deactivation has been reported, so that a page with
  * several requests in flight produces one message rather than one per

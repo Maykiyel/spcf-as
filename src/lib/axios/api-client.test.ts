@@ -17,12 +17,24 @@ import {
 const DEACTIVATED_MESSAGE =
   "User account is deactivated. Please ask admin to activate your account.";
 
+/** What `POST /login` answers a deactivated user with. Same condition,
+ * different controller, and one word different from the middleware's. */
+const LOGIN_DEACTIVATED_MESSAGE =
+  "User account is deactivated. Please ask an admin to activate your account.";
+
 /** What a policy or role denial returns on the same status code. */
 const PER_RECORD_MESSAGE =
   "You do not have permission to perform this action.";
 
-function forbidden(message: string): AxiosError {
+/** An admin assigning a series receipt to a cashier who is switched off.
+ * A 403 about somebody else's account being inactive, on the admin's own
+ * working session — the nearest thing in this API to a false positive. */
+const INACTIVE_CASHIER_MESSAGE =
+  "Cannot assign Series Receipt to inactive cashier account";
+
+function forbidden(message: string, url = "/users"): AxiosError {
   const error = new AxiosError(message);
+  error.config = { url } as AxiosError["config"];
   error.response = {
     status: 403,
     data: { message },
@@ -85,6 +97,22 @@ describe("handleResponseError", () => {
 
   it("leaves a per-record denial to the caller", async () => {
     const error = forbidden(PER_RECORD_MESSAGE);
+
+    await expect(handleResponseError(error)).rejects.toBe(error);
+
+    expect(onDeactivated).not.toHaveBeenCalled();
+  });
+
+  it("leaves a failed sign-in to the login form", async () => {
+    const error = forbidden(LOGIN_DEACTIVATED_MESSAGE, "/login");
+
+    await expect(handleResponseError(error)).rejects.toBe(error);
+
+    expect(onDeactivated).not.toHaveBeenCalled();
+  });
+
+  it("leaves a refusal about somebody else's inactive account alone", async () => {
+    const error = forbidden(INACTIVE_CASHIER_MESSAGE);
 
     await expect(handleResponseError(error)).rejects.toBe(error);
 
