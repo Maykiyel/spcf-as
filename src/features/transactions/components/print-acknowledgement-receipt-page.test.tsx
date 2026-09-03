@@ -4,7 +4,7 @@ import { StrictMode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { theme } from "@/config/theme";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getTransaction } from "../api/get-transaction";
@@ -132,5 +132,78 @@ describe("PrintAcknowledgementReceiptPage", () => {
       name: /back to transaction/i,
     });
     expect(backLink.className).toContain("no-print");
+  });
+
+  describe("a transaction that can't be printed", () => {
+    it("explains the refusal instead of rendering the receipt", async () => {
+      mockGetTransaction.mockResolvedValue({
+        ...fakeTransaction,
+        status: "returned",
+      });
+      renderPage();
+
+      expect(
+        await screen.findByText(/only a completed transaction/i),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("ACCOUNTING OFFICE'S COPY")).toBeNull();
+      expect(screen.queryByText("STUDENT'S COPY")).toBeNull();
+    });
+
+    it("never opens the print dialog", async () => {
+      mockGetTransaction.mockResolvedValue({
+        ...fakeTransaction,
+        status: "returned",
+      });
+      renderPage();
+
+      await screen.findByText(/only a completed transaction/i);
+
+      // The effect fires the dialog when the transaction resolves, so
+      // gating only the JSX would still pop a dialog over the refusal and
+      // leave someone cancelling it to read why they can't print.
+      //
+      // A fixed flush, not `waitFor`. A negative assertion passes on
+      // waitFor's very first check and returns immediately, so it would
+      // wait for nothing and this test would pass against an ungated
+      // effect. The wait has to clear the image timeout (400ms) and the
+      // two nested rAFs that stand between the effect and window.print().
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      });
+
+      expect(window.print).not.toHaveBeenCalled();
+    });
+
+    it("refuses an incomplete transaction, not only a voided one", async () => {
+      mockGetTransaction.mockResolvedValue({
+        ...fakeTransaction,
+        customer_name: null,
+        series_number: null,
+        total: null,
+        items: [],
+        status: "pending",
+      });
+      renderPage();
+
+      // Reachable today by typing a control id into the address bar. It
+      // used to print two copies with a blank payer and a zero total.
+      expect(
+        await screen.findByText(/only a completed transaction/i),
+      ).toBeInTheDocument();
+      expect(window.print).not.toHaveBeenCalled();
+    });
+
+    it("still offers the way back to the transaction", async () => {
+      mockGetTransaction.mockResolvedValue({
+        ...fakeTransaction,
+        status: "cancelled",
+      });
+      renderPage();
+
+      await screen.findByText(/only a completed transaction/i);
+      expect(
+        screen.getByRole("button", { name: /back to transaction/i }),
+      ).toBeInTheDocument();
+    });
   });
 });

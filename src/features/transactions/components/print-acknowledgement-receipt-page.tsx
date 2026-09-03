@@ -3,6 +3,7 @@ import { Box, Stack, Text, UnstyledButton } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
+import { isPrintable, printRefusalReason } from "../lib/transaction-status";
 import { AcknowledgementReceiptCopy } from "./acknowledgement-receipt-copy";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
 
@@ -59,8 +60,17 @@ export function PrintAcknowledgementReceiptPage() {
 
   const hasPrintedRef = useRef(false);
 
+  // The same predicate the View page's Print button reads, which is what
+  // stops the two drifting: there, it disables a button; here, it decides
+  // whether a document exists to print at all.
+  const canPrint = transaction !== undefined && isPrintable(transaction.status);
+
   useEffect(() => {
-    if (!transaction) return;
+    // Gating the effect, not only the JSX. The dialog is fired from here
+    // when the transaction resolves, so refusing in the render alone would
+    // still pop a print dialog over the refusal message and leave someone
+    // cancelling a dialog to read why they can't print.
+    if (!transaction || !canPrint) return;
 
     let cancelled = false;
     let rafId1: number | null = null;
@@ -113,7 +123,7 @@ export function PrintAcknowledgementReceiptPage() {
       if (rafId1 !== null) cancelAnimationFrame(rafId1);
       if (rafId2 !== null) cancelAnimationFrame(rafId2);
     };
-  }, [transaction]);
+  }, [transaction, canPrint]);
 
   return (
     <Box p="xs" className="print-page-root">
@@ -133,6 +143,18 @@ export function PrintAcknowledgementReceiptPage() {
           here to narrow the type for the branch below. */}
       {isUnavailable || !transaction ? (
         <TransactionDetailFallback detail={detail} />
+      ) : !canPrint ? (
+        /* Refused in place, not redirected. A redirect throws away the
+           explanation and leaves someone arriving from a stale bookmark
+           bounced with no idea why. TransactionDetailFallback deliberately
+           does not absorb this: that component answers "we could not give
+           you a transaction", and here we have one — the refusal is about
+           what may be done with it. The two pages also want opposite
+           treatments, this one showing nothing but the message while the
+           View page shows its content with one control disabled. */
+        <Text ta="center" c="danger" py="xl">
+          {printRefusalReason(transaction.status)}
+        </Text>
       ) : (
         <Stack gap={0}>
           <Box style={{ breakAfter: "page", pageBreakAfter: "always" }}>

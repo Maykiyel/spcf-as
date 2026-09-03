@@ -1,10 +1,16 @@
 import { Group, Stack, Table, Text } from "@mantine/core";
 import { formatCurrency } from "@/utils/currency";
+import { NO_VALUE_PLACEHOLDER } from "../lib/transaction-status";
 import type { TransactionItemDTO } from "../types";
 
 type TransactionItemsTableProps = {
   items: TransactionItemDTO[];
-  total: number;
+  /** Null until the transaction is saved — the backend computes it at save
+   * time. Rendered as a placeholder rather than `₱0.00`, which would say
+   * the payer owed nothing instead of that nothing has been totalled yet.
+   * The print copies only ever receive a completed transaction, so they
+   * never see the placeholder. */
+  total: number | null;
   amountPaid: number;
   changeAmount: number;
   // Print copies are physically 4in tall (see PrintAcknowledgementReceiptPage)
@@ -58,7 +64,7 @@ export function TransactionItemsTable({
 
       <Group justify="flex-end">
         <Text fw={700} size={textSize}>
-          Total: {formatCurrency(total)}
+          Total: {total === null ? NO_VALUE_PLACEHOLDER : formatCurrency(total)}
         </Text>
       </Group>
 

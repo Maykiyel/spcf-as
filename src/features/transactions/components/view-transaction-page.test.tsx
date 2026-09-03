@@ -119,4 +119,97 @@ describe("ViewTransactionPage", () => {
       "/transactions/62598/print",
     );
   });
+
+  it("shows the status of a completed transaction and leaves Print usable", async () => {
+    mockGetTransaction.mockResolvedValue(fakeTransaction);
+    renderPage();
+
+    expect(await screen.findByText("Completed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /print/i })).toBeEnabled();
+  });
+
+  it("says Voided, not Returned, for a transaction an admin voided", async () => {
+    mockGetTransaction.mockResolvedValue({
+      ...fakeTransaction,
+      status: "returned",
+    });
+    renderPage();
+
+    // The admin action is called Void. "Returned" is the wire's word.
+    expect(await screen.findByText("Voided")).toBeInTheDocument();
+    expect(screen.queryByText("Returned")).toBeNull();
+  });
+
+  it("disables Print on a voided transaction and says why", async () => {
+    mockGetTransaction.mockResolvedValue({
+      ...fakeTransaction,
+      status: "returned",
+    });
+    renderPage();
+
+    const printButton = await screen.findByRole("button", { name: /print/i });
+    expect(printButton).toBeDisabled();
+    expect(screen.getByText(/only a completed transaction/i)).toBeInTheDocument();
+  });
+
+  it("still shows a voided transaction's contents, so it can be looked up", async () => {
+    mockGetTransaction.mockResolvedValue({
+      ...fakeTransaction,
+      status: "returned",
+    });
+    renderPage();
+
+    // Refusing to print is not refusing to look — a cashier still has to
+    // be able to answer a payer's question about it.
+    expect(await screen.findByText("asdfsf")).toBeInTheDocument();
+    expect(screen.getByText("2025-2026")).toBeInTheDocument();
+  });
+
+  it("keeps the Print button on screen rather than hiding it", async () => {
+    mockGetTransaction.mockResolvedValue({
+      ...fakeTransaction,
+      status: "cancelled",
+    });
+    renderPage();
+
+    // A missing button reads as the page having failed to load, to
+    // someone who prints these all day.
+    expect(
+      await screen.findByRole("button", { name: /print/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a placeholder for blank fields rather than leaving them empty", async () => {
+    mockGetTransaction.mockResolvedValue({
+      ...fakeTransaction,
+      customer_name: null,
+      series_number: null,
+      total: null,
+      items: [],
+      status: "pending",
+    });
+    renderPage();
+
+    await screen.findByText("Pending");
+
+    // "not assigned yet" has to read differently from "failed to load",
+    // and a zero total would say the payer owed nothing.
+    expect(screen.getByText("Series No.: —")).toBeInTheDocument();
+    expect(screen.getByText("Total: —")).toBeInTheDocument();
+    expect(screen.queryByText("Total: ₱0.00")).toBeNull();
+  });
+
+  it("refuses to print an incomplete transaction", async () => {
+    mockGetTransaction.mockResolvedValue({
+      ...fakeTransaction,
+      customer_name: null,
+      series_number: null,
+      total: null,
+      items: [],
+      status: "pending",
+    });
+    renderPage();
+
+    expect(await screen.findByRole("button", { name: /print/i })).toBeDisabled();
+  });
 });
