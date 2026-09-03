@@ -2,10 +2,7 @@ import { SimpleGrid, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/utils/currency";
-import {
-  DASHBOARD_TODAY_QUERY_KEY,
-  getDashboardToday,
-} from "../api/get-dashboard-today";
+import { getDashboardToday } from "../api/get-dashboard-today";
 import { StatTile } from "./stat-tile";
 
 /** The two figures every user sees, scoped to them by the endpoint.
@@ -22,7 +19,9 @@ import { StatTile } from "./stat-tile";
  * in `BACKEND_NOTES.md` and are the backend developer's to change. */
 export function TodayFigures() {
   const { data, isLoading, isError } = useQuery({
-    queryKey: DASHBOARD_TODAY_QUERY_KEY,
+    // Inline, like the other two sections: nothing invalidates these
+    // keys, because the dashboard has no mutations.
+    queryKey: ["dashboard-today"],
     queryFn: getDashboardToday,
   });
 
@@ -30,7 +29,9 @@ export function TodayFigures() {
     return (
       <Card.Root>
         <Card.Body>
-          <Text c="danger.7">Couldn't load today's figures.</Text>
+          <Text c="danger">
+            Couldn't load today's figures. Please try again.
+          </Text>
         </Card.Body>
       </Card.Root>
     );

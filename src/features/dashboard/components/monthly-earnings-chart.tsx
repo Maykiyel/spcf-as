@@ -9,6 +9,11 @@ export type MonthlyEarningsPoint = {
 
 type MonthlyEarningsChartProps = {
   data: MonthlyEarningsPoint[];
+  /** Passed in rather than declared here, so the placeholder the section
+   * shows while this chunk loads is the same height and the card does
+   * not jump. A shared constant would have to live in one module or the
+   * other, and a value imported from here would undo the lazy split. */
+  height: number;
 };
 
 /**
@@ -34,10 +39,11 @@ type MonthlyEarningsChartProps = {
  */
 export default function MonthlyEarningsChart({
   data,
+  height,
 }: MonthlyEarningsChartProps) {
   return (
     <BarChart
-      h={280}
+      h={height}
       data={data}
       dataKey="month"
       series={[{ name: "total_earnings", label: "Earnings", color: "primary.6" }]}

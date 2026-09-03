@@ -54,6 +54,13 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
+// Mantine's Combobox scrolls its active option into view when the
+// dropdown opens. jsdom implements no scrolling at all, so without this
+// the year Select throws — and it throws *outside* the assertion, as an
+// unhandled rejection, which leaves every test green while the run exits
+// non-zero. Worth knowing: a passing test count is not the gate.
+Element.prototype.scrollIntoView = vi.fn();
+
 const cashier: AuthUser = {
   id: 7,
   first_name: "Jaypee",
@@ -78,9 +85,9 @@ function signIn(user: AuthUser) {
   useAuthStore.setState({ user, status: "authenticated" });
 }
 
-function renderPage() {
+function renderPage(url = "/dashboard") {
   return renderWithQueryClient(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <DashboardPage />
     </MemoryRouter>,
   );
@@ -173,7 +180,7 @@ describe("DashboardPage", () => {
       renderPage();
 
       expect(
-        await screen.findByText("Couldn't load today's figures."),
+        await screen.findByText("Couldn't load today's figures. Please try again."),
       ).toBeInTheDocument();
     });
   });
@@ -263,7 +270,7 @@ describe("DashboardPage", () => {
 
       expect(await screen.findByText("Jaypee Pahayahay")).toBeInTheDocument();
       expect(
-        screen.getByText("Couldn't load today's figures."),
+        screen.getByText("Couldn't load today's figures. Please try again."),
       ).toBeInTheDocument();
     });
   });
@@ -334,13 +341,30 @@ describe("DashboardPage", () => {
       );
     });
 
+    it("restores the year from the URL", async () => {
+      signIn(admin);
+      renderPage(`/dashboard?year=${CURRENT_YEAR + 1}`);
+
+      await screen.findByTestId("bar-chart");
+      expect(mockGetMonthlyEarnings).toHaveBeenCalledWith(CURRENT_YEAR + 1);
+    });
+
+    it("ignores a year the endpoint would refuse", async () => {
+      signIn(admin);
+      renderPage("/dashboard?year=1999");
+
+      await screen.findByTestId("bar-chart");
+      expect(mockGetMonthlyEarnings).toHaveBeenCalledWith(CURRENT_YEAR);
+      expect(mockGetMonthlyEarnings).not.toHaveBeenCalledWith(1999);
+    });
+
     it("shows its own error message without disturbing the rest", async () => {
       mockGetMonthlyEarnings.mockRejectedValue(new Error("boom"));
       signIn(admin);
       renderPage();
 
       expect(
-        await screen.findByText("Couldn't load monthly earnings."),
+        await screen.findByText("Couldn't load monthly earnings. Please try again."),
       ).toBeInTheDocument();
       expect(screen.getByText("₱1,250.00")).toBeInTheDocument();
       expect(screen.getByText("Jaypee Pahayahay")).toBeInTheDocument();
