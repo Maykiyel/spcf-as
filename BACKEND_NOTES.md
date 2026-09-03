@@ -160,15 +160,25 @@ user is rejected on **every** endpoint with:
 
 **HTTP 403, in Laravel's plain shape — not the success envelope.**
 
-**Collision to handle deliberately:** this frontend already treats 403 as
-"you don't have access to *this resource*" (see `useTransactionDetail`).
-A deactivated account now produces 403 on every request, so without
-discrimination it reads as "you don't have access to this transaction"
-when the truth is "your account is switched off". Distinguish on the
-message, or on the fact that it happens everywhere at once.
+**Four unrelated things return 403, and only the message separates them:**
 
-A deactivated user also remains "logged in" client-side — nothing revokes
-the token, so the session survives and every request fails.
+| Where | Message | Means |
+|---|---|---|
+| `EnsureAccountIsActive` (every endpoint) | `User account is deactivated. Please ask admin to activate your account.` | the caller's own account is switched off |
+| `AuthController@login` | `User account is deactivated. Please ask an admin to activate your account.` | same, on a sign-in attempt. Envelope shape, and note `ask an admin` where the middleware says `ask admin` |
+| `bootstrap/app.php` exception handler | `You do not have permission to perform this action.` | policy or role denial on one resource |
+| `SeriesReceiptController@store` | `Cannot assign Series Receipt to inactive cashier account` | somebody *else's* account is off, on the admin's own working session |
+
+The first two mean "end this session"; the last two do not, and the
+fourth is about an account being inactive without being the caller's, so
+matching on the word "deactivated" alone is closer to a collision than it
+looks. `src/lib/axios/api-client.ts` matches the phrase
+`user account is deactivated` and exempts `POST /login`.
+
+A deactivated user still keeps a token that authenticates — nothing on the
+server revokes it. Signing them out is entirely the client's doing, which
+is why it happens on their next request rather than the moment an admin
+deactivates them.
 
 ## Users: delete and toggle status (`a96743a`, `8a5fb1c`)
 

@@ -26,4 +26,15 @@ export const authSession = {
       useAuthStore.getState().setUnauthenticated();
     }
   },
+
+  /** The session ended without the user asking: the server stopped
+   * accepting them mid-session, on a 401 or because their account was
+   * deactivated. `logout()` is not the same thing and is not usable here,
+   * because its own `POST /logout` is one of the requests being refused.
+   *
+   * Clearing the status is the whole mechanism: `ProtectedRoute` watches
+   * it and navigates to the login screen. */
+  end(): void {
+    useAuthStore.getState().setUnauthenticated();
+  },
 };
