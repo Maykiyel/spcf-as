@@ -4,7 +4,7 @@ Reference for the API this frontend talks to. Describes **what the backend
 actually returns and enforces** — not why it was built that way.
 
 Source: `spcf-as-backend` (Laravel 12 + Sanctum + spatie/laravel-permission
-+ spatie/laravel-query-builder), read at commit `e355837` (2026-09-02).
++ spatie/laravel-query-builder), read at commit `e660349` (2026-09-03).
 That repo belongs to the backend developer and is read-only from here; this
 file is a transcription of it. When it changes, re-read and update this.
 
@@ -199,17 +199,67 @@ PATCH  /users/{user}/toggle-status    (admin)  body: {"is_active": bool}
   series back to `active`. `SeriesReceiptStatus` is now
   `queued | active | exhausted | suspended`.
 - Returns the updated `UserResource`, which now includes `is_active`.
-- **`GET /users` returns `is_active` too, as of `e355837`.** `index`
-  narrows the query with `->select($fields)`; that commit appends
-  `is_active` unconditionally, next to `id`, so it arrives whether or
-  not `fields[]` was passed (it is still not a value `fields[]` accepts,
-  and doesn't need to be). The same commit casts it to `boolean` on the
-  model, so every endpoint now returns `true`/`false` rather than the
-  index returning `1`/`0` and `toggle-status` returning a real bool.
-  Before it, the field was absent from every row of the directory:
-  unselected, and `UserResource` wraps it in `whenNotNull`.
-- There is still **no update endpoint** — no rename, no email change, no
-  role change, no password reset.
+- There is still **no update endpoint** — no rename, no role change, no
+  password reset.
+
+## Users: the index was rewritten (`4955f19`, `29b913d`, `e660349`)
+
+```
+GET /users     (admin only now)
+GET /cashiers  (admin)
+```
+
+`GET /users` was unpaginated, served both roles, took a `fields[]`
+parameter and returned a flat array. All four are gone.
+
+- **Admin only.** `UserPolicy@viewAny` was `hasAnyRole(['admin',
+  'cashier'])` and is now `hasAnyRole(['admin'])`. A cashier gets a 403.
+- **Paginated**, in the standard envelope: `{users: [...], pagination:
+  {...}}`. 25 per page by default, 100 max, from `config/pagination.php`.
+- **No `fields[]`.** The whole resource comes back every time.
+- **Filters** are `role` (`admin`|`cashier`) and `is_active`. `is_active`
+  is spatie's default *partial* match, so `filter[is_active]=1` and `=0`
+  are the working forms — the same shape `/services` takes.
+- **Sorts** are `first_name`, `last_name`, `full_name`, `username`.
+  `email` and `created_at` are gone from the allow list.
+- **No `filter[search]`**, still.
+- **No default sort**, so an unsorted request returns rows in whatever
+  order the database gives, which is not stable across pages. The Manage
+  Accounts table sends `full_name` rather than relying on it.
+
+`GET /cashiers` is new and unpaginated: an array of `{id, full_name}`
+ordered by `full_name`, in the envelope. It takes an optional
+`is_active` — a **plain query parameter, not `filter[is_active]`**. It is
+what the series-receipt cashier picker uses.
+
+### `role` came back, and it hangs on one line
+
+`4955f19` dropped the `->with('roles')` the old index did. Because
+`UserResource.role` is `whenLoaded('roles')`, that made the key absent
+from every row of `GET /users` — silently, since the backend's own
+structure assertion does not name `role`. `e660349` restored it as
+`$users->load('roles')` after `paginate()`. Worth knowing if the field
+ever goes missing again: nothing on either side fails loudly when it
+does.
+
+### Two defects still live
+
+1. **`POST /users` should 500 on every request.** `store` still validates
+   `'email' => [..., 'unique:users,email']` and still writes `email`, but
+   `4955f19` dropped the column from the `users` migration and `email`
+   from `$fillable`. The unique rule queries a column that no longer
+   exists. (The `email` column still in that migration file belongs to
+   `password_reset_tokens`, not `users`.) The backend's own `store` tests
+   send a payload with no email, so they 422 before reaching it and the
+   break is invisible there.
+2. **`per_page` is validated and then ignored.** `index` calls
+   `$request->validate([...])` without assigning the result, then reads
+   `$validated['per_page']`. `$validated` is undefined, so the expression
+   is always the config default and the parameter does nothing.
+
+`email` is otherwise fully gone: no column, no `$fillable` entry, no
+`UserResource` field. `Supplier` still has one; that is a different
+model.
 
 ## Earnings reports (`fbbb77f`)
 
@@ -258,8 +308,9 @@ instants of 31 December fall outside it.
   length, no complexity. The Manage Accounts create form imposes 8
   characters client-side, which does nothing for anything calling the
   API directly.
-- **No `search` filter** on `/activity-logs`, `/reports/*` or `/users`.
-  Activity logs remain date-only with `created_at` as the sole sort.
+- **No `search` filter** on `/activity-logs`, `/reports/*`, `/users` or
+  `/cashiers`. Activity logs remain date-only with `created_at` as the
+  sole sort.
 - **`/reports/transactions` computes `total_earnings` from the same
   builder instance `paginate()` was called on**, so the offset may leak
   into the aggregate and zero the total on page 2 onward. Unverified.
@@ -320,8 +371,13 @@ names this relation `account`), `from`, `to`, `remaining_sheets`,
 ### `UserResource`
 
 `id`, `first_name`, `last_name`, `full_name`, `user_name` (from
-`username`), `email`, `role`. Every field except `id` is omitted when null;
-`role` requires the roles relation to be loaded.
+`username`), `is_active`, `role`. No `email` — dropped in `4955f19`.
+
+`whenNotNull` was removed from every field in the same commit, so they are
+sent as-is rather than omitted when null. `role` is the one exception: it
+is `whenLoaded('roles')`, so it is present only where the caller eager-
+loaded the relation. Every endpoint does today; see the note above for
+how narrowly.
 
 ## Authorization
 
@@ -333,6 +389,7 @@ names this relation `account`), `from`, `to`, `remaining_sheets`,
 | save / cancel | owning cashier only |
 | void | admin only |
 | series receipts, activity logs, reports | admin only |
+| `GET /users`, `GET /cashiers` | admin only, as of `4955f19` |
 
 `filter[cashier_id]` on the index endpoint is accepted **only** for admins.
 For a cashier it is not in the allowed list, so it returns 400.
@@ -386,9 +443,11 @@ POST   /login                                   (throttled)
 POST   /logout
 GET    /dashboard
 GET    /users/me
-GET    /users            POST /users            GET /users/{id}
+GET    /users                                              (admin)
+POST   /users            GET  /users/{id}
 DELETE /users/{user}                                       (admin)
 PATCH  /users/{user}/toggle-status                         (admin)
+GET    /cashiers                                           (admin)
        /suppliers        (full apiResource)
        /item-codes       (full apiResource)
        /services         (full apiResource)
