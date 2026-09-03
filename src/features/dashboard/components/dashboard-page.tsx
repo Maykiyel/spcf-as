@@ -1,6 +1,7 @@
 import { Stack, Title } from "@mantine/core";
 import { useAuthStore } from "@/stores/auth-store";
 import { CashierEarningsTable } from "./cashier-earnings-table";
+import { MonthlyEarningsSection } from "./monthly-earnings-section";
 import { TodayFigures } from "./today-figures";
 
 /**
@@ -27,7 +28,12 @@ export function DashboardPage() {
 
       <TodayFigures />
 
-      {isAdmin && <CashierEarningsTable />}
+      {isAdmin && (
+        <>
+          <MonthlyEarningsSection />
+          <CashierEarningsTable />
+        </>
+      )}
     </Stack>
   );
 }

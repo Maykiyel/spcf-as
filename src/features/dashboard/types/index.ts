@@ -29,3 +29,18 @@ export type CashierEarnings = {
   cashier_name: string;
   total_earnings: number;
 };
+
+/** One entry of `GET /reports/monthly-earnings`, admin-only.
+ *
+ * `month` is `YYYY-MM`. Twelve always arrive, zero-filled, which is what
+ * makes a bar chart the honest shape: a line would descend to zero across
+ * an empty month and climb back out, reading as a collapse and a recovery
+ * where bars simply show nothing.
+ *
+ * Windowed on `created_at`, where cashier earnings windows on
+ * `completed_at`. A transaction started near a month boundary can be
+ * attributed to different months by the two. */
+export type MonthlyEarnings = {
+  month: string;
+  total_earnings: number;
+};
