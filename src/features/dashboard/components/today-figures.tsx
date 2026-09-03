@@ -42,11 +42,13 @@ export function TodayFigures() {
       <StatTile
         label="Transactions Today"
         value={String(data?.transactions_today ?? 0)}
+        accent="primary"
         isLoading={isLoading}
       />
       <StatTile
         label="Earnings Today"
         value={formatCurrency(data?.earnings_today ?? 0)}
+        accent="success"
         isLoading={isLoading}
       />
     </SimpleGrid>

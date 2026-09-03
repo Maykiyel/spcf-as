@@ -1,6 +1,12 @@
 import { BarChart } from "@mantine/charts";
-import { formatCurrency } from "@/utils/currency";
+import { formatCompactCurrency, formatCurrency } from "@/utils/currency";
 import "@mantine/charts/styles.css";
+
+/** Wide enough for a compact label like `₱11.5M` plus the 10px recharts
+ * translates the tick by. Mantine's default gutter is sized for bare
+ * numbers, so a peso-prefixed one overflows it and the card, which clips
+ * to its own radius, cuts the label off at the edge. */
+const Y_AXIS_WIDTH = 64;
 
 export type MonthlyEarningsPoint = {
   month: string;
@@ -47,7 +53,13 @@ export default function MonthlyEarningsChart({
       data={data}
       dataKey="month"
       series={[{ name: "total_earnings", label: "Earnings", color: "primary.6" }]}
+      // The tooltip keeps the exact figure. Only the axis is abbreviated,
+      // because that is the one that has to fit in a fixed gutter.
       valueFormatter={formatCurrency}
+      yAxisProps={{
+        width: Y_AXIS_WIDTH,
+        tickFormatter: formatCompactCurrency,
+      }}
       withLegend={false}
       barProps={{ radius: 4 }}
     />
