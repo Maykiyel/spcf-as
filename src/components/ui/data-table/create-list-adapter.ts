@@ -22,9 +22,16 @@ type ListAdapterOptions = {
 // Declared filters (`params.filters`) are sent as `filter[<key>]`, which is
 // what every filterable endpoint in this API calls them, so a table that
 // declares its filters needs no per-feature mapping to reach the wire. A
-// caller with real variance — a parameter that isn't a `filter[...]`, or a
-// value the endpoint wants in a different shape — merges it in via `extra`
-// on a call-by-call basis rather than the factory growing an option for it.
+// caller with real variance — a parameter that isn't a `filter[...]` —
+// merges it in via `extra` on a call-by-call basis rather than the factory
+// growing an option for it.
+//
+// **`extra` has no consumers.** Services was the only one, and #84 moved
+// its status filter onto the declared mechanism, where the value reaches
+// the query key as well as the request. The escape hatch stays because it
+// is still the right answer for a non-`filter[...]` parameter; it is not
+// the right answer for a filter.
+//
 // `null` is "not set", and an unknown filter key is a 400 rather than a
 // silently ignored parameter (see BACKEND_NOTES.md) — so an unset filter has
 // to be absent from the request, not present and empty.
