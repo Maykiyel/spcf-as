@@ -229,8 +229,12 @@ parameter and returned a flat array. All four are gone.
 
 `GET /cashiers` is new and unpaginated: an array of `{id, full_name}`
 ordered by `full_name`, in the envelope. It takes an optional
-`is_active` — a **plain query parameter, not `filter[is_active]`**. It is
-what the series-receipt cashier picker uses.
+`is_active` — a **plain query parameter, not `filter[is_active]`**,
+validated `['sometimes', 'boolean']` at the top level rather than under a
+`filter` key like everything else here. It is what the series-receipt
+cashier picker uses, with `is_active=1`, because `POST /series-receipts`
+answers an inactive cashier with a 403 (`Cannot assign Series Receipt to
+inactive cashier account`).
 
 ### `role` came back, and it hangs on one line
 
