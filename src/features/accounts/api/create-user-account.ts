@@ -17,19 +17,18 @@ const PASSWORD_MIN_LENGTH = 8;
  * is what lets a server-side "username has already been taken" land on the
  * username input without a translation table in between.
  *
- * Note the asymmetry with `UserAccount`: the request field is `username`,
- * the response field is `user_name`. That is the API's, not a typo here.
+ * There is no `email` field. Backend `4955f19` dropped the column from the
+ * `users` table and the field from `UserResource`, so there is nowhere for
+ * one to go. `POST /users` has not caught up — it still validates `email`
+ * as required and still writes it — which means account creation is broken
+ * server-side until it does. Sending an email would not rescue it: the
+ * write it feeds targets a column that no longer exists, and the
+ * `unique:users,email` rule queries it first. See `BACKEND_NOTES.md`.
  */
 export const createUserAccountSchema = z.object({
   first_name: z.string().trim().min(1, "First name is required").max(255),
   last_name: z.string().trim().min(1, "Last name is required").max(255),
   username: z.string().trim().min(1, "Username is required").max(255),
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email address is required")
-    .max(255)
-    .pipe(z.email("Enter a valid email address")),
   password: z
     .string()
     .min(

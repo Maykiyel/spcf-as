@@ -37,7 +37,6 @@ const EMPTY_FORM: CreateUserAccountInput = {
   first_name: "",
   last_name: "",
   username: "",
-  email: "",
   password: "",
   role: "cashier",
 };
@@ -93,7 +92,7 @@ export function CreateAccountModal({
         setError(field, { message: fieldErrors[field] });
       }
 
-      // A duplicate username or email belongs on the input that caused it.
+      // A duplicate username belongs on the input that caused it.
       // Anything else — a 500, a dropped connection — has no field to sit
       // under, so it surfaces the way every other failed mutation does.
       if (named.length === 0) {
@@ -145,17 +144,6 @@ export function CreateAccountModal({
                 label="Username"
                 {...field}
                 error={errors.username?.message}
-              />
-            )}
-          />
-          <Controller
-            name="email"
-            control={control}
-            render={({ field }) => (
-              <TextInput
-                label="Email Address"
-                {...field}
-                error={errors.email?.message}
               />
             )}
           />

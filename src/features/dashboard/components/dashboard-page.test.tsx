@@ -67,7 +67,6 @@ const cashier: AuthUser = {
   last_name: "Pahayahay",
   full_name: "Jaypee Pahayahay",
   user_name: "jaypee",
-  email: "jaypee@spcf.edu.ph",
   role: "cashier",
 };
 
@@ -77,7 +76,6 @@ const admin: AuthUser = {
   last_name: "Bautista",
   full_name: "Mike Bautista",
   user_name: "mike",
-  email: "mike@spcf.edu.ph",
   role: "admin",
 };
 
