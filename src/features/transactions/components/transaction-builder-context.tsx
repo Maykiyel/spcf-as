@@ -1,7 +1,19 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
-import { notifySuccess, notifyMutationError } from "@/lib/notifications/notifications";
+import {
+  notifySuccess,
+  notifyMutationError,
+  notifyWarning,
+} from "@/lib/notifications/notifications";
 import { getFeeCatalog } from "../api/get-fee-catalog";
+import { getPendingTransactionCount } from "../api/get-pending-transaction-count";
 import { saveTransaction } from "../api/save-transaction";
 import {
   countByItemCode,
@@ -35,6 +47,9 @@ const EMPTY_CATALOG: FeeCatalogItem[] = [];
 const INITIAL_PAYER_NAME = "";
 const INITIAL_AMOUNT_PAID = 0;
 
+const DISCARDED_MESSAGE =
+  "A transaction you had in progress was discarded when this one started.";
+
 type TransactionBuilderProviderProps = {
   children: ReactNode;
   // Test-only: bypasses the getFeeCatalog network call with fixed data.
@@ -67,6 +82,50 @@ export function TransactionBuilderProvider({
   });
 
   const catalog = catalogOverride ?? fetchedCatalog ?? EMPTY_CATALOG;
+
+  // Asked on mount, and deliberately not awaited anywhere. Starting a
+  // transaction abandons every pending one the cashier already had, and
+  // the creation response doesn't say what it discarded — so the only way
+  // to tell them is to have looked first. Looking *at creation time*
+  // would put a round trip in front of the cashier's first line item,
+  // which is a worse outcome than an occasionally missed notice.
+  //
+  // `staleTime: 0` so each visit to the page asks again. The app-wide
+  // minute would otherwise serve a count taken before the last
+  // transaction was created, on a page whose whole job is creating them.
+  const { data: pendingBeforeStart } = useQuery({
+    queryKey: ["transactions", "pending-count"],
+    queryFn: getPendingTransactionCount,
+    staleTime: 0,
+  });
+
+  // Fires once per provider lifetime, on the transition from "no
+  // transaction" to "one exists" — which is exactly when the server did
+  // the abandoning.
+  //
+  // A notification, not a dialog: the abandonment has already happened by
+  // the time the transaction exists, so there is nothing to confirm and
+  // nothing to undo, and blocking a cashier mid-service to say so would
+  // cost them the one thing the notice is meant to save.
+  const hasReportedDiscardRef = useRef(false);
+  const transactionId = lineItemSync.transactionId;
+
+  useEffect(() => {
+    // Waits for both. If the count is still in flight the decision isn't
+    // knowable yet, and guessing either way is worse than the notice
+    // arriving a moment late.
+    if (transactionId === null || pendingBeforeStart === undefined) return;
+    if (hasReportedDiscardRef.current) return;
+
+    hasReportedDiscardRef.current = true;
+
+    // Nothing was discarded, which is the normal case. A cashier who used
+    // explicit cancellation, as this app gives them a way to do, sees
+    // nothing at all.
+    if (pendingBeforeStart === 0) return;
+
+    notifyWarning(DISCARDED_MESSAGE);
+  }, [transactionId, pendingBeforeStart]);
 
   const toggleItemCode = (itemCode: string) => {
     setSelectedItemCodes((current) =>

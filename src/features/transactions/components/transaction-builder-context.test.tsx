@@ -6,10 +6,15 @@ import { TransactionBuilderProvider } from "./transaction-builder-context";
 import { useCatalogBuilder } from "./use-catalog-builder";
 import { useTransactionDraft } from "./use-transaction-draft";
 import { initiateTransaction } from "../api/initiate-transaction";
+import { getPendingTransactionCount } from "../api/get-pending-transaction-count";
 import { addTransactionItem } from "../api/add-transaction-item";
 import { saveTransaction } from "../api/save-transaction";
 import { cancelTransaction } from "../api/cancel-transaction";
-import { notifySuccess, notifyMutationError } from "@/lib/notifications/notifications";
+import {
+  notifySuccess,
+  notifyMutationError,
+  notifyWarning,
+} from "@/lib/notifications/notifications";
 import type { FeeCatalogItem, TransactionDTO } from "../types";
 
 // This suite covers only what TransactionBuilderProvider adds on top of
@@ -19,17 +24,20 @@ import type { FeeCatalogItem, TransactionDTO } from "../types";
 // use-line-item-sync.test.tsx, not re-tested here.
 
 vi.mock("../api/initiate-transaction");
+vi.mock("../api/get-pending-transaction-count");
 vi.mock("../api/add-transaction-item");
 vi.mock("../api/save-transaction");
 vi.mock("../api/cancel-transaction");
 vi.mock("@/lib/notifications/notifications");
 
 const mockInitiateTransaction = vi.mocked(initiateTransaction);
+const mockGetPendingCount = vi.mocked(getPendingTransactionCount);
 const mockAddTransactionItem = vi.mocked(addTransactionItem);
 const mockSaveTransaction = vi.mocked(saveTransaction);
 const mockCancelTransaction = vi.mocked(cancelTransaction);
 const mockNotifySuccess = vi.mocked(notifySuccess);
 const mockNotifyMutationError = vi.mocked(notifyMutationError);
+const mockNotifyWarning = vi.mocked(notifyWarning);
 
 const parkingFee: FeeCatalogItem = {
   id: 2,
@@ -128,6 +136,8 @@ beforeEach(() => {
     quantity: 1,
     subtotal: parkingFee.price,
   });
+  // The normal case: nothing outstanding, so nothing was discarded.
+  mockGetPendingCount.mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -234,6 +244,91 @@ describe("TransactionBuilderProvider — confirmTransaction", () => {
     });
 
     expect(onConfirmSuccess).not.toHaveBeenCalled();
+  });
+});
+
+describe("TransactionBuilderProvider — the discarded-transaction notice", () => {
+  it("tells the cashier when starting one discarded a transaction in progress", async () => {
+    mockGetPendingCount.mockResolvedValue(1);
+    renderHarness();
+
+    fireEvent.click(screen.getByText("add"));
+    await advance(400); // add-debounce -> initiate
+
+    expect(mockNotifyWarning).toHaveBeenCalledExactlyOnceWith(
+      expect.stringMatching(/in progress was discarded/i),
+    );
+  });
+
+  it("says nothing when the cashier had none outstanding", async () => {
+    mockGetPendingCount.mockResolvedValue(0);
+    renderHarness();
+
+    fireEvent.click(screen.getByText("add"));
+    await advance(400);
+
+    expect(mockNotifyWarning).not.toHaveBeenCalled();
+  });
+
+  it("says nothing before a transaction has been created", async () => {
+    mockGetPendingCount.mockResolvedValue(3);
+    renderHarness();
+
+    // The count resolves on mount, but nothing has been abandoned until
+    // the cashier's first add creates a transaction.
+    await advance(400);
+
+    expect(mockNotifyWarning).not.toHaveBeenCalled();
+  });
+
+  it("does not repeat the notice for a second transaction in the same session", async () => {
+    mockGetPendingCount.mockResolvedValue(1);
+    mockSaveTransaction.mockResolvedValue(fakeCompletedTransaction);
+    renderHarness();
+
+    fireEvent.click(screen.getByText("add"));
+    await advance(400);
+    fireEvent.click(screen.getByText("set-payer"));
+    fireEvent.click(screen.getByText("set-amount"));
+    fireEvent.click(screen.getByText("confirm"));
+    await advance(0);
+
+    // A second transaction, from the same mounted page. The count is the
+    // one taken at mount and is now stale: the previous transaction was
+    // completed, not abandoned, and the cashier has nothing pending.
+    // Warning again would tell them work was thrown away when none was.
+    fireEvent.click(screen.getByText("add"));
+    await advance(400);
+
+    expect(mockNotifyWarning).toHaveBeenCalledOnce();
+  });
+
+  it("never blocks the transaction on the count", async () => {
+    // The count never resolves. The cashier's line item still lands and
+    // the draft is still usable — an extra round trip in front of the
+    // first item would be a worse outcome than a missed notice.
+    mockGetPendingCount.mockReturnValue(new Promise(() => {}));
+    renderHarness();
+
+    fireEvent.click(screen.getByText("add"));
+    await advance(400);
+    fireEvent.click(screen.getByText("set-payer"));
+    fireEvent.click(screen.getByText("set-amount"));
+
+    expect(screen.getByTestId("line-count").textContent).toBe("1");
+    expect(screen.getByTestId("can-confirm").textContent).toBe("yes");
+    expect(mockNotifyWarning).not.toHaveBeenCalled();
+  });
+
+  it("does not ask the cashier to wait for the count before adding", async () => {
+    mockGetPendingCount.mockReturnValue(new Promise(() => {}));
+    renderHarness();
+
+    fireEvent.click(screen.getByText("add"));
+
+    // Optimistic, as it is with the count resolved — the line appears on
+    // the click, not on any network response.
+    expect(screen.getByTestId("line-count").textContent).toBe("1");
   });
 });
 

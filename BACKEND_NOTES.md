@@ -75,6 +75,15 @@ abandons every one of that cashier's `pending` transactions before creating
 the new one, writing a `TRANSACTION_ABANDONED` activity entry for each. It
 was previously a declared-but-unused state.
 
+**The creation response does not say what it abandoned.** It returns the
+trimmed `{id, status, cashier}` shape and nothing about the rows it just
+discarded, so a frontend that wants to tell the cashier has to have looked
+*before* — `GET /transactions?filter[status]=pending` and its
+`pagination.total`, which a cashier's own scoping already narrows to their
+rows. `getPendingTransactionCount` does exactly that, off the critical
+path. If the response ever grows a count of what it discarded, that fetcher
+and the query behind it can go.
+
 ### Which actions each status allows
 
 Enforced by `TransactionAction::isAllowedFor`; a violation is **409**.
