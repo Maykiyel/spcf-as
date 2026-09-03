@@ -160,15 +160,17 @@ user is rejected on **every** endpoint with:
 
 **HTTP 403, in Laravel's plain shape — not the success envelope.**
 
-**Collision to handle deliberately:** this frontend already treats 403 as
-"you don't have access to *this resource*" (see `useTransactionDetail`).
-A deactivated account now produces 403 on every request, so without
-discrimination it reads as "you don't have access to this transaction"
-when the truth is "your account is switched off". Distinguish on the
-message, or on the fact that it happens everywhere at once.
+**Collision, now handled:** this frontend also treats 403 as "you don't
+have access to *this resource*" (see `useTransactionDetail`), and a
+deactivated account produces 403 on every request. `handleResponseError`
+in `src/lib/axios/api-client.ts` discriminates on the message before that
+per-record handling is reached, so only a body mentioning "deactivated"
+ends the session; a policy denial still reaches the caller untouched.
 
-A deactivated user also remains "logged in" client-side — nothing revokes
-the token, so the session survives and every request fails.
+A deactivated user still keeps a token that authenticates — nothing on the
+server revokes it. Clearing the session is entirely a client-side
+response to the 403, which is why it happens on the next request rather
+than the moment an admin deactivates them.
 
 ## Users: delete and toggle status (`a96743a`, `8a5fb1c`)
 
