@@ -21,6 +21,10 @@ This repository is a Vite + React + TypeScript application for the SPCF AS proje
 The single interface (`login`, `restore`, `logout`) that owns all writes to the auth store. UI, route guards, and the HTTP client call it; nothing else calls the store's setters directly.
 _Avoid_: auth store (that's the state container it manages, not the module itself), auth context
 
+**Dashboard (page)**:
+The page at `/dashboard` that everyone lands on after signing in. Everyone sees today's transaction count and today's earnings, scoped to them by the endpoint. An admin additionally sees a monthly earnings bar chart for a chosen year and a table of earnings per cashier. **The role branch is forced by the API, not chosen for design reasons**: `GET /dashboard` scopes itself and serves both roles, but `/reports/*` is admin-only and answers a cashier with a 403, so a cashier's dashboard must not request those at all. That is why each admin-only section is a component holding its own query — unmounted, it never fires — rather than one page-level fetch with the results hidden. The same structure gives each section its own loading and error state, so one failing request does not blank the other two.
+_Avoid_: home, landing page (the login screen is what people mean by those); "the reports page" (`/reports` is a separate, unbuilt page)
+
 **Item code**:
 A category of billable service or fee (e.g. "GRADUATION FEE", "RENTAL"). Owns a `name` and `description`; has many Services. Managed on its own catalog page, independent of adding Services.
 _Avoid_: item, product, SKU
