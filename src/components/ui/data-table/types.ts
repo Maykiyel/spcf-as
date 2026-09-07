@@ -31,8 +31,16 @@ export const MAX_SORT_COLUMNS = 2;
  * through the URL (see `useTableControls`), which has only strings, so any
  * other type would need a per-filter decoder on the way back in and the
  * declaration site would have to name it. Converting to the shape the wire
- * wants — a boolean as `0`/`1`, an id as a number — belongs in the feature's
- * own `getX`, which already knows what its endpoint expects. */
+ * wants — an id as a number, say — belongs in the feature's own `getX`,
+ * which already knows what its endpoint expects.
+ *
+ * **A boolean is the carve-out: it carries `1`/`0` as its value here.**
+ * `filter[is_active]` is a `boolean` rule over a `tinyint`, so `1`/`0` is
+ * already a string the endpoint takes and the URL can hold. Converting in
+ * `getX` instead would leave the URL reading `accounts_is_active=active` —
+ * the wire's key against a value the wire won't accept — and put back the
+ * per-consumer mapping step this mechanism removed.
+ * `UserAccountStatusFilter` and `ServiceStatusFilter` both do it this way. */
 export type TableFilters = Record<string, string | null>;
 
 export type DataTableContextValue<T> = {

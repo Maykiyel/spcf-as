@@ -1,16 +1,18 @@
 import { useMemo } from "react";
 import { SidebarItem } from "./sidebar-item";
 import { Accordion, AppShell, Box, Divider, Stack } from "@mantine/core";
-import { pages, isPageGroup } from "@/config/pages";
+import { getVisiblePages, isPageGroup } from "@/config/pages";
 import { useAuthStore } from "@/stores/auth-store";
 
 const SidebarLinksContainer = () => {
   const role = useAuthStore((s) => s.user?.role);
 
-  const visiblePages = useMemo(
-    () => pages.filter((p) => !p.roles || (role && p.roles.includes(role))),
-    [role],
-  );
+  // Groups arrive already reduced to the children this role can reach,
+  // and one with none left is gone entirely — the filtering is not this
+  // component's to do. `ProtectedRoute` resolves the same declaration
+  // through the same function, so a link shown here always leads
+  // somewhere this role may actually go.
+  const visiblePages = useMemo(() => getVisiblePages(role), [role]);
 
   // Dashboard is always pages[0] and never a group — rendered separately so
   // it keeps its own spacing/divider placement; everything else lives in

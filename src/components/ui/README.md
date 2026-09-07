@@ -154,7 +154,10 @@ alongside the shared pieces, with no slot prop involved:
 <DataTable.Toolbar>
   <DataTable.PageSize />
   <Divider orientation="vertical" visibleFrom="xs" />
-  <ServiceStatusFilter urlKey={URL_KEY} />
+  <ServiceStatusFilter
+    value={tableState.filters.is_active}
+    onChange={(is_active) => tableState.setFilters({ is_active })}
+  />
   <DataTable.Search />
 </DataTable.Toolbar>
 ```
@@ -201,9 +204,11 @@ merges a patch into them. Everything else follows from the declaration:
   the hook owns them. The mechanism this replaces, `createListAdapter`'s
   `extra` argument, hands the fetcher values it never puts in the key, so
   every consumer has to remember to add them to its own `queryKey` by hand.
-  Services remembers. The next page to reach for `extra` might not, and
-  forgetting serves the previous filter's cached rows with no error at all,
-  which is the worst available failure.
+  Services was the only one that ever did, and it remembered; #84 moved it
+  onto this and `extra` now has **no consumers**. It stays for a parameter
+  that genuinely isn't a `filter[...]`, but a filter is not that case, and
+  forgetting the key serves the previous filter's cached rows with no error
+  at all — the worst available failure.
 - **Changing a filter resets to page 1**, for the same reason changing
   search or sort does.
 - **They reach the wire as `filter[<key>]`**, which is what every filterable
@@ -240,14 +245,20 @@ alone.
 Key the filters by the API's own filter name (`from_date`, not `dateFrom`)
 so that mapping stays a no-op. `TableFilters` values are `string | null` and
 nothing else: they round-trip through the URL, which has only strings, so
-another type would need a per-filter decoder on the way back in. Converting
-to the shape the endpoint wants — a boolean as `0`/`1`, an id as a number —
-belongs in that feature's `getX` via the adapter's `extra` argument.
+another type would need a per-filter decoder on the way back in.
 
-**`ServiceStatusFilter`, in the "Composing the toolbar" example above,
-predates this and owns its own URL param.** It is the older way and it is on
-its way out; #59 kept the three existing tables out of scope. Copy the
-pattern below, not that one.
+**A boolean filter carries `1`/`0` as its value**, not `active`/`inactive`,
+and that is a departure from the sentence above. `filter[is_active]` is a
+`boolean` rule over a `tinyint`, so `1`/`0` is what the endpoint takes.
+Converting in the feature's `getX` instead would leave the URL reading
+`accounts_is_active=active` — the wire's key against a value the wire won't
+accept — and put back the per-consumer mapping step this mechanism removed.
+`UserAccountStatusFilter` and `ServiceStatusFilter` both do it this way,
+and both say so at their declaration. A value that genuinely can't survive
+the URL as a string is the case `getX` is still for; a boolean isn't one.
+
+Those two, and `UserAccountRoleFilter`, are all built on
+`TableFilterSegments` below.
 
 Filter controls are toolbar children, wired by the page:
 
@@ -273,11 +284,33 @@ date-only string, so this re-establishes the `ApiDate` type instead of
 asserting it.
 
 **Filters are deliberately not on the `DataTable` context**, unlike page and
-sort. The toolbar's children are written by the same component that calls
-`useServerTableState`, so there is no prop drilling for a context to remove
-here — it would only add a second way to reach the same values. Page and
-sort are on the context because `DataTable.Pagination` and `DataTable.Grid`
-are shared pieces that genuinely can't be handed props by the page.
+sort. **Settled by Mike, and not open** — it was raised on #85 and left
+unanswered through three batches, so it is recorded here rather than left
+to be rediscovered by whoever builds the next table.
+
+The reason is ownership, not prop drilling. `PageSize`, `Search`,
+`Pagination` and `Grid` are pieces this tier owns, and the context is this
+tier's private channel to its own pieces — they genuinely can't be handed
+props by the page. A filter control belongs to a feature: it knows what
+`is_active` means and that the wire wants `1`/`0`. Letting feature
+components read this tier's context inverts that relationship, and it is
+the kind of coupling that is easy to add and hard to take back.
+
+There is a concrete cost too. `TableFilterSegments` is a plain controlled
+component, which is why it can be tested standing on its own. On the
+context it would either have to be inside a `DataTable` to render at all,
+or stay controlled behind a context-reading wrapper — two layers to say
+what props already say.
+
+The argument the other way is real but mild: a toolbar mixes two idioms,
+shared pieces taking no props beside filter controls taking two, and a
+reader has to learn both. The line is that shared pieces are identical on
+every page while filters differ on every page.
+
+**Note #59 assumed the opposite.** Its "explicitly rejected: splitting the
+table context" paragraph only makes sense if filters were going onto that
+context, so the shipped design answered a question that spec thought it had
+settled. Naming that here is the point of this note.
 
 ### Declaring the default sort
 
@@ -453,6 +486,30 @@ API's filter names are, so this hasn't come up.
 only if it appears in `initialFilters`, so a hand-edited or stale link
 can't inject a filter key the endpoint would answer with a 400.
 
+**A control change replaces the history entry; it does not push one.**
+Filtering, searching, sorting and paging all write with `{ replace: true }`
+(`updateParams` in `use-table-controls.ts`), so Back leaves the page rather
+than rewinding through the controls you touched. **Settled by Mike, and not
+open** — it was raised on #85 and carried unanswered through three batches,
+so it is written here rather than left to be rediscovered.
+
+**This supersedes #59's user story 7**, "As an admin, I want the back button
+to restore my previous filter state, so that navigation behaves the way the
+rest of the web does." That story is unmet on purpose. It was written
+before the mechanism existed, and it does not survive contact with the fact
+that one function writes every control.
+
+The reasoning is search. Every control goes through one function, so making
+a filter click a place you have been makes a *keystroke* one too, and Back
+after typing "graduation" would walk back a letter at a time. Nobody wants
+that version, and splitting the behaviour per control — push for filters,
+replace for typing — buys an undo nobody asked for at the price of two
+rules where there is now one.
+
+Sharing is unaffected either way: the URL is still written on every change,
+so copying a link, bookmarking, and refreshing all behave the same. Only
+the history entry differs.
+
 **Two independent debounces on search.** Typing goes into a local draft
 first, debounced 400ms before it's written to the URL. For
 `useServerTableState`, the network request has its own separate 400ms
@@ -542,6 +599,71 @@ not special-cased this way — it surfaces as the generic error state above.
 tree** (typically inside `MantineProvider`). If it isn't mounted, the sort
 still resets correctly, but the toast explaining why silently does nothing —
 worth confirming this is in place before relying on it.
+
+---
+
+## TableFilterSegments
+
+A segmented control for a table filter that takes one of a few fixed
+values. Domain-agnostic: it knows a filter is a string or `null`, and that
+a `SegmentedControl` cannot hold `null`, and nothing else.
+
+```tsx
+<TableFilterSegments
+  label="Status"
+  allLabel="All Statuses"
+  options={[
+    { label: "Active", value: "1" },
+    { label: "Inactive", value: "0" },
+  ]}
+  value={tableState.filters.is_active}
+  onChange={(is_active) => tableState.setFilters({ is_active })}
+/>
+```
+
+**The `null` ↔ "all" bridge is the whole reason this is shared.** A filter's
+unset value is `null`, which is what `useServerTableState` drops from the
+request rather than sending empty — and a `SegmentedControl` has no null to
+show for it. Every re-implementation of that bridge is a chance to send
+`"all"` to an endpoint that has no such value, or to render an unfiltered
+control as blank. It is handled here once and nowhere else.
+
+`allLabel` is the caller's, not this component's. "All" and "All Statuses"
+are both right, depending on how many filters sit side by side in that
+toolbar. `label` is required because it names the control for assistive
+tech and scopes it in tests: segment labels are routinely the same words as
+the values they filter on, so "Active" on its own does not distinguish this
+control from a row in the table below it.
+
+**Wrap it in your feature; don't compose it bare.** Both consumers today
+are three-line components in `features/*/components/` that name their
+filter, its options, and the wire values those options carry:
+
+```tsx
+export function ServiceStatusFilter(props: {
+  value: string | null;
+  onChange: (value: string | null) => void;
+}) {
+  return (
+    <TableFilterSegments
+      label="Status"
+      allLabel="All"
+      options={[
+        { label: "Active", value: "1" },
+        { label: "Inactive", value: "0" },
+      ]}
+      {...props}
+    />
+  );
+}
+```
+
+That split is the rule at the bottom of this file applied to one control:
+the piece with no domain knowledge lives here, and the piece that knows
+what an `is_active` flag is worth on the wire lives with the feature that
+knows. Composing a bare `TableFilterSegments` in a toolbar isn't wrong, but
+it puts the wire-value decision in a page's JSX rather than somewhere a
+reader looking for it will think to look.
 
 ---
 
