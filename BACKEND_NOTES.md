@@ -372,7 +372,14 @@ hand-built `{id, status, cashier}` object rather than a
 
 The `index` endpoint selects only `id, service_name, transaction_id,
 subtotal`, so `price` and `quantity` are **absent from list rows** and
-present on `show`.
+present on `show`. `subtotal` is absent too: the resource emits it only
+when `price` is non-null, and `price` was never selected. A list row's
+item is therefore an id and a name, and nothing else.
+
+`index` eager-loads both `items` and `cashier`, so both are present on
+every list row. It does **not** load `voidedBy`, so `voided_by` is absent
+from list rows even for a voided transaction; `voided_at` is a plain
+column and is present whenever it is non-null.
 
 Because `service_name` is stored on the item, renaming a Service later does
 not change what past transactions display.

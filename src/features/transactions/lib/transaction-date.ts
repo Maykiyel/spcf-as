@@ -21,14 +21,15 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 // inserts a locale connector that varies by ICU version ("Aug 24, 2026 at
 // 2:30 PM" on newer data, "Aug 24, 2026, 2:30 PM" on older), which would
 // make the printed receipt change appearance with the browser rather than
-// with our code.
-const ACKNOWLEDGEMENT_RECEIPT_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+// with our code, and would put two spellings of the same timestamp on
+// the receipts list and the receipt it prints.
+const TRANSACTION_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
 });
 
-const ACKNOWLEDGEMENT_RECEIPT_TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
+const TRANSACTION_TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
 });
@@ -51,11 +52,12 @@ function parseTransactionDate(
   return { value: parsed, hasTime: true };
 }
 
-// Renders the date an Acknowledgement Receipt prints. The backend sends a
-// real timestamp, so the receipt shows the time of the transaction as well
-// as the day.
+// Renders a transaction's date wherever one is shown: on the printed
+// Acknowledgement Receipt, and in the receipts list. The backend sends a
+// real timestamp, so both show the time of the transaction as well as the
+// day, and they show it identically because they ask the same function.
 //
-// The date-only guard case prints the day alone: there is no time to show,
+// The date-only guard case shows the day alone: there is no time to show,
 // and midnight would be a clock reading nobody recorded — worse on a
 // printed receipt than simply omitting it.
 export function formatTransactionDate(date: string | undefined): string {
@@ -64,8 +66,8 @@ export function formatTransactionDate(date: string | undefined): string {
   const parsed = parseTransactionDate(date);
   if (!parsed) return "—";
 
-  const day = ACKNOWLEDGEMENT_RECEIPT_DATE_FORMAT.format(parsed.value);
+  const day = TRANSACTION_DATE_FORMAT.format(parsed.value);
   if (!parsed.hasTime) return day;
 
-  return `${day}, ${ACKNOWLEDGEMENT_RECEIPT_TIME_FORMAT.format(parsed.value)}`;
+  return `${day}, ${TRANSACTION_TIME_FORMAT.format(parsed.value)}`;
 }
