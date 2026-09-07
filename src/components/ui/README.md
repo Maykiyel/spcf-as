@@ -284,11 +284,33 @@ date-only string, so this re-establishes the `ApiDate` type instead of
 asserting it.
 
 **Filters are deliberately not on the `DataTable` context**, unlike page and
-sort. The toolbar's children are written by the same component that calls
-`useServerTableState`, so there is no prop drilling for a context to remove
-here — it would only add a second way to reach the same values. Page and
-sort are on the context because `DataTable.Pagination` and `DataTable.Grid`
-are shared pieces that genuinely can't be handed props by the page.
+sort. **Settled by Mike, and not open** — it was raised on #85 and left
+unanswered through three batches, so it is recorded here rather than left
+to be rediscovered by whoever builds the next table.
+
+The reason is ownership, not prop drilling. `PageSize`, `Search`,
+`Pagination` and `Grid` are pieces this tier owns, and the context is this
+tier's private channel to its own pieces — they genuinely can't be handed
+props by the page. A filter control belongs to a feature: it knows what
+`is_active` means and that the wire wants `1`/`0`. Letting feature
+components read this tier's context inverts that relationship, and it is
+the kind of coupling that is easy to add and hard to take back.
+
+There is a concrete cost too. `TableFilterSegments` is a plain controlled
+component, which is why it can be tested standing on its own. On the
+context it would either have to be inside a `DataTable` to render at all,
+or stay controlled behind a context-reading wrapper — two layers to say
+what props already say.
+
+The argument the other way is real but mild: a toolbar mixes two idioms,
+shared pieces taking no props beside filter controls taking two, and a
+reader has to learn both. The line is that shared pieces are identical on
+every page while filters differ on every page.
+
+**Note #59 assumed the opposite.** Its "explicitly rejected: splitting the
+table context" paragraph only makes sense if filters were going onto that
+context, so the shipped design answered a question that spec thought it had
+settled. Naming that here is the point of this note.
 
 ### Declaring the default sort
 
@@ -470,6 +492,12 @@ Filtering, searching, sorting and paging all write with `{ replace: true }`
 than rewinding through the controls you touched. **Settled by Mike, and not
 open** — it was raised on #85 and carried unanswered through three batches,
 so it is written here rather than left to be rediscovered.
+
+**This supersedes #59's user story 7**, "As an admin, I want the back button
+to restore my previous filter state, so that navigation behaves the way the
+rest of the web does." That story is unmet on purpose. It was written
+before the mechanism existed, and it does not survive contact with the fact
+that one function writes every control.
 
 The reasoning is search. Every control goes through one function, so making
 a filter click a place you have been makes a *keystroke* one too, and Back

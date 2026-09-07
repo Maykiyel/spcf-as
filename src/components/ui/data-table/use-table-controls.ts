@@ -155,6 +155,11 @@ function useUrlAdapter(
   // Sharing is unaffected: the URL is still written on every change, so
   // links, bookmarks and refreshes behave identically. Only the history
   // entry differs.
+  //
+  // **This supersedes #59's user story 7**, which asked for the back button
+  // to restore the previous filter state. Unmet on purpose: that story was
+  // written before the mechanism existed and does not survive the fact that
+  // one function writes every control, typing included.
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
       setSearchParams(
