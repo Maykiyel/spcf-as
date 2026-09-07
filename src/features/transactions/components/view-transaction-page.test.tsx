@@ -80,11 +80,24 @@ describe("ViewTransactionPage", () => {
     expect(mockGetTransaction).toHaveBeenCalledWith(62598);
   });
 
-  it("shows a loading state before the fetch resolves", () => {
+  it("shows the page's own shape while the fetch is in flight", () => {
+    // A skeleton, not a spinner, and specifically this page's skeleton:
+    // the header, the four-column items table and the totals are known
+    // before the transaction is. The Print page keeps the spinner, its
+    // layout being two compact copies on 8.5 by 4 inch stock.
+    //
+    // This path matters more since #62: voiding removes the transaction's
+    // cached detail rather than marking it stale, so an admin who voids
+    // one and opens it lands here rather than on a cached page.
     mockGetTransaction.mockReturnValue(new Promise(() => {})); // never resolves
     renderPage();
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(
+      screen.getByTestId("transaction-detail-skeleton"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Service" })).toBeInTheDocument();
+    // Nothing to print yet, and nothing claiming there is.
+    expect(screen.queryByRole("button", { name: /print/i })).toBeNull();
   });
 
   it("shows a distinct message when access is forbidden (403)", async () => {
@@ -217,5 +230,43 @@ describe("ViewTransactionPage", () => {
     renderPage();
 
     expect(await screen.findByRole("button", { name: /print/i })).toBeDisabled();
+  });
+  // #62 put the void action on its own page, and this is where its record
+  // lands: the voiding user's name is available from `show` and nowhere
+  // else, so no list can show it.
+  const voided: TransactionDTO = {
+    ...fakeTransaction,
+    status: "returned",
+    voided_at: "2026-09-01T09:15:00.000000Z",
+    voided_by: { id: 99, full_name: "Mike Bautista" },
+  };
+
+  it("says who voided a transaction, and when", async () => {
+    mockGetTransaction.mockResolvedValue(voided);
+    renderPage();
+
+    expect(
+      await screen.findByText(/Voided on Sep 1, 2026,.* by Mike Bautista/),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing about voiding on a transaction that wasn't", async () => {
+    mockGetTransaction.mockResolvedValue(fakeTransaction);
+    renderPage();
+
+    await screen.findByRole("button", { name: /print/i });
+    expect(screen.queryByText(/Voided on/)).toBeNull();
+  });
+
+  it("still says when, if the voiding user didn't come back", async () => {
+    // `voided_at` is a plain column and `voided_by` a relation behind an
+    // eager load. A response carrying one without the other should read as
+    // an unknown admin rather than swallow the line.
+    mockGetTransaction.mockResolvedValue({ ...voided, voided_by: undefined });
+    renderPage();
+
+    expect(
+      await screen.findByText(/Voided on Sep 1, 2026,.* by an unknown admin/),
+    ).toBeInTheDocument();
   });
 });

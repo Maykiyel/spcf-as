@@ -38,7 +38,23 @@ if (typeof window !== "undefined") {
   // Dynamic import, not a top-level one: importing "@testing-library/react"
   // pulls in DOM-dependent code that node-environment test files should
   // never have to load at all.
-  const { cleanup } = await import("@testing-library/react");
+  const { cleanup, configure } = await import("@testing-library/react");
+
+  // RTL waits 1000ms by default for a `findBy*` or a `waitFor`. That is a
+  // wall-clock budget, and vitest runs these files in parallel, so it is
+  // spent on whatever else the machine is doing as much as on the render
+  // being waited for. A page test that mounts Mantine, a DataTable and a
+  // query passes comfortably on its own and then times out inside the full
+  // suite, which reads as a flaky test rather than a starved one. #62
+  // added the 39th jsdom file and made two of them intermittent.
+  //
+  // Raising it costs nothing on a passing run: `findBy*` returns as soon
+  // as the element appears. It only lengthens genuine failures. It also
+  // weakens no assertion, because the negative assertions in this suite
+  // are written as fixed flushes rather than as waits, on purpose — see
+  // the `flush` helper in transaction-list-page.test.tsx.
+  configure({ asyncUtilTimeout: 5000 });
+
   afterEach(() => {
     cleanup();
   });

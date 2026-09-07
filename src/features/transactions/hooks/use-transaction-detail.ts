@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { getTransaction } from "../api/get-transaction";
+import { transactionDetailQueryKey } from "../api/transaction-query-keys";
 
 // Both pages derive their id with `Number(useParams().controlId)`, so a
 // non-numeric URL segment ("/transactions/abc") arrives here as NaN.
@@ -31,7 +32,7 @@ export function useTransactionDetail(controlId: number) {
   const canFetch = isFetchableControlId(controlId);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["transactions", controlId],
+    queryKey: transactionDetailQueryKey(controlId),
     queryFn: () => getTransaction(controlId),
     enabled: canFetch,
   });

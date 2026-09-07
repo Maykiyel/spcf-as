@@ -381,6 +381,16 @@ every list row. It does **not** load `voidedBy`, so `voided_by` is absent
 from list rows even for a voided transaction; `voided_at` is a plain
 column and is present whenever it is non-null.
 
+**`show` is the only endpoint that returns `voided_by`**, and only for a
+transaction that has been voided: it loads `cashier` and `items` always,
+and appends `voidedBy` to that list only when the status is `returned`
+(`TransactionController::show`). `void` itself does **not** — it reloads
+`items` and `cashier` and stops there, so even the call that sets the
+field answers without it. So the voiding user's name is reachable from the
+transaction detail page and nowhere else, and a client that wants it after
+voiding has to re-fetch rather than read the mutation's response. Read out
+of the source, not inferred from the resource.
+
 Because `service_name` is stored on the item, renaming a Service later does
 not change what past transactions display.
 

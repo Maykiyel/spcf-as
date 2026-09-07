@@ -4,10 +4,12 @@ import { useNavigate, useParams } from "react-router";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/ui/button";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
+import { formatTransactionDate } from "../lib/transaction-date";
 import { isPrintable, printRefusalReason } from "../lib/transaction-status";
 import { TransactionItemsTable } from "./transaction-items-table";
 import { TransactionStatusBadge } from "./transaction-status-badge";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
+import { TransactionDetailSkeleton } from "./transaction-detail-skeleton";
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
@@ -22,7 +24,10 @@ export function ViewTransactionPage() {
       <Card.Divider />
       <Card.Body>
         {isUnavailable || !transaction ? (
-          <TransactionDetailFallback detail={detail} />
+          <TransactionDetailFallback
+            detail={detail}
+            loading={<TransactionDetailSkeleton />}
+          />
         ) : (
           <Stack gap="md">
             <Group justify="space-between" align="flex-start">
@@ -46,6 +51,23 @@ export function ViewTransactionPage() {
                 </Text>
               </Stack>
             </Group>
+
+            {/* Only a voided transaction has either field, and this page
+                is the only place in the app that can show who did it:
+                `show` eager-loads `voidedBy` once the status is
+                `returned`, and no list endpoint loads it at all.
+
+                Gated on the timestamp rather than on the status, because
+                the timestamp is the field actually being rendered. The
+                name falls back because the two arrive by different routes
+                — one a column, one a relation — and a missing eager load
+                should read as an unknown admin, not as a missing line. */}
+            {transaction.voided_at && (
+              <Text size="sm" c="dimmed">
+                Voided on {formatTransactionDate(transaction.voided_at)} by{" "}
+                {transaction.voided_by?.full_name ?? "an unknown admin"}
+              </Text>
+            )}
 
             <TransactionItemsTable
               items={transaction.items}

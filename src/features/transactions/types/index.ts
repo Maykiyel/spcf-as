@@ -97,7 +97,8 @@ export type TransactionListItemDTO = {
 // `voided_at` and `voided_by` are absent deliberately. Both are `when(...)`
 // on the resource, and `voided_by` needs an eager load the index endpoint
 // doesn't do — so they belong to whichever variant can actually promise
-// them, not here. #62 is where that gets settled.
+// them, not here. #62 settled it: they are on `TransactionDTO` and on
+// nothing else. See the note there, and on `TransactionListRow`.
 type TransactionBase = {
   control_id: number;
   cashier: { id: number; full_name: string } | null;
@@ -111,8 +112,21 @@ type TransactionBase = {
 };
 
 // The full shape returned by save/cancel/show.
+//
+// Optional rather than nullable, because the resource omits both keys
+// rather than sending null: `voided_at` is a `when($this->voided_at, ...)`
+// and `voided_by` a `whenLoaded('voidedBy')`. A voided transaction has
+// both, anything else has neither.
+//
+// **`voided_by` is only ever this shape's to promise.** `show` eager-loads
+// `voidedBy` only once the status is `returned`, and no other endpoint
+// loads it at all — `void`'s own response reloads `items` and `cashier` and
+// stops there, so even the call that sets the field doesn't return it.
+// Checked against the controller, not inferred.
 export type TransactionDTO = TransactionBase & {
   items: TransactionItemDTO[];
+  voided_at?: string;
+  voided_by?: { id: number; full_name: string };
 };
 
 // One row of `GET /transactions`.
@@ -122,6 +136,13 @@ export type TransactionDTO = TransactionBase & {
 // would push null-handling into the detail and print pages, where those
 // values are genuinely guaranteed — weakening types that are accurate
 // today to describe a context that never sees them.
+//
+// Carries neither void field, for two different reasons. `voided_by`
+// cannot be here: `index` does not eager-load `voidedBy`, so it is absent
+// from a list row even for a voided transaction. `voided_at` could be —
+// it is a plain column and is sent whenever it is non-null — but no list
+// renders it, and a field declared before something reads it is a promise
+// nothing is checking. Add it when a column wants it.
 export type TransactionListRow = TransactionBase & {
   items: TransactionListItemDTO[];
 };

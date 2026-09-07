@@ -51,6 +51,23 @@ describe("PrintAcknowledgementReceiptPage", () => {
     vi.spyOn(window, "print").mockImplementation(() => {});
   });
 
+  it("waits with a spinner, not the View page's skeleton", () => {
+    // The two pages share `TransactionDetailFallback` so they can't word a
+    // 403 or a failure differently, but they deliberately do not share a
+    // loading *shape*. This page prints two compact copies onto 8.5 by 4
+    // inch stock, so the View page's header-plus-items-table skeleton
+    // would be a lie here. Asserted because that is a decision nothing
+    // else would catch: moving the skeleton into the fallback's default
+    // would silently change this page.
+    mockGetTransaction.mockReturnValue(new Promise(() => {})); // never resolves
+    renderPage();
+
+    expect(screen.getByText(/loading transaction/i)).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("transaction-detail-skeleton"),
+    ).toBeNull();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });

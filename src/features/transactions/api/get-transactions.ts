@@ -1,12 +1,6 @@
 import { createListAdapter } from "@/components/ui/data-table";
 import type { TransactionListRow } from "../types";
 
-/** The prefix every cache entry for the transaction list starts with.
- * `useServerTableState` appends the page, size, sorts and filters, so this
- * is a prefix rather than a whole key — which is what `invalidateQueries`
- * matches on, so #62's void mutation will need no change here. */
-export const TRANSACTIONS_QUERY_KEY = ["transactions"] as const;
-
 /**
  * One page of transactions.
  *
