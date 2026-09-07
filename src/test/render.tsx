@@ -34,15 +34,10 @@ function makeQueryClient() {
   });
 }
 
-// The same provider tree as renderWithQueryClient, exposed on its own for
-// renderHook, which takes a `wrapper` rather than rendering an element.
-// Hook tests used to hand-roll this; sharing it is what keeps a hook test
-// and a component test agreeing about retry and cache isolation.
-//
-// The client is a parameter so a test that needs to reach the cache — to
-// seed an entry, or to assert something invalidated one — can hold the
-// same client the tree is using. Defaulted, so every existing caller keeps
-// getting its own isolated client without saying so.
+// The same tree as renderWithQueryClient, exposed for renderHook, which
+// takes a `wrapper`. Sharing it keeps hook and component tests agreeing
+// about retry and cache isolation. The client is a defaulted parameter so
+// a caller that needs to reach the cache can hold the same one.
 function createQueryWrapper(queryClient: QueryClient = makeQueryClient()) {
   return function QueryWrapper({ children }: { children: ReactNode }) {
     return (

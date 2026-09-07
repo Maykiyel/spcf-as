@@ -7,15 +7,10 @@ import type {
   TransactionDTO,
 } from "../types";
 
-// Split into two contexts along who actually reads what: FiltersPanel and
-// FeeCatalogPanel only ever touch the catalog/filter fields below;
-// TransactionDraftPanel only ever touches the draft fields further down. Keeping
-// them in one context meant every keystroke in either side re-rendered
-// all three panels. addFeeItem is the one exception — it's triggered from
-// the catalog side but mutates draft state, so it lives in
-// CatalogBuilderActions with a stabilized identity (see
-// use-line-item-sync.ts) rather than pulling FeeCatalogPanel into the
-// draft context just to reach it.
+// Two contexts, split by who reads what: one context meant every keystroke
+// on either side re-rendered all three panels. `addFeeItem` is the
+// exception, triggered from the catalog side but mutating draft state, so
+// it sits in `CatalogBuilderActions` with a stabilised identity.
 
 export type CatalogBuilderState = {
   search: string;

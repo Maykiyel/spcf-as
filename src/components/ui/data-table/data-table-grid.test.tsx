@@ -6,22 +6,13 @@ import { theme } from "@/config/theme";
 import { DataTable } from "./index";
 import type { ColumnDef, DataTableContextValue } from "./types";
 
-// Seam: the grid rendered under a real DataTable.Root, with the table state
-// hand-built as a test double — the same seam and the same double as
-// data-table-toolbar.test.tsx. The state hooks have their own tests; what
-// matters here is what the grid does with a row and a column.
+// Seam: the grid under a real DataTable.Root, with the table state
+// hand-built as a double. Two behaviours here fail silently:
 //
-// Two behaviours, both of which fail silently if they regress:
-//
-// - **`sortKey`.** A column that sorts under a name the endpoint doesn't
-//   allow-list is a 422, and the recovery path swallows it into a toast —
-//   so the assertion is on the name `onSort` was handed, which is the only
-//   place the mistake is visible before the network.
-// - **The interactive-element guard.** #62 puts a Void button on every row
-//   of a table whose rows navigate. Without the guard, voiding a
-//   transaction also navigates away from the page the admin is working
-//   through, and the void still happens — so nothing looks broken enough
-//   to notice.
+// - `sortKey`: a wrong sort name is a 422 that the recovery path swallows
+//   into a toast, so the assertion is on the name `onSort` was handed.
+// - The interactive-element guard: without it a row's Void button also
+//   navigates away, and the void still happens.
 
 class ResizeObserverStub {
   observe() {}

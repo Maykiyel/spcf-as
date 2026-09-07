@@ -52,16 +52,13 @@ export function ViewTransactionPage() {
               </Stack>
             </Group>
 
-            {/* Only a voided transaction has either field, and this page
-                is the only place in the app that can show who did it:
-                `show` eager-loads `voidedBy` once the status is
-                `returned`, and no list endpoint loads it at all.
+            {/* The only place in the app that can show who voided a
+                transaction: no list endpoint loads `voidedBy`.
 
-                Gated on the timestamp rather than on the status, because
-                the timestamp is the field actually being rendered. The
-                name falls back because the two arrive by different routes
-                — one a column, one a relation — and a missing eager load
-                should read as an unknown admin, not as a missing line. */}
+                Gated on the timestamp, which is the field being rendered.
+                The name falls back because the two arrive by different
+                routes, and a missing eager load should read as an unknown
+                admin rather than as a missing line. */}
             {transaction.voided_at && (
               <Text size="sm" c="dimmed">
                 Voided on {formatTransactionDate(transaction.voided_at)} by{" "}

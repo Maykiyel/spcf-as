@@ -1,16 +1,12 @@
 import { AxiosError } from "axios";
 
 /**
- * Pulls the per-field messages out of a Laravel validation failure.
+ * Pulls the per-field messages out of a Laravel 422, which keys its
+ * `errors` bag by the request's own field names. Only the first message
+ * per field is kept, the form showing one under each input.
  *
- * A 422 from this API carries `{ message, errors: { field: [msg, ...] } }`,
- * keyed by the request's own field names. Only the first message per field
- * is kept: the form shows one message under one input, and Laravel orders
- * the bag with the rule that actually failed first.
- *
- * Returns an empty object for anything that isn't a validation failure —
- * a 500, a network error, a 422 with no bag — so the caller can treat
- * "nothing matched a field" as "show this as a toast instead".
+ * Anything that is not a validation failure returns `{}`, so the caller
+ * can treat "nothing matched a field" as "show a toast instead".
  */
 export function getServerFieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof AxiosError)) return {};

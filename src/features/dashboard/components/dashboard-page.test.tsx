@@ -11,12 +11,10 @@ import { getCashierEarnings } from "../api/get-cashier-earnings";
 import { getMonthlyEarnings } from "../api/get-monthly-earnings";
 import { DashboardPage } from "./dashboard-page";
 
-// Seam: the page component with its fetchers mocked at the module
-// boundary and the auth store stubbed to pick the role. What each role
-// sees, and — the part that matters most — which requests each role's
-// dashboard actually issues. The admin-only endpoints answer a cashier
-// with a 403, so "the cashier branch never calls them" is the decision
-// keeping a forbidden response off the app's landing page.
+// Seam: the page component, fetchers mocked and the auth store stubbed to
+// pick the role. The part that matters is which requests each role
+// issues: the admin-only endpoints 403 a cashier, so "the cashier branch
+// never calls them" is what keeps that off the landing page.
 
 vi.mock("../api/get-dashboard-today");
 const mockGetDashboardToday = vi.mocked(getDashboardToday);
@@ -27,11 +25,9 @@ const mockGetCashierEarnings = vi.mocked(getCashierEarnings);
 vi.mock("../api/get-monthly-earnings");
 const mockGetMonthlyEarnings = vi.mocked(getMonthlyEarnings);
 
-// recharts measures its container to lay anything out, and jsdom reports
-// every element as zero by zero — so the real BarChart renders an empty
-// box whatever it is handed. Standing in for it is the only way to assert
-// on the series that reaches the chart, which is the part with a decision
-// in it: twelve months, zero-earning ones included.
+// recharts measures its container, and jsdom reports every element as
+// zero by zero, so the real chart renders empty whatever it is handed.
+// Standing in for it is the only way to assert on the series.
 vi.mock("@mantine/charts", () => ({
   BarChart: (props: {
     data: { month: string; total_earnings: number }[];
@@ -44,9 +40,8 @@ vi.mock("@mantine/charts", () => ({
   ),
 }));
 
-// `DataTable.Grid` wraps its table in a Mantine ScrollArea, which
-// subscribes to a ResizeObserver on mount. jsdom doesn't implement one.
-// Same stub as manage-accounts-page.test.tsx.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -54,11 +49,9 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
-// Mantine's Combobox scrolls its active option into view when the
-// dropdown opens. jsdom implements no scrolling at all, so without this
-// the year Select throws — and it throws *outside* the assertion, as an
-// unhandled rejection, which leaves every test green while the run exits
-// non-zero. Worth knowing: a passing test count is not the gate.
+// jsdom implements no scrolling, and Mantine's Combobox scrolls its active
+// option into view on open. Without this a Select throws as an unhandled
+// rejection: every test stays green and the run exits non-zero.
 Element.prototype.scrollIntoView = vi.fn();
 
 const cashier: AuthUser = {
@@ -118,16 +111,10 @@ function lastEarningsParams() {
   return calls[calls.length - 1][0];
 }
 
-/** Opens the year Select and returns its options.
- *
- * Two jsdom quirks, both Mantine's Popover rather than anything here.
- * The options list stays in the DOM while closed and is labelled by the
- * same label as the input, so the label alone matches two elements —
- * hence `selector: "input"`. And the dropdown never loses `display: none`
- * even once `aria-expanded` is `true`, because floating-ui measures every
- * element as zero by zero, so the options are only reachable with
- * `hidden: true` and can only be chosen with `fireEvent`, which does not
- * refuse an element it believes nobody can point at. */
+/** Opens the year Select and returns its options. Two jsdom quirks, both
+ * Mantine's Popover: the closed list shares the input's label, hence
+ * `selector: "input"`; and it keeps `display: none` even when expanded,
+ * hence `hidden: true` and `fireEvent`. */
 async function openYearSelect(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByLabelText("Year", { selector: "input" }),

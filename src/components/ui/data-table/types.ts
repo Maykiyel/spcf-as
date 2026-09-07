@@ -6,56 +6,32 @@ export type ColumnDef<T> = {
   header: string;
   sortable?: boolean;
   /** The name the endpoint allow-lists for this column's sort, when it
-   * isn't the field the cell reads. Defaults to `key`.
-   *
-   * It exists because a backend is free to name a response field and its
-   * sort differently for the same column, and `/transactions` does:
-   * `date` sorts as `created_at`, `customer_name` sorts as `customer`.
-   * Without this, a column could be read or sorted but not both — `key`
-   * is constrained to `keyof T`, so naming the sort there would mean
-   * forking those fields off the row type, and `TransactionListRow`
-   * shares them with the detail type on purpose.
-   *
-   * Only meaningful alongside `sortable`. Getting it wrong is a 422 on
-   * the first header click (or on the first request, via `initialSorts`),
-   * exactly like getting `key` wrong was before this existed. */
+   * isn't the field the cell reads (`/transactions` sorts `date` as
+   * `created_at`). Only meaningful with `sortable`; getting it wrong is a
+   * 422 on the first header click. Defaults to `key`. */
   sortKey?: string;
   render?: (row: T) => ReactNode;
 };
 
 export type SortDirection = "asc" | "desc" | null;
 
-/** A single active sort column. `direction` is never null within an active
- * entry — a column with no direction simply isn't present in the `sorts`
- * array. See `nextSorts` in `use-table-controls.ts` for the cycle/eviction
- * rules that produce this array. */
+/** An active sort column. A column with no direction isn't in the array at
+ * all. See `nextSorts` in `use-table-controls.ts` for the cycle rules. */
 export type SortEntry = {
   key: string;
   direction: "asc" | "desc";
 };
 
-/** Hard cap on simultaneously active sort columns. Enforced here on the
- * frontend only (see ADR 0002) — so this is the single source of truth for the limit. */
+/** Hard cap on active sort columns, frontend-only (ADR 0002). */
 export const MAX_SORT_COLUMNS = 2;
 
-/** A table's server-side filter values, keyed by the API's own filter name
- * (`status`, `from_date`, `cashier_id`). `null` means "not set" and is what
- * an unfiltered table sends.
+/** Server-side filter values, keyed by the API's own filter name. `null`
+ * means "not set" and is dropped from the request.
  *
- * Values are strings and nothing else, on purpose. Filters round-trip
- * through the URL (see `useTableControls`), which has only strings, so any
- * other type would need a per-filter decoder on the way back in and the
- * declaration site would have to name it. Converting to the shape the wire
- * wants — an id as a number, say — belongs in the feature's own `getX`,
- * which already knows what its endpoint expects.
- *
- * **A boolean is the carve-out: it carries `1`/`0` as its value here.**
- * `filter[is_active]` is a `boolean` rule over a `tinyint`, so `1`/`0` is
- * already a string the endpoint takes and the URL can hold. Converting in
- * `getX` instead would leave the URL reading `accounts_is_active=active` —
- * the wire's key against a value the wire won't accept — and put back the
- * per-consumer mapping step this mechanism removed.
- * `UserAccountStatusFilter` and `ServiceStatusFilter` both do it this way. */
+ * Strings only, because filters round-trip through the URL. Converting to
+ * what the wire wants belongs in the feature's `getX`. The carve-out is a
+ * boolean, which carries `1`/`0` here: those are already URL-safe and
+ * already what the endpoint takes. */
 export type TableFilters = Record<string, string | null>;
 
 export type DataTableContextValue<T> = {
@@ -74,8 +50,7 @@ export type DataTableContextValue<T> = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
 
-  // Ordered by priority — sorts[0] is primary, sorts[1] (if present) is the
-  // tiebreaker. Length is always <= MAX_SORT_COLUMNS.
+  // Ordered by priority, capped at MAX_SORT_COLUMNS.
   sorts: SortEntry[];
   onSort: (key: string) => void;
 };

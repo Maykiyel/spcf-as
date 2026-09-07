@@ -7,20 +7,14 @@ type ToggleUserAccountStatusArgs = {
 };
 
 /**
- * Switches an account on or off, and with it that user's series receipt.
- * Deactivating moves their `active` series to `suspended`; reactivating
- * moves a `suspended` series back to `active`. Only cashiers hold one, so
- * only cashiers feel that half.
+ * Switches an account on or off, and with it that cashier's series
+ * receipt: `active` to `suspended` and back.
  *
- * Deactivation bites immediately and everywhere: `EnsureAccountIsActive`
- * wraps the whole authenticated group, so the user stays signed in
+ * Deactivation bites everywhere at once. The user stays signed in
  * client-side and is refused on every request until reactivated.
  *
- * `isActive` is camelCase here and `is_active` on the wire, the same
- * translate-at-the-boundary rule the series receipt feature follows.
- * `create-user-account.ts` deliberately goes the other way and names its
- * fields for the wire, because they are also react-hook-form field names
- * and the server's 422 bag is keyed by them.
+ * camelCase here, `is_active` on the wire. `create-user-account.ts` goes
+ * the other way on purpose; see the note there.
  */
 export const toggleUserAccountStatus = async ({
   id,

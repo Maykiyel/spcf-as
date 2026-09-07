@@ -8,42 +8,18 @@ const DISCARDED_MESSAGE =
 
 /**
  * Tells the cashier when starting a transaction threw away one they had in
- * progress.
+ * progress. `POST /transactions` abandons their pending transactions
+ * without reporting it, so the count has to be taken beforehand.
  *
- * `POST /transactions` abandons every pending transaction the cashier
- * already had before creating the new one, and its response does not
- * report what it discarded — so the only way to say so is to have counted
- * before. The count is asked for on mount and **never awaited on the way
- * to anything**: asking at creation time would put a round trip in front
- * of the cashier's first line item, which is worse than the occasionally
- * missed notice.
- *
- * A notification, not a dialog. The abandonment has already happened by
- * the time the transaction exists, so there is nothing to confirm and
- * nothing to undo, and blocking a cashier mid-service would cost them the
- * one thing this is meant to save.
- *
- * Lives in its own hook rather than inline in `TransactionBuilderProvider`
- * because it feeds neither of that provider's two context values — it is a
- * self-contained notice, the same shape of concern `useLineItemSync`
- * already is.
+ * Never awaited on the way to anything: a round trip in front of the first
+ * line item is worse than an occasionally missed notice. A notification
+ * rather than a dialog, since it has already happened and cannot be undone.
  */
 export function useDiscardedTransactionNotice(transactionId: number | null) {
-  // Three options, each closing a way this could warn about nothing.
-  //
-  // `staleTime: 0` alone is not enough: react-query still serves a cached
-  // value immediately while it refetches, so a revisit would decide on the
-  // *previous* visit's number. `gcTime: 0` drops the entry when the page
-  // unmounts, so a revisit has no value to serve and the effect below
-  // waits for the real one.
-  //
-  // `retry: false` against the app-wide two retries on network and 5xx
-  // errors. A retry would be a *second* request, issued after this page
-  // may already have created its transaction — and that request would
-  // count the new pending row itself, warning the cashier that work was
-  // discarded when the only pending row is their own. One attempt, taken
-  // before anything was created, is the only question worth asking; if it
-  // fails, the notice is simply missed, which the spec accepts.
+  // `gcTime: 0` as well as `staleTime: 0`, or a revisit decides on the
+  // previous visit's cached number. `retry: false` because a retry would
+  // land after this page created its transaction and count that new row,
+  // warning about work that was never discarded.
   const { data: pendingBeforeStart } = useQuery({
     queryKey: ["transactions", "pending-count"],
     queryFn: getPendingTransactionCount,
@@ -55,20 +31,15 @@ export function useDiscardedTransactionNotice(transactionId: number | null) {
   const hasReportedRef = useRef(false);
 
   useEffect(() => {
-    // Waits for both. Until the count is in, the decision is not knowable,
-    // and guessing either way is worse than the notice arriving late.
+    // Until the count is in, the decision isn't knowable.
     if (transactionId === null || pendingBeforeStart === undefined) return;
     if (hasReportedRef.current) return;
 
-    // Latched, so this fires once per mount. After a confirm the
-    // transaction id resets to null and the next one re-runs this effect
-    // against a count taken before the *first* transaction — by then the
-    // cashier has nothing pending, and warning again would say work was
-    // thrown away when none was.
+    // Latched to once per mount: after a confirm the id resets to null, and
+    // the next transaction would otherwise re-warn against a stale count.
     hasReportedRef.current = true;
 
-    // Nothing was discarded, which is the normal case: a cashier who
-    // cancels explicitly, as this app lets them, sees nothing at all.
+    // The normal case: a cashier who cancels explicitly sees nothing.
     if (pendingBeforeStart === 0) return;
 
     notifyWarning(DISCARDED_MESSAGE);

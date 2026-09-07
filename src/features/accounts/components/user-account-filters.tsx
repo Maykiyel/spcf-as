@@ -1,17 +1,12 @@
 import { TableFilterSegments } from "@/components/ui/table-filter";
 
-/** Both controls are the shape #59 settled on: they take a value and
- * report a change, and know nothing about the URL. `useServerTableState`
- * owns the values, puts them in the query key and persists them.
+/** Both controls take a value and report a change, knowing nothing about
+ * the URL. Thin on purpose: `TableFilterSegments` owns the `null` bridge,
+ * and what stays here is what the shared tier must not know, namely that
+ * `/users` filters on `role` and `is_active` and what those send.
  *
- * They are thin on purpose. `TableFilterSegments` owns the `null` ↔ "all"
- * bridge, which is the only part worth sharing; what stays here is what
- * this feature knows and the shared tier must not — that `/users` filters
- * on `role` and `is_active`, and what values those take on the wire.
- *
- * Named `UserAccount*` after the record they filter, like
- * `UserAccountActionsCell`. Bare "Accounts" is the sidebar nav group in
- * `CONTEXT.md`, which is a different thing.
+ * Named `UserAccount*` after the record, since bare "Accounts" is the
+ * sidebar nav group in `CONTEXT.md`.
  */
 export function UserAccountRoleFilter(props: {
   value: string | null;

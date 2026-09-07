@@ -18,12 +18,8 @@ type VoidTransactionActionProps = {
   transaction: TransactionListRow;
 };
 
-/** One labelled identifier in the confirmation.
- *
- * Four of these rather than a sentence, because they are being read to be
- * matched against something — a receipt on the desk, or a payer on the
- * phone — and a value buried in prose is harder to check than one in a
- * column. */
+/** Four of these rather than a sentence: they are read to be matched
+ * against a receipt on the desk, and prose is harder to check. */
 function ConfirmDetail({ label, value }: { label: string; value: string }) {
   return (
     <Group justify="space-between" gap="xl" wrap="nowrap">
@@ -38,24 +34,14 @@ function ConfirmDetail({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * The Void button on one row, and the confirmation behind it.
+ * The Void button on one row, and the confirmation behind it. That dialog
+ * is the only checkpoint there is: no un-void endpoint, no request body,
+ * nothing downstream to catch a mistake. Hence four identifiers rather
+ * than "are you sure", since the adjacent row is the same cashier on the
+ * same day with a series number one away. Alternatives weighed on #62.
  *
- * **The confirmation is the only checkpoint that exists.** There is no
- * un-void endpoint, and `POST /void` takes no body, so nothing downstream
- * can capture a reason, ask a second time, or undo it. That is why the
- * dialog carries four identifiers rather than asking "are you sure": rows
- * in a dense table look alike, and the adjacent one is the same cashier on
- * the same day with a series number one away.
- *
- * Type-to-confirm was considered and rejected on #62: the action is
- * already admin-gated and already written to the activity log, so the
- * extra friction buys little. An inline two-click confirm on the row was
- * rejected as too easy to trigger by accident.
- *
- * The button is named per row rather than reading "Void" to everything
- * that can't see which row it sits in. `DataTable.Grid` ignores a row
- * click that lands on a button, so this coexists with the row navigating
- * to the transaction.
+ * The button is named per row, so it identifies itself to anything that
+ * can't see which row it is in.
  */
 export function VoidTransactionAction({
   transaction,
@@ -64,36 +50,12 @@ export function VoidTransactionAction({
     useDisclosure(false);
   const queryClient = useQueryClient();
 
-  /** What this transaction's caches are worth once the server has spoken
-   * about it, on either path.
+  /** Lists invalidated, detail entry **removed**. Invalidation only marks
+   * an inactive query, so the next mount would paint the pre-void data,
+   * and `isPrintable` would leave Print live on a reversed payment.
    *
-   * **The lists are invalidated and the detail entry is removed**, which is
-   * not the same thing and the difference is the whole point.
-   *
-   * `invalidateQueries` defaults to `refetchType: "active"`. Voiding
-   * happens on this page, so the detail query is *inactive* at that moment
-   * and invalidation only marks it. React Query then hands a remount that
-   * cached entry synchronously and revalidates behind it, so opening the
-   * transaction paints the pre-void data first and corrects itself a
-   * moment later. Reported from a browser: the View page showed
-   * "Completed" on a transaction that had just been voided.
-   *
-   * A moment of a wrong badge would be bad enough against #62's "see it
-   * reflected immediately". It is worse than cosmetic: `isPrintable` is
-   * `status === "completed"`, so for that window the Print button is live
-   * on a reversed payment, and the print page reads this same entry.
-   *
-   * Removing it leaves nothing to render stale. The detail page shows its
-   * ordinary loading fallback, which offers no Print button at all, and
-   * then the real voided transaction. `refetchType: "all"` would also
-   * refetch it, but it would refetch every other inactive transaction
-   * query too, and it would still lose the race against a fast navigation
-   * because the stale entry stays readable until the response lands.
-   *
-   * The lists keep plain invalidation on purpose. The one on screen
-   * refetches at once; the others are marked and refetch when next shown,
-   * and a list correcting one row's badge behind the user is the ordinary
-   * stale-while-revalidate trade, with no action hanging off it. */
+   * The lists keep plain invalidation: a badge correcting itself behind
+   * the user has no action hanging off it. */
   const forgetWhatWeKnew = () => {
     queryClient.invalidateQueries({ queryKey: [...TRANSACTIONS_QUERY_KEY] });
     queryClient.removeQueries({
@@ -109,14 +71,11 @@ export function VoidTransactionAction({
       notifySuccess(`Transaction ${transaction.control_id} was voided.`);
     },
     onError: (error) => {
-      // A 409 from `ensureActionAllowed` names the status it found, which
-      // is how an admin learns another admin voided this row first. Worth
-      // more than a generic failure, so it is shown as written.
+      // The 409 names the status it found, which is how an admin learns
+      // someone voided this row first. Shown as written.
       notifyMutationError(error, "Couldn't void this transaction.");
-      // The same forgetting as a success, because a refusal here is itself
-      // evidence that what we hold is stale: every row on this page is
-      // meant to be voidable, and the server has just said this one is
-      // not. That makes the cached detail as suspect as the list row.
+      // A refusal is itself evidence the list is stale: every row here is
+      // meant to be voidable, and the server just said this one isn't.
       forgetWhatWeKnew();
       closeConfirm();
     },
@@ -152,10 +111,8 @@ export function VoidTransactionAction({
             />
             <ConfirmDetail
               label="Series No."
-              // Never null on this page — every row is `completed`, and a
-              // series number is assigned at save time. Rendered for the
-              // absent case anyway, because the row type allows it and a
-              // blank line beside a label reads as a bug.
+              // Never null here, but the row type allows it and a blank
+              // line beside a label reads as a bug.
               value={
                 transaction.series_number === null
                   ? "—"

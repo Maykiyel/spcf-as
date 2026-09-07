@@ -9,13 +9,10 @@ import { updateService } from "../api/update-service";
 import { searchItemCodes } from "@/api/item-codes";
 import type { Service } from "@/api/services";
 
-// Seam: the mutation call sites' existing pattern — mock the queryClient
-// used by the component, assert the invalidateQueries calls made after a
-// successful mutation (mirroring the existing ["services"]/["item-codes"]
-// assertions this call site would already have). Covers both
-// createMutation and updateMutation since they share invalidateAndNotify;
-// the update path is exercised directly since it needs no combobox
-// interaction (edit mode pre-populates selection from editingService).
+// Seam: mock the component's queryClient and assert the invalidateQueries
+// calls a successful mutation makes. Covers both create and update, which
+// share `invalidateAndNotify`; update is driven directly, needing no
+// combobox interaction.
 
 vi.mock("../api/update-service");
 vi.mock("@/api/item-codes");

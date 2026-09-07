@@ -5,21 +5,14 @@ import { DataTableSkeleton } from "./data-table-skeleton";
 
 const MAX_SKELETON_ROWS = 10;
 
-/** A click that landed on a control inside a row is that control's, not
- * the row's. The receipts list puts a link on the Control ID cell, and #62
- * will put a Void button on every row of that same table — without this,
- * voiding would also navigate away from the page it was meant to act
- * on. */
+/** A click on a control inside a row belongs to that control, not the row.
+ * Without it, the Void button would also navigate away. */
 const INTERACTIVE_WITHIN_ROW = "a,button,input,select,textarea";
 
 type DataTableGridProps<T> = {
-  /** What clicking a row does. Omitted by default, and a table that omits
-   * it renders exactly as it did before this existed — no pointer cursor,
-   * no handler.
-   *
-   * This is a prop rather than part of the shared state because the state
-   * comes from `useClientTableState`/`useServerTableState`, and neither
-   * knows anything about navigation. */
+  /** What clicking a row does. Omitted by default: no handler, no pointer
+   * cursor. A prop rather than shared state, which knows nothing about
+   * navigation. */
   onRowClick?: (row: T) => void;
 };
 
@@ -62,8 +55,8 @@ export function DataTableGrid<T extends Record<string, any>>({
                 );
               }
 
-              // The name the endpoint knows this column by, which is not
-              // always the field the cell reads — see `sortKey`.
+              // The endpoint's name for the column, not always the field
+              // the cell reads. See `sortKey`.
               const sortKey = col.sortKey ?? col.key;
               const sortIndex = sorts.findIndex((s) => s.key === sortKey);
               const active = sortIndex !== -1;
@@ -71,9 +64,8 @@ export function DataTableGrid<T extends Record<string, any>>({
               const showPriorityBadge = active && sorts.length > 1;
 
               return (
-                // The carets are drawn with opacity, so the sorted state
-                // is invisible to a screen reader and to a test. This is
-                // the handle for both.
+                // Carets are drawn with opacity, so the sorted state is
+                // invisible to a screen reader and a test. This is both.
                 <Table.Th
                   key={col.id ?? col.key}
                   aria-sort={

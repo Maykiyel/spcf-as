@@ -1,8 +1,7 @@
 import { toApiDate, type ApiDate } from "./api-date";
 
-/** A usable date range, or no range at all. There is no third state here on
- * purpose — a half-picked range is draft state inside the control and never
- * reaches a consumer. See `nextDateRange`. */
+/** A usable range or none at all. A half-picked range is draft state inside
+ * the control and never reaches a consumer. See `nextDateRange`. */
 export type DateRangeValue = {
   from: ApiDate | null;
   to: ApiDate | null;
@@ -11,18 +10,13 @@ export type DateRangeValue = {
 export const EMPTY_DATE_RANGE: DateRangeValue = { from: null, to: null };
 
 /**
- * The emit rule for the date-range control, as a pure transition: given what
- * the picker now holds, either the range to publish or `null` for "hold,
- * this isn't a filter yet".
+ * The control's emit rule: the range to publish, or `null` for "not a
+ * filter yet".
  *
- * Selecting one end of a range publishes nothing. Doing otherwise would fire
- * a request the API answers with a 422 (`to_date` carries
- * `after_or_equal:from_date`) while the user is still mid-interaction, and
- * every consumer would have to filter the same half-state back out again.
- *
- * Clearing both ends *does* publish. `{ from: null, to: null }` is a real
- * value meaning "no date filter", and is how a user gets back to the
- * unfiltered view.
+ * One end alone publishes nothing, because `to_date` carries
+ * `after_or_equal:from_date` and half a range is a 422. Clearing both
+ * *does* publish: `{from: null, to: null}` means "no date filter" and is
+ * how a user gets back to the unfiltered view.
  */
 export function nextDateRange(
   range: [Date | string | null, Date | string | null],

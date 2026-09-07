@@ -2,18 +2,12 @@ import { Badge } from "@mantine/core";
 import { TRANSACTION_STATUS_LABEL } from "../lib/transaction-status";
 import type { TransactionStatus } from "../types";
 
-// Green only for the one status that means the payment stands. `returned`
-// is the outcome of an admin voiding a completed transaction, so it is the
-// one a cashier most needs to notice.
+// Green only for the status that means the payment stands. Total over the
+// union, like `TRANSACTION_STATUS_LABEL`: a partial map with a fallback
+// would give a sixth status a plausible badge in the wrong colour.
 //
-// Total over the union, like `TRANSACTION_STATUS_LABEL`, and for the same
-// reason: a partial map with a fallback would give a sixth status a
-// plausible-looking badge in the wrong colour, silently. The label map gets
-// that right; a colour map beside it that didn't would undo half of it.
-//
-// Colour stays in a component rather than joining the label in `lib/`,
-// because the print page renders a transaction's status nowhere and
-// shouldn't import a palette to do it.
+// Colour lives here rather than beside the label in `lib/`, so the print
+// page needn't import a palette to render no badge at all.
 const STATUS_COLOR: Record<TransactionStatus, string> = {
   pending: "tertiary",
   abandoned: "tertiary",

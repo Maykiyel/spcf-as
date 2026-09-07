@@ -1,28 +1,14 @@
-// Matches a date-only value ("2026-08-24") as distinct from a full
-// timestamp ("2026-08-24T06:30:00.000000Z").
+// A date-only value, as distinct from a full timestamp. The backend only
+// sends timestamps, so this branch is defensive: `date` is typed as a bare
+// string, and a date-only value parsed as an instant is silently wrong.
 //
-// The backend sends the latter: TransactionResource maps `date` to the
-// model's `created_at` (see BACKEND_NOTES.md), so it is always a full
-// ISO-8601 timestamp and this branch does not fire in production. It is
-// kept because TransactionDTO.date is typed as a bare string, and a
-// date-only value parsed as an instant is silently wrong rather than
-// loudly wrong — `new Date("2026-08-24")` is UTC midnight, which renders
-// as a fabricated clock time locally and rolls back a day west of UTC.
-//
-// `src/components/ui/date-range/api-date.ts` carries the same regex and the
-// same local-components rule for the same UTC+8 reason. The two are
-// deliberately not shared: the shared UI tier must not import from
-// `features/*`, and it formats a date for the wire rather than rendering one
-// for a printed receipt. Change one, look at the other.
+// `components/ui/date-range/api-date.ts` carries the same regex and rule;
+// the tiers can't share it. Change one, look at the other.
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-// Date and time are formatted separately and joined here rather than asked
-// for in one Intl call. A single formatter with both date and time fields
-// inserts a locale connector that varies by ICU version ("Aug 24, 2026 at
-// 2:30 PM" on newer data, "Aug 24, 2026, 2:30 PM" on older), which would
-// make the printed receipt change appearance with the browser rather than
-// with our code, and would put two spellings of the same timestamp on
-// the receipts list and the receipt it prints.
+// Formatted separately and joined, not asked for in one Intl call: a
+// combined formatter's connector varies by ICU version ("at 2:30 PM" vs
+// ", 2:30 PM"), which would change the printed receipt with the browser.
 const TRANSACTION_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -34,11 +20,9 @@ const TRANSACTION_TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-// A date-only string is a calendar date, not an instant. Passing one to
-// `new Date()` parses it as UTC midnight, which then renders in local time
-// as a fabricated clock reading — and rolls back a day anywhere west of
-// UTC. Splitting the parts and building a local date keeps the calendar
-// date the backend sent, in every timezone.
+// A calendar date, not an instant: `new Date("2026-08-24")` is UTC
+// midnight, which renders as a fabricated clock time and rolls back a day
+// west of UTC. Building it from parts keeps the date in every timezone.
 function parseTransactionDate(
   date: string,
 ): { value: Date; hasTime: boolean } | null {

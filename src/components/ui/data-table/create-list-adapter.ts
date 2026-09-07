@@ -6,35 +6,19 @@ import type {
 } from "./use-server-table-state";
 
 type ListAdapterOptions = {
-  /** Whether this endpoint accepts `filter[search]`. Only three do — item
-   * codes, services and series receipts. Everywhere else an unknown filter
-   * key is a 400, not a silently ignored parameter (see BACKEND_NOTES.md),
-   * so the key is never sent unless the endpoint says it takes one. */
+  /** Whether this endpoint accepts `filter[search]`. Only item codes,
+   * services and series receipts do; elsewhere an unknown filter key is a
+   * 400, not an ignored parameter. See BACKEND_NOTES.md. */
   supportsSearch?: boolean;
 };
 
-// Every server-backed DataTable list endpoint returns the same envelope:
-// `{ [responseKey]: T[], pagination: { total } }`, and is queried with the
-// same `per_page` / `page` / `sort` params. This factory owns that shared
-// shape so each feature's getX only has to name its own endpoint and
-// response key.
+// Every list endpoint returns the same envelope and takes the same params,
+// so a feature's getX names only its endpoint and response key. Declared
+// filters go out as `filter[<key>]`.
 //
-// Declared filters (`params.filters`) are sent as `filter[<key>]`, which is
-// what every filterable endpoint in this API calls them, so a table that
-// declares its filters needs no per-feature mapping to reach the wire. A
-// caller with real variance — a parameter that isn't a `filter[...]` —
-// merges it in via `extra` on a call-by-call basis rather than the factory
-// growing an option for it.
-//
-// **`extra` has no consumers.** Services was the only one, and #84 moved
-// its status filter onto the declared mechanism, where the value reaches
-// the query key as well as the request. The escape hatch stays because it
-// is still the right answer for a non-`filter[...]` parameter; it is not
-// the right answer for a filter.
-//
-// `null` is "not set", and an unknown filter key is a 400 rather than a
-// silently ignored parameter (see BACKEND_NOTES.md) — so an unset filter has
-// to be absent from the request, not present and empty.
+// `extra` has no consumers today; it is still right for a parameter that
+// isn't a `filter[...]`. A `null` filter must be absent rather than empty,
+// since an unknown or empty key is a 400.
 function toFilterParams(
   filters: ServerTableParams["filters"],
 ): Record<string, string> {

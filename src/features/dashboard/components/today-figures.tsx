@@ -5,18 +5,13 @@ import { formatCurrency } from "@/utils/currency";
 import { getDashboardToday } from "../api/get-dashboard-today";
 import { StatTile } from "./stat-tile";
 
-/** The two figures every user sees, scoped to them by the endpoint.
+/** The two figures every user sees, scoped by the endpoint. Owns its own
+ * request and error state, so a failure here leaves the rest of the
+ * dashboard rendered.
  *
- * Owns its own request, loading and error state, so a failure here leaves
- * the admin's chart and cashier table rendered beside it. Three
- * independent requests, and one of them falling over should not blank the
- * other two.
- *
- * The labels say what the endpoint returns and nothing more. Copy
- * qualifying them ("since 8am yesterday", "count includes voided") was
- * considered and rejected: it documents a backend bug instead of fixing
- * it, and reads worse than the wrong number. Both behaviours are recorded
- * in `BACKEND_NOTES.md` and are the backend developer's to change. */
+ * The labels say what the endpoint returns and nothing more: qualifying
+ * copy would document a backend quirk instead of fixing it. Both are in
+ * BACKEND_NOTES.md. */
 export function TodayFigures() {
   const { data, isLoading, isError } = useQuery({
     // Inline, like the other two sections: nothing invalidates these

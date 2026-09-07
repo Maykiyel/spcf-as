@@ -11,9 +11,8 @@ import type { ColumnDef, DataTableContextValue } from "./types";
 // state hand-built as a test double. The state hooks have their own tests;
 // what matters here is only which controls a given composition renders.
 
-// Mantine's Select renders its dropdown inside a ScrollArea, which
-// subscribes to a ResizeObserver on mount — jsdom doesn't implement one.
-// Same stub as service-form.test.tsx, for the same reason.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}

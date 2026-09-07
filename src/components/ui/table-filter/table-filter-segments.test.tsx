@@ -9,9 +9,8 @@ import { TableFilterSegments } from "./table-filter-segments";
 // is shared rather than written per feature, so it is what these assert;
 // the feature wrappers' own tests cover the wire values they choose.
 
-// Mantine's SegmentedControl measures its segments through a
-// ResizeObserver to position the sliding indicator, and jsdom doesn't
-// implement one. Same stub as manage-accounts-page.test.tsx.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}

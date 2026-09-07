@@ -26,12 +26,8 @@ const DEBOUNCE_MS = 400;
 // Safety cap on cancel's drain loop — shouldn't ever be hit.
 const MAX_CANCEL_DRAIN_ROUNDS = 10;
 
-// Consolidates what were four parallel per-fee Records
-// (pendingAddCountsRef, addFlushTimeoutsRef, addInFlightRef,
-// addInFlightPromisesRef) into one state object per fee — "what's true
-// about fee 7's add right now" was one clump traveling across four maps
-// with nothing enforcing they stayed in sync; every mutation site had to
-// touch the right subset in the right order.
+// One state object per fee, replacing four parallel Records that had to
+// be kept in sync by hand at every mutation site.
 type FeeAddState = {
   pendingCount: number;
   flushTimeout: ReturnType<typeof setTimeout> | null;
@@ -56,10 +52,9 @@ function getFeeAddState(
   return created;
 }
 
-// Owns transaction lifecycle too, not just line items — cancel() needs
-// add-draining and transaction-id resolution together, and splitting
-// them across two modules recreates the ref coupling that caused this
-// session's remove-on-a-locked-line bug.
+// Owns the transaction lifecycle too, not just line items: cancel() needs
+// add-draining and id resolution together, and splitting them recreates
+// the ref coupling that caused the remove-on-a-locked-line bug.
 export function useLineItemSync() {
   const [transactionId, setTransactionId] = useState<number | null>(null);
   const [lineItems, setLineItems] = useState<DraftLineItem[]>([]);

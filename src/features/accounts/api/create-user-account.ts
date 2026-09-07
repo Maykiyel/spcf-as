@@ -2,26 +2,17 @@ import { z } from "zod";
 import { apiClient } from "@/lib/axios/api-client";
 import type { UserAccount } from "../types";
 
-/**
- * Advisory only. The server validates the password as `['required',
- * 'string']` and nothing more, so it accepts a single character today —
- * anything calling the API directly still can. Enforcing a minimum here
- * stops an admin creating a one-character password by hand; it is not a
- * substitute for the backend rule, which has been asked for.
- */
+/** Advisory only: the server validates the password as `required|string`
+ * and nothing more, so anything calling the API directly can still send
+ * one character. A backend rule has been asked for. */
 const PASSWORD_MIN_LENGTH = 8;
 
 /**
- * Field names are the request's own, not camelCase. Laravel's 422 body keys
- * its `errors` bag by request field, so naming the form fields the same way
- * is what lets a server-side "username has already been taken" land on the
- * username input without a translation table in between.
+ * Field names are the request's own, not camelCase: Laravel keys its 422
+ * `errors` bag by request field, so matching them is what lets "username
+ * has already been taken" land on the username input unaided.
  *
- * There is no `email` field. Backend `4955f19` dropped the column from the
- * `users` table and the field from `UserResource`, so there is nowhere for
- * one to go. `store` kept validating and writing it for three commits,
- * which made every `POST /users` a SQL error against a column that no
- * longer existed; `0cecdbd` removed both lines.
+ * No `email` field, because the column no longer exists.
  */
 export const createUserAccountSchema = z.object({
   first_name: z.string().trim().min(1, "First name is required").max(255),

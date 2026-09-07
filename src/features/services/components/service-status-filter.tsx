@@ -1,16 +1,10 @@
 import { TableFilterSegments } from "@/components/ui/table-filter";
 
-/** The shape #59 settled on: takes a value, reports a change, knows
- * nothing about the URL. `useServerTableState` owns the value, puts it in
- * the query key and persists it.
+/** Takes a value, reports a change, knows nothing about the URL.
  *
- * `1`/`0` rather than `active`/`inactive`, the same call
- * `UserAccountStatusFilter` makes and for the same reason — see the
- * carve-out on `TableFilters` in `data-table/types.ts`.
- *
- * Keeps "All", not "All Statuses": #84 changes nothing a user sees except
- * the URL, and this toolbar has one filter rather than two sitting side by
- * side.
+ * `1`/`0` rather than `active`/`inactive`, per the carve-out on
+ * `TableFilters`. Reads "All" rather than "All Statuses", this toolbar
+ * having one filter rather than two side by side.
  */
 export function ServiceStatusFilter(props: {
   value: string | null;

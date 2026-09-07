@@ -33,28 +33,17 @@ export const setAccountDeactivatedHandler = (
   onAccountDeactivatedCallback = cb;
 };
 
-/** `EnsureAccountIsActive` answers a deactivated user on **every**
- * endpoint, with a 403 in Laravel's plain shape (see BACKEND_NOTES.md).
- * That status is shared with per-record policy denials, which must keep
- * their own more specific handling, so the message is what tells them
- * apart.
- *
- * Matched on the phrase rather than the word "deactivated" alone. The API
- * has a third 403, "Cannot assign Series Receipt to inactive cashier
- * account", which is about somebody *else's* account on the admin's own
- * working session. It says "inactive" today and so misses a bare word
- * match by luck; the phrase does not depend on that luck.
- *
- * Returns the message rather than a boolean so the caller reports the
- * server's own copy without reaching back into the response for it. */
+/** A deactivated user gets a 403 on every endpoint, a status it shares
+ * with policy denials, so the message is what tells them apart. Matched on
+ * the whole phrase: a third 403 is about an inactive *cashier* account on
+ * the admin's own working session, and misses a bare word match only by
+ * luck. Returns the message so the caller shows the server's own copy. */
 const DEACTIVATED_ACCOUNT = /user account is deactivated/i;
 
 function accountDeactivatedMessage(error: AxiosError): string | null {
   if (error.response?.status !== 403) return null;
-  // `POST /login` answers a deactivated user with its own version of this
-  // message. There is no session to end there, and the login form already
-  // shows the server's message itself, so intercepting it would sign
-  // nobody out and put a second toast on screen saying the same thing.
+  // `POST /login` sends its own version of this message. No session to end,
+  // and the form already shows it, so intercepting would double the toast.
   if (error.config?.url === "/login") return null;
   const message = (error.response.data as { message?: string } | undefined)
     ?.message;
@@ -83,10 +72,8 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => config);
 // Response interceptor
 api.interceptors.response.use(handleResponseSuccess, handleResponseError);
 
-/** Latches once a deactivation has been reported, so that a page with
- * several requests in flight produces one message rather than one per
- * request. Every one of them is rejected — `EnsureAccountIsActive` guards
- * the whole authenticated group — and the user needs to be told once. */
+/** Latched so a page with several requests in flight reports the
+ * deactivation once rather than once per rejected request. */
 let deactivationReported = false;
 
 export function handleResponseSuccess(response: AxiosResponse) {
@@ -102,19 +89,14 @@ export function handleResponseSuccess(response: AxiosResponse) {
       ),
     );
   }
-  // A response got through, so the account is answering again and a later
-  // deactivation is a new event rather than an echo of this one. Nothing
-  // succeeds while an account is switched off, so this cannot clear the
-  // latch during the burst it exists to suppress.
+  // A response got through, so a later deactivation is a new event. Nothing
+  // succeeds while an account is off, so this can't clear the latch early.
   deactivationReported = false;
   return response;
 }
 
-/** The response interceptor's error half, lifted out of the `use()` call
- * so it can be exercised directly. Everything it does is a session-level
- * decision made from the response alone, with no request in flight, so a
- * unit test of this function is a test of the real thing rather than of a
- * stubbed adapter. */
+/** The interceptor's error half, lifted out of `use()` so a unit test can
+ * call it directly: every decision here is made from the response alone. */
 export async function handleResponseError(error: AxiosError) {
   const status = error.response?.status;
   const originalRequest = error.config as

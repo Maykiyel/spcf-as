@@ -14,18 +14,15 @@ export type TableControls = {
   onSearchChange: (query: string) => void;
   onSort: (key: string) => void;
   resetSort: () => void;
-  /** Merges a patch into the current filters. A patch rather than a single
-   * key/value because a date range moves both of its ends at once, and two
-   * sequential single-key writes would mean two refetches for one user
-   * action. */
+  /** Merges a patch in. A patch, not a single key/value: a date range
+   * moves both ends at once and two writes would mean two refetches. */
   setFilters: (patch: TableFilters) => void;
 };
 
 type TableControlsAdapter = TableControls;
 
-// Both adapters drop keys the table didn't declare. Reading already ignores
-// them, so accepting one on write would put a param in the URL that nothing
-// ever reads back, or a value in the bag that never reaches the fetcher.
+// Both adapters drop undeclared keys. Reading ignores them anyway, so
+// writing one would put a param in the URL that nothing reads back.
 const declaredOnly = (
   patch: TableFilters,
   initialFilters: TableFilters,
@@ -35,9 +32,8 @@ const declaredOnly = (
   );
 
 // A filter's URL param is `<urlKey>_<filterKey>`, sharing a namespace with
-// the table's own `page`, `size`, `q` and `sort`. Filters are keyed by the
-// API's own filter names (`from_date`, `status`, `cashier_id`), none of
-// which collide — this is a note for whoever adds the first one that does.
+// `page`, `size`, `q` and `sort`. None collide today; note for whoever
+// adds the first one that does.
 
 export function nextSorts(
   current: SortEntry[],
@@ -70,19 +66,12 @@ const clampPageSize = (value: string | null, fallback: number): number => {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : fallback;
 };
 
-/** Marks "the user turned the sort off" in the URL, as distinct from "no
- * param, so use the declared sort".
- *
- * Only meaningful for a table that declares an `initialSorts`. Without it,
- * such a table could never be unsorted: `nextSorts` takes a descending
- * column to removed, an empty list would write no param, and no param
- * would read back as the declared sort again on the next render. Not a
- * possible sort key, since a key never contains a colon and no endpoint
- * here allow-lists `none`. */
+/** "The user turned the sort off", as distinct from "no param, so use the
+ * declared sort". Without it a table declaring `initialSorts` could never
+ * be unsorted, since no param reads back as the declared sort. */
 const NO_SORT = "none";
 
-/** Module scope so the default parameter is one array rather than a fresh
- * one per render — it seeds `useState` and is compared on every read. */
+/** Module scope: it seeds `useState` and is compared on every read. */
 const NO_SORTS: SortEntry[] = [];
 
 const sameSorts = (a: SortEntry[], b: SortEntry[]): boolean =>
@@ -92,11 +81,8 @@ const sameSorts = (a: SortEntry[], b: SortEntry[]): boolean =>
       entry.key === b[index].key && entry.direction === b[index].direction,
   );
 
-// Encodes the ordered sort list as `key:dir,key:dir` in a single param —
-// order in the string is the priority order, so no separate index/priority
-// field is needed. The declared sort is omitted rather than written out,
-// the same as page 1 and an unfiltered filter, so a shared link stays
-// clean and a table at its default doesn't look re-sorted.
+// `key:dir,key:dir` in one param, string order being priority order. The
+// declared sort is omitted, like page 1, so a shared link stays clean.
 const encodeSorts = (
   sorts: SortEntry[],
   initialSorts: SortEntry[],
@@ -106,8 +92,7 @@ const encodeSorts = (
   return sorts.map((s) => `${s.key}:${s.direction}`).join(",");
 };
 
-// Defensively re-capped on parse in case a shared/pasted URL was
-// hand-edited past the current limit.
+// Re-capped on parse, in case a pasted URL was hand-edited past the limit.
 const parseSorts = (
   raw: string | null,
   initialSorts: SortEntry[],
@@ -139,27 +124,10 @@ function useUrlAdapter(
     [urlKey],
   );
 
-  // `{ replace: true }` below, on every control this writes for — filter,
-  // search, sort and page alike. Back leaves the page rather than rewinding
-  // through the controls the user touched.
-  //
-  // **Settled by Mike, and not open.** It was raised on #85 and carried
-  // unanswered through three batches; #84 made services its second
-  // consumer, which is what finally got it decided. The reasoning is
-  // search: everything routes through this one function, so making a
-  // filter click a place you have been makes a keystroke one too, and Back
-  // after typing "graduation" would walk back a letter at a time. Pushing
-  // for filters and replacing for typing would buy an undo nobody asked
-  // for at the price of two rules where there is one.
-  //
-  // Sharing is unaffected: the URL is still written on every change, so
-  // links, bookmarks and refreshes behave identically. Only the history
-  // entry differs.
-  //
-  // **This supersedes #59's user story 7**, which asked for the back button
-  // to restore the previous filter state. Unmet on purpose: that story was
-  // written before the mechanism existed and does not survive the fact that
-  // one function writes every control, typing included.
+  // `{ replace: true }` on every control, so Back leaves the page rather
+  // than rewinding through it a keystroke at a time. Settled on
+  // #84 and not open; it supersedes #59's user story 7. Sharing is
+  // unaffected, since the URL is still written on every change.
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
       setSearchParams(
@@ -180,14 +148,14 @@ function useUrlAdapter(
     [setSearchParams],
   );
 
-  // ---- Search draft (decoupled from the network-side debounce that
-  // `useServerTableState` applies independently before hitting the API) ----
+  // Search draft, decoupled from the network-side debounce in
+  // `useServerTableState`.
   const urlSearchQuery = searchParams.get(paramName("q")) ?? "";
   const [searchDraft, setSearchDraft] = useState(urlSearchQuery);
   const debouncedSearchDraft = useDebouncedValue(searchDraft, 400);
 
-  // Keep the draft in sync when the URL changes from outside typing —
-  // back/forward navigation, a pasted/shared link, sort/page resets, etc.
+  // Re-sync when the URL changes from outside typing: back/forward, a
+  // pasted link, a sort or page reset.
   useEffect(() => {
     if (!urlKey) return;
     setSearchDraft(urlSearchQuery);
@@ -212,11 +180,9 @@ function useUrlAdapter(
   );
   const sorts = parseSorts(searchParams.get(paramName("sort")), initialSorts);
 
-  // Derived from the URL on every render, exactly like page and sort above —
-  // which is what makes a refresh, a pasted link and a history entry all
-  // restore the same view without any of them being special-cased. Only
-  // declared keys are read, so a hand-edited URL can't inject a filter the
-  // endpoint would answer with a 400.
+  // Derived from the URL every render, like page and sort, so a refresh and
+  // a pasted link restore the same view. Only declared keys are read, so a
+  // hand-edited URL can't inject a filter the endpoint would 400.
   const filters: TableFilters = {};
   for (const [key, defaultValue] of Object.entries(initialFilters)) {
     filters[key] = searchParams.get(paramName(key)) ?? defaultValue;
@@ -259,16 +225,13 @@ function useUrlAdapter(
     for (const [key, value] of Object.entries(
       declaredOnly(patch, initialFilters),
     )) {
-      // A filter sitting at its declared default is absent from the URL
-      // rather than written out. `?status=all` is noise in a shared link,
-      // and it makes an unfiltered table look filtered.
-      updates[paramName(key)] =
-        value === initialFilters[key] ? null : value;
+      // A filter at its default is absent from the URL: `?status=all` is
+      // noise, and makes an unfiltered table look filtered.
+      updates[paramName(key)] = value === initialFilters[key] ? null : value;
     }
 
-    // Same reason changing search or sort resets the page: the row that was
-    // on page 7 of the old filter almost certainly isn't there under the new
-    // one, and a page past the end renders as empty rather than as an error.
+    // Reset the page: what was on page 7 of the old filter isn't there
+    // under the new one, and a page past the end renders empty.
     updates[paramName("page")] = null;
 
     updateParams(updates);
@@ -343,12 +306,8 @@ function useLocalAdapter(
   };
 }
 
-/**
- * Thin selector over one interface: both adapters are always instantiated
- * (so hook call order stays stable regardless of `urlKey`), and this just
- * picks which one's state/handlers to expose. No handler here re-checks
- * `urlKey` — that decision is made once, at the return statement.
- */
+/** Picks an adapter. Both are always instantiated so hook call order stays
+ * stable, and `urlKey` is checked once, at the return. */
 export function useTableControls(
   initialPageSize = 25,
   urlKey?: string,

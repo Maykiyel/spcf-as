@@ -18,24 +18,14 @@ const listCashierEarnings = createListAdapter<CashierEarningsWireRow>(
 );
 
 /**
- * Renames `full_name` to `cashier_name` on the way in.
+ * Renames `full_name` to `cashier_name` on the way in, which is not
+ * cosmetic: a `ColumnDef`'s `key` is both the field a cell reads and the
+ * word sent as `sort`, and the endpoint allow-lists `cashier_name`. A
+ * column keyed `full_name` would render fine and 400 on the first sort
+ * click. `CONTEXT.md` records the same trap from the other direction.
  *
- * Not cosmetic. A `ColumnDef`'s `key` does two jobs: it decides which
- * field the cell reads, and it is the word sent as `sort` when someone
- * clicks that column's header. The endpoint allow-lists `cashier_name`
- * and `total_earnings`, so a column keyed `full_name` would render
- * correctly and then answer the first sort click with a 400.
- *
- * `CONTEXT.md` records the same trap from the other direction on the
- * Series Receipts table, where the backend's name won and the column had
- * to keep it. Here the endpoint's read and sort names differ from each
- * other, so one of them has to be translated, and the boundary is the
- * only place it can happen once.
- *
- * No `search`: `/reports/*` accepts no `filter[search]`, and an unknown
- * filter key is a 400 here rather than an ignored parameter — which is
- * why the adapter is not opted into search and the table composes no
- * search box.
+ * No search: `/reports/*` accepts no `filter[search]`, and an unknown key
+ * is a 400.
  */
 export const getCashierEarnings = async (
   params: ServerTableParams,

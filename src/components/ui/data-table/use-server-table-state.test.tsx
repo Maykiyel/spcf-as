@@ -14,9 +14,8 @@ const columns: ColumnDef<Row>[] = [
   { key: "name", header: "Name" },
 ];
 
-// A Router is required even for a table with no `urlKey`: both adapters in
-// `useTableControls` are always instantiated so hook call order stays stable,
-// and the URL one calls `useSearchParams` regardless of which is returned.
+// A Router is required even with no `urlKey`: both adapters are always
+// instantiated, and the URL one calls `useSearchParams` regardless.
 function createWrapper(initialEntries: string[] = ["/"]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

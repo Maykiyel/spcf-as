@@ -15,9 +15,8 @@ import SidebarLinksContainer from "./sidebar-links-container";
 // whether the group is expanded, so an absent group means absent from the
 // tree, not merely collapsed.
 
-// Mantine's Popover and Tooltip (both wrap every collapsible group here)
-// measure their target through a ResizeObserver, which jsdom doesn't
-// implement. Same stub as manage-accounts-page.test.tsx.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}

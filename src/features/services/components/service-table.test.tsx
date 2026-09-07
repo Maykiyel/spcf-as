@@ -7,23 +7,18 @@ import { getServices } from "../api/get-services";
 import { ServiceTable } from "./service-table";
 import type { Service } from "@/api/services";
 
-// Seam: the table component with its fetcher mocked at the module
-// boundary. Filters are asserted through the params `getServices` was
-// called with, because that *is* what a server filter does — the rows come
-// back already narrowed, and a test that stubbed narrowed rows would pass
-// whatever the table sent. Same reasoning as manage-accounts-page.test.tsx.
+// Seam: the table component, fetcher mocked at the module boundary.
 //
-// This is the migration's real failure mode. Before #84 the filter reached
-// the request but not the query key, so a filter change could be answered
-// from the previous filter's cache with no error anywhere — nothing on
-// screen says the rows are wrong. Asserting on the params is what catches
-// the value going missing from either.
+// Filters are asserted through the params `getServices` received. The
+// failure this catches is silent: a filter that reaches the request but
+// not the query key is answered from the previous filter's cache, and
+// nothing on screen says the rows are wrong.
 
 vi.mock("../api/get-services");
 const mockGetServices = vi.mocked(getServices);
 
-// Mantine's page-size Select and `DataTable.Grid` both subscribe to a
-// ResizeObserver on mount, which jsdom doesn't implement.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -31,10 +26,9 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
-// Mantine's Combobox scrolls its active option into view on open, and
-// jsdom implements no scrolling. Without this the Select throws outside
-// the assertion, as an unhandled rejection — every test stays green while
-// the run exits non-zero.
+// jsdom implements no scrolling, and Mantine's Combobox scrolls its active
+// option into view on open. Without this a Select throws as an unhandled
+// rejection: every test stays green and the run exits non-zero.
 Element.prototype.scrollIntoView = vi.fn();
 
 const services: Service[] = [

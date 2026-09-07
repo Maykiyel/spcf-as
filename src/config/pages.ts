@@ -14,8 +14,8 @@ import {
 } from "@tabler/icons-react";
 import type { Role } from "@/features/auth/types";
 
-// Not part of the pages array below — it has no sidebar presence and
-// renders outside AppLayout/ProtectedRoute entirely.
+// Not in the pages array: no sidebar presence, and it renders outside
+// AppLayout/ProtectedRoute.
 export const LOGIN_PATH = "/";
 
 export const DASHBOARD_PATH = "/dashboard";
@@ -26,15 +26,9 @@ export type PageLeaf = {
   lazyImport: () => Promise<{ Component: ComponentType }>;
   label: string;
   icon: Icon;
-  /** Who may reach this page. Undefined means "inherit" — its group's
-   * roles for a leaf inside one, everyone for a standalone leaf.
-   *
-   * A leaf that declares its own roles **overrides** its group's rather
-   * than intersecting with them: the more specific declaration wins,
-   * which is the rule any cascade already trains people to expect. An
-   * intersecting rule — a leaf may only narrow, never widen — is safer in
-   * the abstract, but every case here narrows, so the two behave
-   * identically while intersection is harder to reason about. */
+  /** Who may reach this page. Undefined inherits: the group's roles, or
+   * everyone for a standalone leaf. A leaf that declares its own
+   * **overrides** the group rather than intersecting with it. */
   roles?: Role[];
 };
 
@@ -52,9 +46,8 @@ export function isPageGroup(entry: TopLevelPage): entry is PageGroup {
   return "children" in entry;
 }
 
-// The one place the leaf-overrides-group rule lives. Both derivations
-// below call it, which is what stops a hidden sidebar link and a
-// reachable route disagreeing.
+// The one place the leaf-overrides-group rule lives, so a hidden sidebar
+// link and a reachable route can't disagree.
 function resolveLeafRoles(
   leaf: PageLeaf,
   group?: PageGroup,
@@ -62,13 +55,9 @@ function resolveLeafRoles(
   return leaf.roles ?? group?.roles;
 }
 
-// Undeclared roles mean everyone. A declared list needs a signed-in role
-// that is on it — a user with no role at all matches nothing.
-//
-// Exported because `ProtectedRoute` asks the same question of the roles it
-// reads off the matched route's `handle`. It used to hand-roll the test,
-// which left the enforcement point free to drift from the two derivations
-// below — the exact drift they resolve through one function to avoid.
+// Undeclared roles mean everyone; a user with no role matches nothing.
+// Exported because `ProtectedRoute` asks the same question, and used to
+// hand-roll it.
 export function isAllowedForRole(
   roles: Role[] | undefined,
   role: Role | undefined,
@@ -76,10 +65,8 @@ export function isAllowedForRole(
   return !roles || (role !== undefined && roles.includes(role));
 }
 
-// Every navigable leaf with its required roles resolved. This is the
-// router's source for role-gating a direct navigation, the same way
-// `getVisiblePages` below is the sidebar's — both resolve through
-// `resolveLeafRoles`, so neither can drift from the other.
+// The router's source for role-gating a direct navigation, as
+// `getVisiblePages` is the sidebar's. Both resolve the same way.
 export function getLeafRoutes(entries: TopLevelPage[] = pages): PageLeaf[] {
   return entries.flatMap((entry) =>
     isPageGroup(entry)
@@ -91,28 +78,19 @@ export function getLeafRoutes(entries: TopLevelPage[] = pages): PageLeaf[] {
   );
 }
 
-// The navigation tree `role` may actually use: standalone leaves they can
-// reach, and groups reduced to the children they can reach.
+// The navigation tree `role` may use: reachable standalone leaves, and
+// groups reduced to their reachable children. A group isn't filtered on
+// its own roles, since inheritance already empties it, and an empty group
+// is dropped: one that opens onto nothing is worse than none.
 //
-// A group is not filtered on its own `roles` directly — it doesn't need
-// to be. A child with no roles of its own inherits the group's, so an
-// admin-only group whose children declare nothing loses every child for a
-// cashier and drops out here on the emptiness rule below. Filtering the
-// group separately would be a second rule saying the same thing, free to
-// disagree with the router the moment a leaf overrides its group.
-//
-// **An empty group is dropped entirely.** An expandable group that opens
-// onto nothing is worse than no group at all.
-//
-// This is presentation, not security: `ProtectedRoute` is the enforcement
-// point in the client and the server enforces independently. Nothing here
-// should be relied on as an access control boundary.
+// Presentation, not security. `ProtectedRoute` enforces in the client and
+// the server enforces independently.
 export function getVisiblePages(
   role: Role | undefined,
   entries: TopLevelPage[] = pages,
 ): TopLevelPage[] {
-  // The explicit type argument matters: inference takes the first branch's
-  // `PageLeaf[]` and then rejects the group branch against it.
+  // Explicit type argument: inference takes the first branch's type and
+  // then rejects the second against it.
   return entries.flatMap<TopLevelPage>((entry) => {
     if (!isPageGroup(entry)) {
       return isAllowedForRole(entry.roles, role) ? [entry] : [];
@@ -126,9 +104,8 @@ export function getVisiblePages(
   });
 }
 
-// The single source of truth for every page in the app shell. The router
-// and the sidebar both derive from this array — adding, removing, or
-// regrouping a page is an edit here, nowhere else.
+// Every page in the app shell. The router and sidebar both derive from
+// this, so adding or regrouping a page is an edit here and nowhere else.
 export const pages: TopLevelPage[] = [
   {
     key: "dashboard",

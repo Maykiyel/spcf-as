@@ -2,16 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { apiClient } from "@/lib/axios/api-client";
 import { getCashiers, cashiersQueryKey, type Cashier } from "./cashiers";
 
-// Seam: getCashiers' own interface against a mocked apiClient.get. The
-// request is the assertion here, not an incidental detail: dropping the
-// `is_active` parameter fails nothing visible — the picker simply offers
-// cashiers the server will refuse, and the only symptom is a 403 the
-// admin meets after choosing one. Same seam as get-active-services.test.ts.
+// Seam: getCashiers' interface against a mocked apiClient.get. The
+// request is the assertion: dropping `is_active` fails nothing visible,
+// and only shows up as a 403 after an admin picks an inactive cashier.
 //
-// It moved here with the fetcher when the Transactions list became its
-// second consumer. The variant cases below are what that move added: the
-// two callers want opposite answers, and both the parameter and the cache
-// key have to tell them apart.
+// The two callers want opposite answers, so both the parameter and the
+// cache key have to tell them apart.
 
 vi.mock("@/lib/axios/api-client", () => ({
   apiClient: { get: vi.fn() },

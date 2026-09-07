@@ -14,25 +14,18 @@ import type { AuthUser } from "@/features/auth/types";
 import { ManageAccountsPage } from "./manage-accounts-page";
 import type { UserAccount } from "../types";
 
-// Seam: the page component, with its fetchers mocked at the module
-// boundary. What an admin can see and do — which rows render, what the
-// create form submits, what the server's delete refusal looks like on
-// screen. Nothing here asserts on modal internals or table plumbing;
-// DataTable and useServerTableState have their own tests.
+// Seam: the page component, fetchers mocked at the module boundary.
+// Nothing here asserts on modal internals or table plumbing.
 //
-// The table is server-backed since backend `4955f19` paginated `/users`,
-// so `getUserAccounts` now takes params and answers `{data, total}`. The
-// filters are asserted through the params it was called with, because
-// that *is* what a server filter does — the rows come back already
-// narrowed, and a test that stubbed narrowed rows would pass whatever the
-// page sent.
+// Filters are asserted through the params the fetcher received, because
+// stubbing narrowed rows would pass whatever the page actually sent.
 
 vi.mock("../api/get-user-accounts");
 const mockGetUserAccounts = vi.mocked(getUserAccounts);
 
 vi.mock("../api/create-user-account", async () => {
-  // The schema is the form's own validation, not a collaborator — mocking it
-  // would mean the password rule and the required fields were never exercised.
+  // The schema is the form's own validation, not a collaborator: mocking
+  // it would leave the password and required rules unexercised.
   const actual = await vi.importActual<
     typeof import("../api/create-user-account")
   >("../api/create-user-account");
@@ -49,10 +42,8 @@ const mockToggleStatus = vi.mocked(toggleUserAccountStatus);
 const DELETION_REFUSED =
   "User cannot be deleted because they have existing related records.";
 
-// Mantine's Select (the toolbar's page-size control) renders its dropdown
-// inside a ScrollArea, and so does `DataTable.Grid`; both subscribe to a
-// ResizeObserver on mount, which jsdom doesn't implement. Same stub as
-// service-form.test.tsx.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -60,10 +51,9 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
-// Mantine's Combobox scrolls its active option into view on open, and
-// jsdom implements no scrolling. Without this the page-size Select throws
-// outside the assertion, as an unhandled rejection — every test stays
-// green while the run exits non-zero. Same stub as dashboard-page.test.tsx.
+// jsdom implements no scrolling, and Mantine's Combobox scrolls its active
+// option into view on open. Without this a Select throws as an unhandled
+// rejection: every test stays green and the run exits non-zero.
 Element.prototype.scrollIntoView = vi.fn();
 
 const accounts: UserAccount[] = [

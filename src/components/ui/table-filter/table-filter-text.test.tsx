@@ -4,24 +4,16 @@ import { act, fireEvent } from "@testing-library/react";
 import { render, screen } from "@/test/render";
 import { TableFilterText } from "./table-filter-text";
 
-// Seam: the component's own interface — what it shows for a given value,
-// and what (and how often) it reports. The two things it owns are the
-// reason it is shared rather than written per feature, so they are what
-// these assert: the `null` <-> "" bridge and the debounce. The feature
-// wrappers' own tests cover the filter keys they choose.
-//
-// Both failures this guards are silent. A control that published `""`
-// instead of `null` would look identical on screen and 400 at the
-// endpoint; one that published per keystroke would look identical too, and
-// only show up as five requests where one was wanted.
+// Seam: the component's own interface. It asserts the two things this
+// control owns, the `null` <-> "" bridge and the debounce, and both fail
+// silently: publishing `""` looks identical on screen and 400s at the
+// endpoint, and publishing per keystroke looks identical too.
 
 const DEBOUNCE_MS = 400;
 
-/** Past the debounce, wrapped so React flushes the effects it releases.
- * A fixed advance rather than `waitFor`: every assertion below is about a
- * call that should or should not have happened by now, and `waitFor`
- * returns on its first successful check — so a negative one would pass
- * against a control with no debounce at all. */
+/** Past the debounce, wrapped so React flushes the effects. A fixed
+ * advance, not `waitFor`, which returns on its first success and so would
+ * pass a negative assertion against a control with no debounce. */
 const settle = () =>
   act(() => {
     vi.advanceTimersByTime(DEBOUNCE_MS + 1);
