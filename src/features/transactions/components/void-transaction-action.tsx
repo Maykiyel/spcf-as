@@ -7,7 +7,7 @@ import {
   notifyMutationError,
 } from "@/lib/notifications/notifications";
 import { formatCurrency } from "@/utils/currency";
-import { TRANSACTIONS_QUERY_KEY } from "../api/get-transactions";
+import { TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
 import { voidTransaction } from "../api/void-transaction";
 import type { TransactionListRow } from "../types";
 
@@ -79,6 +79,12 @@ export function VoidTransactionAction({
       // is how an admin learns another admin voided this row first. Worth
       // more than a generic failure, so it is shown as written.
       notifyMutationError(error, "Couldn't void this transaction.");
+      // And then the same invalidation as a success, because a refusal on
+      // this page is itself evidence the list is stale: every row here is
+      // meant to be voidable, and the server has just said this one isn't.
+      // Leaving it on screen would leave a Void button that can only 409
+      // again, which is the state the pinned status exists to prevent.
+      queryClient.invalidateQueries({ queryKey: [...TRANSACTIONS_QUERY_KEY] });
       closeConfirm();
     },
   });

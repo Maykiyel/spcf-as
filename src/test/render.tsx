@@ -53,15 +53,18 @@ function createQueryWrapper(queryClient: QueryClient = makeQueryClient()) {
   };
 }
 
+// Returns the client alongside RTL's own result, so a test that needs to
+// reach the cache — to seed an entry, or to assert something invalidated
+// one — can do it without building and threading its own.
 function renderWithQueryClient(
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper"> & { queryClient?: QueryClient },
+  options?: Omit<RenderOptions, "wrapper">,
 ) {
-  const { queryClient, ...renderOptions } = options ?? {};
-  return render(ui, {
-    wrapper: createQueryWrapper(queryClient),
-    ...renderOptions,
-  });
+  const queryClient = makeQueryClient();
+  return {
+    ...render(ui, { wrapper: createQueryWrapper(queryClient), ...options }),
+    queryClient,
+  };
 }
 
 // Re-export everything from RTL so test files only need one import source.
@@ -70,5 +73,4 @@ export {
   renderWithProviders as render,
   renderWithQueryClient,
   createQueryWrapper,
-  makeQueryClient,
 };

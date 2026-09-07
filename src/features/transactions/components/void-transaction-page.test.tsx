@@ -5,15 +5,11 @@ import { MemoryRouter, useLocation } from "react-router";
 import { Notifications, notifications } from "@mantine/notifications";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
-import {
-  screen,
-  renderWithQueryClient,
-  makeQueryClient,
-} from "@/test/render";
+import { screen, renderWithQueryClient } from "@/test/render";
 import { getCashiers } from "@/api/cashiers";
 import { getTransactions } from "../api/get-transactions";
 import { voidTransaction } from "../api/void-transaction";
-import { transactionDetailQueryKey } from "../hooks/use-transaction-detail";
+import { transactionDetailQueryKey } from "../api/transaction-query-keys";
 import type { TransactionListRow } from "../types";
 import { VoidTransactionPage } from "./void-transaction-page";
 
@@ -29,7 +25,18 @@ import { VoidTransactionPage } from "./void-transaction-page";
 // about a stub, which is the same reason #61 asserts its filters through
 // the params the fetcher received.
 
-vi.mock("../api/get-transactions");
+vi.mock("../api/get-transactions", async () => {
+  // A factory, not a bare `vi.mock`. Automocking replaces every export of
+  // the module, and it empties exported arrays — which is how the receipts
+  // page's default sort silently became `[]` earlier on this branch. The
+  // query keys have since moved to their own unmocked module, so nothing
+  // in this file depends on that any more, but a bare mock here would put
+  // the hazard back the moment a constant returns to this module.
+  const actual = await vi.importActual<
+    typeof import("../api/get-transactions")
+  >("../api/get-transactions");
+  return { ...actual, getTransactions: vi.fn() };
+});
 const mockGetTransactions = vi.mocked(getTransactions);
 
 vi.mock("../api/void-transaction");
@@ -109,8 +116,7 @@ function LocationProbe() {
 }
 
 function renderPage(initialEntry = "/void") {
-  const queryClient = makeQueryClient();
-  const view = renderWithQueryClient(
+  return renderWithQueryClient(
     <>
       {/* Mounted the way the app mounts it, so a success or a refusal that
           surfaces only as a toast is still visible to these tests. */}
@@ -120,9 +126,7 @@ function renderPage(initialEntry = "/void") {
         <LocationProbe />
       </MemoryRouter>
     </>,
-    { queryClient },
   );
-  return { ...view, queryClient };
 }
 
 /** The rows themselves, so an assertion about the list can't be satisfied
@@ -314,6 +318,26 @@ describe("VoidTransactionPage", () => {
     fireEvent.click(dialog().getByRole("button", { name: "Void Transaction" }));
 
     expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+
+  it("refreshes the list after a refusal, the refusal being evidence it is stale", async () => {
+    // Every row on this page is meant to be voidable. A 409 says one of
+    // them isn't, which means the list is out of date — leaving it up
+    // would leave a Void button that can only fail the same way again.
+    mockVoidTransaction.mockRejectedValue(
+      conflict("Invalid Action. Cannot void a transaction with status 'returned'."),
+    );
+
+    renderPage();
+    await openConfirmFor(1201);
+    const requestsBefore = mockGetTransactions.mock.calls.length;
+    fireEvent.click(dialog().getByRole("button", { name: "Void Transaction" }));
+
+    await waitFor(() =>
+      expect(mockGetTransactions.mock.calls.length).toBeGreaterThan(
+        requestsBefore,
+      ),
+    );
   });
 
   it("says something useful when the failure carries no message", async () => {

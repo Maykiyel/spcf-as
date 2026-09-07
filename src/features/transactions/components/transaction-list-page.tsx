@@ -6,10 +6,8 @@ import {
   type TableFilters,
 } from "@/components/ui/data-table";
 import { useAuthStore } from "@/stores/auth-store";
-import {
-  getTransactions,
-  TRANSACTIONS_QUERY_KEY,
-} from "../api/get-transactions";
+import { getTransactions } from "../api/get-transactions";
+import { TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
 import type { TransactionListRow } from "../types";
 import { transactionFiltersUsable } from "../lib/transaction-filters";
 import { TransactionListFilters } from "./transaction-list-filters";

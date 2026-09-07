@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { getTransaction } from "../api/get-transaction";
+import { transactionDetailQueryKey } from "../api/transaction-query-keys";
 
 // Both pages derive their id with `Number(useParams().controlId)`, so a
 // non-numeric URL segment ("/transactions/abc") arrives here as NaN.
@@ -9,16 +10,6 @@ import { getTransaction } from "../api/get-transaction";
 function isFetchableControlId(controlId: number): boolean {
   return Number.isInteger(controlId) && controlId > 0;
 }
-
-/** One transaction's detail entry, under the same `transactions` prefix
- * the two lists sit beneath.
- *
- * Named rather than written inline because a void has to invalidate it:
- * `TRANSACTIONS_QUERY_KEY` is that prefix, so one `invalidateQueries` on it
- * reaches this entry as well as the lists. That only holds while this key
- * starts with the same word, and a name is what lets a test say so. */
-export const transactionDetailQueryKey = (controlId: number) =>
-  ["transactions", controlId] as const;
 
 // Shared by ViewTransactionPage and the Print page so their 403
 // classification can't silently drift apart.
