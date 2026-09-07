@@ -464,6 +464,24 @@ API's filter names are, so this hasn't come up.
 only if it appears in `initialFilters`, so a hand-edited or stale link
 can't inject a filter key the endpoint would answer with a 400.
 
+**A control change replaces the history entry; it does not push one.**
+Filtering, searching, sorting and paging all write with `{ replace: true }`
+(`updateParams` in `use-table-controls.ts`), so Back leaves the page rather
+than rewinding through the controls you touched. **Settled by Mike, and not
+open** — it was raised on #85 and carried unanswered through three batches,
+so it is written here rather than left to be rediscovered.
+
+The reasoning is search. Every control goes through one function, so making
+a filter click a place you have been makes a *keystroke* one too, and Back
+after typing "graduation" would walk back a letter at a time. Nobody wants
+that version, and splitting the behaviour per control — push for filters,
+replace for typing — buys an undo nobody asked for at the price of two
+rules where there is now one.
+
+Sharing is unaffected either way: the URL is still written on every change,
+so copying a link, bookmarking, and refreshing all behave the same. Only
+the history entry differs.
+
 **Two independent debounces on search.** Typing goes into a local draft
 first, debounced 400ms before it's written to the URL. For
 `useServerTableState`, the network request has its own separate 400ms

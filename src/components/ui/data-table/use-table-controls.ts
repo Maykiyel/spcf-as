@@ -139,6 +139,22 @@ function useUrlAdapter(
     [urlKey],
   );
 
+  // `{ replace: true }` below, on every control this writes for — filter,
+  // search, sort and page alike. Back leaves the page rather than rewinding
+  // through the controls the user touched.
+  //
+  // **Settled by Mike, and not open.** It was raised on #85 and carried
+  // unanswered through three batches; #84 made services its second
+  // consumer, which is what finally got it decided. The reasoning is
+  // search: everything routes through this one function, so making a
+  // filter click a place you have been makes a keystroke one too, and Back
+  // after typing "graduation" would walk back a letter at a time. Pushing
+  // for filters and replacing for typing would buy an undo nobody asked
+  // for at the price of two rules where there is one.
+  //
+  // Sharing is unaffected: the URL is still written on every change, so
+  // links, bookmarks and refreshes behave identically. Only the history
+  // entry differs.
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
       setSearchParams(
