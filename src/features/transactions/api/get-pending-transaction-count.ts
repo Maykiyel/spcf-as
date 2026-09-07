@@ -1,11 +1,12 @@
 import { createListAdapter } from "@/components/ui/data-table";
+import type { TransactionDTO } from "../types";
 
 // One row is enough — `pagination.total` is what this is for, and it is
 // the cheapest count the API offers. `createListAdapter` owns the
 // `{transactions, pagination}` envelope so this doesn't re-encode it, and
 // `status` goes through the declared-filter path rather than `extra`,
-// which is what `filter[<key>]` is for.
-const listTransactions = createListAdapter<{ control_id: number }>(
+// which is what `filter[<key>]` is for. The row itself is discarded.
+const listTransactions = createListAdapter<TransactionDTO>(
   "/transactions",
   "transactions",
 );

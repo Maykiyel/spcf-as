@@ -6,21 +6,30 @@ import { PrimaryButton } from "@/components/ui/button";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
 import {
   isPrintable,
-  NO_VALUE_PLACEHOLDER,
   printRefusalReason,
   TRANSACTION_STATUS_LABEL,
 } from "../lib/transaction-status";
+import type { TransactionStatus } from "../types";
 import { TransactionItemsTable } from "./transaction-items-table";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
 
 // Green only for the one status that means the payment stands. `returned`
 // is the outcome of an admin voiding a completed transaction, so it is the
 // one a cashier most needs to notice.
-const STATUS_COLOR: Record<string, string> = {
+//
+// Total over the union, like `TRANSACTION_STATUS_LABEL`, and for the same
+// reason: a partial map with a fallback would give a sixth status a
+// plausible-looking badge in the wrong colour, silently. The label map
+// gets that right; a colour map beside it that didn't would undo half of
+// it. Colour stays here rather than joining the label in `lib/`, because
+// the print page has no badge and shouldn't import a palette.
+const STATUS_COLOR: Record<TransactionStatus, string> = {
+  pending: "tertiary",
+  abandoned: "tertiary",
   completed: "success",
+  cancelled: "tertiary",
   returned: "danger",
 };
-const DEFAULT_STATUS_COLOR = "tertiary";
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
@@ -44,12 +53,10 @@ export function ViewTransactionPage() {
                   Customer Name:
                 </Text>
                 <Text size="sm" fw={700}>
-                  {transaction.customer_name ?? NO_VALUE_PLACEHOLDER}
+                  {transaction.customer_name ?? "—"}
                 </Text>
                 <Badge
-                  color={
-                    STATUS_COLOR[transaction.status] ?? DEFAULT_STATUS_COLOR
-                  }
+                  color={STATUS_COLOR[transaction.status]}
                   variant="light"
                   ml="xs"
                 >
@@ -61,8 +68,7 @@ export function ViewTransactionPage() {
                   Control ID: {transaction.control_id}
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Series No.:{" "}
-                  {transaction.series_number ?? NO_VALUE_PLACEHOLDER}
+                  Series No.: {transaction.series_number ?? "—"}
                 </Text>
               </Stack>
             </Group>

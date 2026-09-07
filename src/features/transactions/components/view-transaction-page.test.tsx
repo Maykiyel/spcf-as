@@ -192,8 +192,14 @@ describe("ViewTransactionPage", () => {
 
     await screen.findByText("Pending");
 
-    // "not assigned yet" has to read differently from "failed to load",
-    // and a zero total would say the payer owed nothing.
+    // All three fields story 7 names. "not assigned yet" has to read
+    // differently from "failed to load", and a zero total would say the
+    // payer owed nothing rather than that nothing has been totalled.
+    //
+    // The payer's name renders as the placeholder alone, where the other
+    // two sit inside a labelled line — so an exact-text match on "—"
+    // finds that one and only that one.
+    expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("Series No.: —")).toBeInTheDocument();
     expect(screen.getByText("Total: —")).toBeInTheDocument();
     expect(screen.queryByText("Total: ₱0.00")).toBeNull();

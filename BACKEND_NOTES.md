@@ -77,12 +77,9 @@ was previously a declared-but-unused state.
 
 **The creation response does not say what it abandoned.** It returns the
 trimmed `{id, status, cashier}` shape and nothing about the rows it just
-discarded, so a frontend that wants to tell the cashier has to have looked
-*before* — `GET /transactions?filter[status]=pending` and its
-`pagination.total`, which a cashier's own scoping already narrows to their
-rows. `getPendingTransactionCount` does exactly that, off the critical
-path. If the response ever grows a count of what it discarded, that fetcher
-and the query behind it can go.
+discarded. Counting them beforehand is the only way to know:
+`GET /transactions?filter[status]=pending` answers with a `pagination.total`
+that a cashier's own scoping already narrows to their rows.
 
 ### Which actions each status allows
 

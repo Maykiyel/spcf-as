@@ -254,10 +254,16 @@ describe("TransactionBuilderProvider — the discarded-transaction notice", () =
 
     fireEvent.click(screen.getByText("add"));
     await advance(400); // add-debounce -> initiate
+    fireEvent.click(screen.getByText("set-payer"));
+    fireEvent.click(screen.getByText("set-amount"));
 
     expect(mockNotifyWarning).toHaveBeenCalledExactlyOnceWith(
       expect.stringMatching(/in progress was discarded/i),
     );
+    // The notice costs the cashier nothing: they carry straight on into
+    // the new transaction, which is why it is a toast and not a dialog.
+    expect(screen.getByTestId("line-count").textContent).toBe("1");
+    expect(screen.getByTestId("can-confirm").textContent).toBe("yes");
   });
 
   it("says nothing when the cashier had none outstanding", async () => {

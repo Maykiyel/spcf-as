@@ -1,6 +1,5 @@
 import { Group, Stack, Table, Text } from "@mantine/core";
 import { formatCurrency } from "@/utils/currency";
-import { NO_VALUE_PLACEHOLDER } from "../lib/transaction-status";
 import type { TransactionItemDTO } from "../types";
 
 type TransactionItemsTableProps = {
@@ -64,7 +63,7 @@ export function TransactionItemsTable({
 
       <Group justify="flex-end">
         <Text fw={700} size={textSize}>
-          Total: {total === null ? NO_VALUE_PLACEHOLDER : formatCurrency(total)}
+          Total: {total === null ? "—" : formatCurrency(total)}
         </Text>
       </Group>
 

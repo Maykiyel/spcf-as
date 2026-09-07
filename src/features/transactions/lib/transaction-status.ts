@@ -52,9 +52,3 @@ export const TRANSACTION_STATUS_LABEL: Record<TransactionStatus, string> = {
 export function printRefusalReason(status: TransactionStatus): string {
   return `Only a completed transaction can be printed. This one is ${TRANSACTION_STATUS_LABEL[status].toLowerCase()}.`;
 }
-
-/** Stands in for a field that has no value yet, rather than rendering
- * nothing. A blank cell reads as "failed to load"; this reads as "not
- * assigned". Payer name, series number and total are all null until a
- * transaction is saved. */
-export const NO_VALUE_PLACEHOLDER = "—";
