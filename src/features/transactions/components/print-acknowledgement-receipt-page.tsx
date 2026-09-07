@@ -7,12 +7,8 @@ import { isPrintable, printRefusalReason } from "../lib/transaction-status";
 import { AcknowledgementReceiptCopy } from "./acknowledgement-receipt-copy";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
 
-// How long to wait for the receipt's images (the school logo, rendered
-// once per copy) to finish loading before printing anyway. Bounded
-// deliberately: never block printing indefinitely on a slow or broken
-// image in production, and — separately — jsdom's <img> never fires
-// load/error at all (it doesn't perform real network/image decoding),
-// so an unbounded wait would hang every test that reaches this code path.
+// Bounded so a slow or broken logo never blocks printing, and so tests
+// don't hang: jsdom's <img> fires neither load nor error.
 const IMAGE_READY_TIMEOUT_MS = 400;
 
 function waitForImage(img: HTMLImageElement): Promise<void> {
@@ -24,26 +20,12 @@ function waitForImage(img: HTMLImageElement): Promise<void> {
     setTimeout(done, IMAGE_READY_TIMEOUT_MS);
   });
 }
-// This @page size is only honored on a real printer if a matching 8.5x4in
-// custom size has been registered in that workstation's printer driver
-// first — the driver, not this rule, decides the physical page. Not
-// enforceable from here: see docs/operations/printer-setup.md for the
-// per-machine procedure, and ADR 0003 for why it cannot live in code.
-// Custom paper size confirmed with the accounting office (their actual
-// receipt stock). An explicit small margin matters here: without one,
-// the browser's default page margin (often 0.4-1in per side) is applied
-// *inside* this already-tiny 4in height, eating real content space and
-// causing overflow. Forces a page break between the two copies so a
-// longer transaction can never split a table row across the
-// Accounting/Student boundary — only the first copy needs the trailing
-// break, since a break after the last copy would print a blank page.
-// Injected inline rather than declared in src/index.css alongside the
-// app's other global classes, on purpose: `@page` has no selector and
-// cannot be scoped, so putting it in the global stylesheet would force
-// every printable page in the app onto 8.5x4in receipt stock. Mounting it
-// with this component is what keeps it page-scoped. `.no-print` did move
-// to index.css, since a second consumer (the Notifications portal) now
-// needs it.
+// The driver decides the physical page: 8.5x4in must be registered per
+// workstation. See docs/operations/printer-setup.md and ADR 0003.
+//
+// The explicit margin is load-bearing, or the browser applies its own
+// 0.4-1in inside a 4in height and content overflows. Inline rather than
+// global because `@page` cannot be scoped.
 const PRINT_STYLES = `
   @page { size: 8.5in 4in; margin: 0.15in; }
   @media print {
@@ -106,18 +88,10 @@ export function PrintAcknowledgementReceiptPage() {
 
     void run();
 
-    // The per-invocation `cancelled` flag (not just the persistent
-    // hasPrintedRef) matters specifically for StrictMode: its dev-mode
-    // double-invocation of the initial mount's effect (mount -> cleanup
-    // -> mount again) gives the *first* invocation's async chain this
-    // cleanup before it can reach the print step — cancelling it here,
-    // rather than via a ref set at entry, is what lets the *second*
-    // (persisting) invocation still go on to print normally. hasPrintedRef
-    // then separately guards against printing more than once for the
-    // lifetime of this page if `transaction` were ever to change again
-    // after a real, successful print (not expected in practice —
-    // refetchOnWindowFocus is disabled project-wide — but not something
-    // to rely on silently).
+    // A per-invocation flag, not just `hasPrintedRef`: StrictMode's
+    // double-invoked mount must cancel the first chain and still let the
+    // second print. `hasPrintedRef` separately caps it at one print for
+    // the life of the page.
     return () => {
       cancelled = true;
       if (rafId1 !== null) cancelAnimationFrame(rafId1);
@@ -144,14 +118,10 @@ export function PrintAcknowledgementReceiptPage() {
       {isUnavailable || !transaction ? (
         <TransactionDetailFallback detail={detail} />
       ) : !canPrint ? (
-        /* Refused in place, not redirected. A redirect throws away the
-           explanation and leaves someone arriving from a stale bookmark
-           bounced with no idea why. TransactionDetailFallback deliberately
-           does not absorb this: that component answers "we could not give
-           you a transaction", and here we have one — the refusal is about
-           what may be done with it. The two pages also want opposite
-           treatments, this one showing nothing but the message while the
-           View page shows its content with one control disabled. */
+        /* Refused in place, not redirected: a redirect leaves someone
+           arriving from a stale bookmark bounced with no idea why.
+           `TransactionDetailFallback` answers "no transaction"; here we
+           have one, and the refusal is about what may be done with it. */
         <Text ta="center" c="danger" py="xl">
           {printRefusalReason(transaction.status)}
         </Text>

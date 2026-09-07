@@ -18,20 +18,12 @@ import { VoidTransactionAction } from "./void-transaction-action";
 
 const URL_KEY = "void";
 
-/** The receipts list's filters, minus `status` and with `cashier_id`
- * always present.
+/** The receipts list's filters minus `status`, with `cashier_id` always
+ * present since the page is admin-only outright.
  *
- * **`status` is absent rather than declared with a `completed` default.**
- * `useTableControls` reads every declared key out of the query string and
- * falls back to the default only when the param is missing, so declaring
- * it would leave `?void_status=pending` a working way to fill this page
- * with rows whose Void button is guaranteed to 409. Undeclared, the key is
- * neither read nor written, and `getVoidableTransactions` pins the value
- * past anywhere the URL reaches.
- *
- * `cashier_id` needs no role gate here the way it does on the receipts
- * list: the page is admin-only through the registry, and the endpoint
- * allow-lists the filter for an admin. */
+ * `status` is *absent*, not defaulted: declared keys are read from the URL,
+ * so `?void_status=pending` would fill the page with rows that can only
+ * 409. `getVoidableTransactions` pins it past where the URL reaches. */
 const VOIDABLE_FILTERS: TableFilters = {
   customer: null,
   series_number: null,
@@ -42,23 +34,14 @@ const VOIDABLE_FILTERS: TableFilters = {
 };
 
 /**
- * Void — the admin's only way to reverse a completed payment record.
+ * Void — the admin's only way to reverse a completed payment record. The
+ * receipts list with the status pinned and a Void action per row, reusing
+ * that page's columns, filter panel, sort and date-range guard (#62).
  *
- * This is the receipts list with the status pinned to `completed` and a
- * Void action per row, which is how #62 specified it and why it was built
- * after #61. The columns, the filter panel, the sort and the date-range
- * guard are all the same pieces that page uses; what differs is the three
- * arguments below and the fetcher.
+ * Every row here can be voided, which is the point of the pin: any other
+ * status is a 409. That is also why the Status column is dropped.
  *
- * **Every row here can be voided.** That is the point of pinning the
- * status: `POST /void` accepts `completed` and answers every other status
- * with a 409, so a list that showed anything else would be offering an
- * action that cannot succeed. It also means the Status column is dropped —
- * a column reading "Completed" on every row carries no information.
- *
- * **Admin-only through the page registry**, which the server enforces
- * again on its own: `TransactionPolicy::void` refuses a cashier, and so
- * does `GET /cashiers` behind the cashier filter.
+ * Admin-only through the page registry, and again on the server.
  */
 export function VoidTransactionPage() {
   const navigate = useNavigate();
@@ -81,9 +64,7 @@ export function VoidTransactionPage() {
 
   return (
     <DataTable.Root title="Void Transactions" state={tableState}>
-      {/* Same panel as the receipts list, one control lighter. The
-          toolbar below carries the page-size control and nothing else —
-          `/transactions` has no search filter to compose a box against. */}
+      {/* Same panel as the receipts list, one control lighter. */}
       <TransactionListFilters
         filters={tableState.filters}
         onChange={tableState.setFilters}

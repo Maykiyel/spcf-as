@@ -7,14 +7,10 @@ import { getCashiers, cashiersQueryKey } from "@/api/cashiers";
 import { TRANSACTION_STATUS_LABEL } from "../lib/transaction-status";
 import { TRANSACTION_STATUSES } from "../types";
 
-/** Every control here is the shape #59 settled on: it takes a value and
- * reports a change, and knows nothing about the URL. `useServerTableState`
- * owns the values, puts them in the query key and persists them.
- *
- * The controls are private to this file and the panel is what's exported.
- * The panel is one component whether it holds three of them or seven —
- * which is what lets the Void page reuse the finding half of this page
- * without re-listing six controls and re-wiring six `setFilters` calls.
+/** Each control takes a value and reports a change, knowing nothing about
+ * the URL; `useServerTableState` owns the values. The controls are private
+ * and the panel is exported, which is what lets a second page reuse the
+ * whole set rather than re-wiring six `setFilters` calls.
  */
 
 type FilterProps = {
@@ -23,50 +19,35 @@ type FilterProps = {
 };
 
 /** `customer`, not `customer_name`: the response field and the filter key
- * disagree, and this is the filter. A partial match on the wire, so a
- * cashier can type what the payer told them rather than the whole name. */
+ * disagree, and this is the filter. Partial match on the wire. */
 function TransactionPayerFilter(props: FilterProps) {
   return (
     <TableFilterText label="Payer Name" placeholder="Any payer" {...props} />
   );
 }
 
-/** Text rather than a number input: `filter[series_number]` is validated as
- * a string, and a spinner on a receipt number invites arrowing through
- * numbers that mean nothing to each other.
- *
- * It is registered on the endpoint as a bare string, which spatie turns
- * into a **partial** match — the same as payer and item name, not an exact
- * lookup. So typing part of a number narrows rather than finding nothing. */
+/** Text, not a number input: the endpoint validates it as a string, and a
+ * spinner on a receipt number invites arrowing through unrelated numbers.
+ * Registered as a bare string, so it is a **partial** match, not exact. */
 function TransactionSeriesNumberFilter(props: FilterProps) {
   return (
     <TableFilterText label="Series No." placeholder="Any series" {...props} />
   );
 }
 
-/** Matches partially against the snapshotted `service_name` on each item,
- * so it finds a transaction by a fee it contained. The Items column exists
- * so a result found this way shows why it matched. */
+/** Partial match on each item's snapshotted `service_name`, so it finds a
+ * transaction by a fee it contained. The Items column shows why it hit. */
 function TransactionItemNameFilter(props: FilterProps) {
   return (
     <TableFilterText label="Item Name" placeholder="Any item" {...props} />
   );
 }
 
-/** A `Select` rather than the segmented control the other tables use:
- * there are five statuses plus "all", and six segments alongside five
- * other filters is a panel nobody can read.
- *
- * Composed from Mantine's `Select` directly rather than through a shared
- * `TableFilterSelect`. There is nothing for one to own: `Select` already
- * holds `string | null` and `clearable` already reports `null`, so unlike
- * `TableFilterSegments` and `TableFilterText` there is no bridge and no
- * debounce to factor out — a wrapper would forward six props and add a
- * name. See the note in the shared tier's README.
- *
- * Values are the wire's own enum; labels come from the map that calls
- * `returned` "Voided", which is the word an admin filtering for what they
- * voided will look for. */
+/** A `Select`, not the segmented control the other tables use: six
+ * segments beside five filters is unreadable. Not wrapped in a shared
+ * `TableFilterSelect` either, since `Select` already holds `string | null`
+ * and there is no bridge or debounce to factor out. Values are the wire's
+ * enum, labels the map that calls `returned` "Voided". */
 function TransactionStatusFilter({ value, onChange }: FilterProps) {
   return (
     <Select
@@ -85,21 +66,13 @@ function TransactionStatusFilter({ value, onChange }: FilterProps) {
 }
 
 /**
- * Admin-only, and the panel must mount it only for an admin rather than
- * hiding it from a cashier.
+ * Admin-only, and must be *unmounted* for a cashier rather than hidden:
+ * `filter[cashier_id]` is a 400 for them and `GET /cashiers` a 403. Holding
+ * the query inside the control is what makes "not rendered" mean "never
+ * requested".
  *
- * Two independent reasons, both of which are 400s and 403s rather than
- * cosmetic: `filter[cashier_id]` isn't in a cashier's allow-list on
- * `/transactions`, and `GET /cashiers` — the query this control holds —
- * authorizes against `viewAny` on User, which a cashier fails. Holding the
- * query inside the control is what makes "not rendered" mean "never
- * requested", the same structure the Dashboard uses for its admin-only
- * sections.
- *
- * The unnarrowed cashier list, not the active-only one the series receipt
- * form asks for: a deactivated cashier's past transactions still exist,
- * and an admin looking for them is the likeliest reason to reach for this
- * filter at all.
+ * Asks for every cashier, not the active-only list: a deactivated
+ * cashier's past transactions are the likeliest reason to use this.
  */
 function TransactionCashierFilter({ value, onChange }: FilterProps) {
   const cashiers = useQuery({
@@ -128,41 +101,23 @@ function TransactionCashierFilter({ value, onChange }: FilterProps) {
 type TransactionListFiltersProps = {
   /** The table's current filter values, straight off `useServerTableState`. */
   filters: TableFilters;
-  /** `setFilters`. A patch rather than a single key/value, because the date
-   * range moves both of its ends at once and two sequential writes would
-   * mean two refetches for one user action. */
+  /** `setFilters`. A patch, because the date range moves both ends at once
+   * and two writes would mean two refetches for one action. */
   onChange: (patch: TableFilters) => void;
-  /** Whether the cashier filter belongs on this panel.
-   *
-   * The caller decides, because the reason differs by page: the receipts
-   * list gates it on the signed-in role, and the Void page is admin-only
-   * outright. What must not vary is that a `false` here means the control
-   * is never mounted — see `TransactionCashierFilter`. */
+  /** Whether the cashier filter belongs here. The caller decides, since the
+   * reason differs by page. `false` must mean never mounted, not hidden. */
   includeCashier: boolean;
-  /** Whether the status filter belongs on this panel.
-   *
-   * `false` on the Void page, where the status is pinned to `completed`
-   * because that is the only one `POST /void` accepts. Offering the control
-   * there would let an admin build a list where every row's action fails
-   * with a 409.
-   *
-   * Not rendering it is the smaller half of that. The value itself is
-   * pinned in `getVoidableTransactions`, past the point a hand-edited URL
-   * can reach, because the Void page declares no `status` filter at all —
-   * a hidden control over a declared filter would still leave the address
-   * bar open. Unlike `includeCashier`, nothing here is admin-gated: the
-   * status filter is everyone's on the receipts list. */
+  /** Whether the status filter belongs here. `false` on the Void page,
+   * where a status control would build a list of rows that can only 409.
+   * Hiding it is the smaller half: the value is pinned in
+   * `getVoidableTransactions`, past where the URL reaches. */
   includeStatus: boolean;
 };
 
 /**
- * How a transaction is found on this page, in place of a search box.
- *
- * `/transactions` accepts no `filter[search]`, and an unknown filter key is
- * a 400 here rather than an ignored parameter — so a box would fail the
- * first time anyone typed into it. These filters are the finding tool
- * instead, and between payer name, series number and item name they cover
- * the job better than one box over one column would.
+ * How a transaction is found, in place of a search box: `/transactions`
+ * accepts no `filter[search]`, and an unknown key is a 400, so a box would
+ * fail the first time anyone typed in it.
  */
 export function TransactionListFilters({
   filters,
@@ -171,8 +126,8 @@ export function TransactionListFilters({
   includeStatus,
 }: TransactionListFiltersProps) {
   return (
-    // `align="flex-end"` so the labelled inputs sit on one baseline
-    // whatever their label lengths, and wrap onto a second row together.
+    // `align="flex-end"` so labelled inputs share a baseline whatever their
+    // label lengths, and wrap together.
     <Group align="flex-end" gap="md" wrap="wrap">
       <TransactionPayerFilter
         value={filters.customer}
@@ -192,9 +147,8 @@ export function TransactionListFilters({
           onChange={(status) => onChange({ status })}
         />
       )}
-      {/* `toApiDate` on the way in rather than a cast: the values are
-          strings off the URL, and this is the one function that decides
-          whether a string is a date the API will take. */}
+      {/* `toApiDate`, not a cast: the values are strings off the URL, and
+          this is what decides whether one is a date the API takes. */}
       <DateRangeFilter
         label="Date Range"
         value={{

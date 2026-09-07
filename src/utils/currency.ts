@@ -5,16 +5,9 @@ export function formatCurrency(amount: number): string {
   })}`;
 }
 
-/**
- * `11501690` to `₱11.5M`, for places where the exact figure does not fit
- * and is not the point.
- *
- * Built for chart axis ticks. `formatCurrency` on an axis labelling
- * millions produces `₱11,501,690.00`, which is wider than recharts'
- * y-axis gutter, so the label is drawn outside the plot and clipped by
- * the card. Anywhere the exact figure matters, including the tooltip on
- * the same chart, keeps `formatCurrency`.
- */
+/** `11501690` to `₱11.5M`, for chart axis ticks, where the full figure is
+ * wider than recharts' y-axis gutter and gets clipped. Anywhere the exact
+ * figure matters, including that chart's tooltip, keeps `formatCurrency`. */
 export function formatCompactCurrency(amount: number): string {
   return `₱${amount.toLocaleString("en-PH", {
     notation: "compact",
@@ -22,11 +15,8 @@ export function formatCompactCurrency(amount: number): string {
   })}`;
 }
 
-// Money comparisons (e.g. "does amountPaid cover the total?") shouldn't be
-// done on raw floats — summing several line-item subtotals can drift by a
-// fraction of a centavo (binary floats can't represent most decimal
-// fractions exactly), which would display as a clean total but still fail
-// an exact >= comparison. Round to the nearest centavo before comparing.
+// Round before comparing money: summed subtotals drift by a fraction of a
+// centavo, which displays clean but fails an exact >= check.
 export function roundToCents(amount: number): number {
   return Math.round(amount * 100) / 100;
 }

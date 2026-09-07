@@ -71,18 +71,13 @@ function toChartPoint(entry: MonthlyEarnings): MonthlyEarningsPoint {
 }
 
 /**
- * Earnings by month for a chosen year, admin-only.
+ * Earnings by month for a chosen year, admin-only. Owns its own query and
+ * error state, so a failure here leaves the rest of the dashboard intact,
+ * and is rendered only on the admin branch, so a cashier never requests
+ * it.
  *
- * Owns its query, its year, and its own loading and error state, so a
- * failure here leaves the figures and the cashier table beside it
- * intact. Rendered only on the admin branch, so a cashier never requests
- * it — `/reports/*` would answer them with a 403.
- *
- * The year lives in the URL rather than in component state, so that a
- * refresh restores it and a link carries it, matching the table below
- * that already persists its page and sort. Following the same rules as
- * the tables do: the default is omitted rather than written out, and the
- * write replaces the history entry.
+ * The year lives in the URL so a refresh restores it and a link carries
+ * it, following the same rules the tables do.
  */
 export function MonthlyEarningsSection() {
   const [searchParams, setSearchParams] = useSearchParams();

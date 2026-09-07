@@ -23,25 +23,13 @@ type MonthlyEarningsChartProps = {
 };
 
 /**
- * The only module in the app that touches `@mantine/charts`, and the
- * reason it is a module of its own: `MonthlyEarningsSection` reaches it
- * through `lazy()`, so the charting library and recharts under it land in
- * a chunk nobody downloads until an admin opens the dashboard. Routes are
- * already split, but that splits per route, not per role, and a cashier
- * would otherwise pay for a component they are never shown.
+ * The only module touching `@mantine/charts`, kept separate so `lazy()`
+ * holds recharts in a chunk no cashier downloads; route splitting alone
+ * splits per route, not per role. Default export because `lazy()` wants
+ * one.
  *
- * The stylesheet is imported here rather than in `mantine-provider.tsx`
- * for the same reason — it belongs to this chunk.
- *
- * Default export because `lazy()` wants one.
- *
- * **Bars, not a line or an area.** These are twelve discrete period
- * totals, not samples of a continuous signal, so interpolating between
- * them asserts something untrue. It matters more than usual because the
- * endpoint zero-fills empty months: a line would dive to zero and climb
- * back, reading as a collapse and a recovery. An area chart would add a
- * filled region encoding cumulative magnitude, which is meaningless for
- * bucketed sums.
+ * Bars, not a line: the endpoint zero-fills empty months, so a line would
+ * read as a collapse and a recovery.
  */
 export default function MonthlyEarningsChart({
   data,

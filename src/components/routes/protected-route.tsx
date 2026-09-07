@@ -27,15 +27,12 @@ export function ProtectedRoute() {
     .map((match) => (match.handle as RouteHandle | undefined)?.roles)
     .find((roles) => roles !== undefined);
 
-  // Signed in and permitted, but not for *this* route. Distinct from
-  // being signed out, and distinct again from a deactivated account —
-  // which is signed in and permitted, and refused by the server on every
-  // request instead (see `authSession.end`).
+  // Signed in and permitted, but not for *this* route. Distinct from being
+  // signed out, and from a deactivated account, which the server refuses
+  // on every request instead.
   //
-  // Asks `pages.ts` the membership question rather than repeating it. The
-  // registry's two derivations resolve through that function so a hidden
-  // link and a reachable route can't disagree; the enforcement point has
-  // to resolve through it as well or it is free to drift from both.
+  // Asks `pages.ts` the membership question rather than repeating it, so
+  // this enforcement point can't drift from the sidebar or the router.
   const isForbidden =
     !isUnauthenticated &&
     requiredRoles !== undefined &&

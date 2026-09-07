@@ -15,6 +15,22 @@ This repository is a Vite + React + TypeScript application for the SPCF AS proje
 - Prefer small, verifiable updates.
 - Update architecture decisions in `docs/adr/` when they materially change.
 
+### Comments
+
+**One line where possible, three at the outside.** A comment earns its place
+only by saying something the code cannot: a wire fact (`an unknown filter key
+is a 400, not ignored`), a trap that will bite again, or why the obvious
+approach was not taken. Everything else is noise the reader has to skip.
+
+Do not restate what the code does, and do not argue a case in a comment. The
+long version of a decision belongs in the commit message, the PR, an ADR, or
+`BACKEND_NOTES.md`; the comment carries the fact and points there. Writing it
+in both places is how a 15 line module becomes 80.
+
+Test files follow the same rule, with one carve-out: keep the single line
+that says why a non-obvious assertion exists, because that is what stops the
+next reader deleting a guard they mistake for ceremony.
+
 ## Language
 
 **Auth session module**:

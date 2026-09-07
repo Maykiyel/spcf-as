@@ -123,14 +123,10 @@ export function TransactionDraftPanel() {
             placeholder="0.00"
             value={state.amountPaid === 0 ? "" : state.amountPaid}
             onChange={(value) => {
-              // NumberInput's onChange gives a string instead of a number
-              // in a few edge cases — notably "trailing decimals", which
-              // fixedDecimalScale triggers constantly (every value here
-              // is padded to 2 decimals, e.g. "1000.00"). Coercing only
-              // `typeof value === "number"` and dropping everything else
-              // to 0 was wrong: it silently zeroed amountPaid on exactly
-              // the padded values fixedDecimalScale produces, while the
-              // field kept showing what was typed.
+              // NumberInput hands back a string for trailing decimals,
+              // which `fixedDecimalScale` produces on every value here.
+              // Coercing only numbers silently zeroed amountPaid while
+              // the field went on showing what was typed.
               const parsed = typeof value === "number" ? value : Number(value);
               actions.setAmountPaid(Number.isFinite(parsed) ? parsed : 0);
             }}

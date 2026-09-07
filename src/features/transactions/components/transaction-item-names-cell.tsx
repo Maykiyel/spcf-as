@@ -8,18 +8,13 @@ import type { TransactionListItemDTO } from "../types";
 const MAX_NAMED = 2;
 
 /**
- * The fees a transaction contained, as a summary.
+ * The fees a transaction contained, as a summary. The list endpoint sends
+ * only an id and a name, and names are shown because item name is one of
+ * this page's filters: a result that doesn't say which item matched leaves
+ * the user opening rows to find out.
  *
- * The list endpoint returns items stripped to an identifier and a name —
- * no price, no quantity, no subtotal. Names are shown anyway because item
- * name is one of this page's filters, and a result list that doesn't say
- * which item matched leaves the user opening rows to find out. Per-item
- * money stays on the detail page, which is the page that has it.
- *
- * The full list is on the cell's `title` so an overflowing row can still be
- * read without opening it. That is a mouse affordance, not the answer for
- * everyone: the detail page one click away is where the complete, priced
- * list lives, and it is reachable from this row by keyboard.
+ * The full list is on the cell's `title`, which is a mouse affordance; the
+ * detail page one click away is the keyboard-reachable answer.
  */
 export function TransactionItemNamesCell({
   items,

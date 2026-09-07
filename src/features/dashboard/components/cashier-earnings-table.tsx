@@ -15,17 +15,12 @@ const URL_KEY = "cashiers";
  * to 25, which is the app's number rather than this endpoint's. */
 const PAGE_SIZE = 5;
 
-// Module scope for the same reason as every other table here: the state
-// hook memoises on this array's identity.
-//
-// Both keys are the endpoint's own sort names. That is what makes the
-// header clicks work without any mapping at the call site — see
-// `get-cashier-earnings.ts` for why the row is renamed to suit.
-/** The order `/reports/cashier-earnings` applies when asked for none, sent
- * explicitly so the header carries its caret. Left implicit, the rows
- * arrive highest-first with nothing on screen saying so, and the first
- * click on Total Earnings reads as reversing a sort the table never
- * admitted to. Module scope, like `columns`, so it is one array. */
+// Module scope: the state hook memoises on this array's identity. Both
+// keys are the endpoint's own sort names, which is why header clicks need
+// no mapping. See `get-cashier-earnings.ts` for the row rename.
+/** The endpoint's own default order, sent explicitly so the header carries
+ * its caret rather than leaving the first click on Total Earnings looking
+ * like it reversed a sort nobody declared. Module scope, like `columns`. */
 const INITIAL_SORTS: SortEntry[] = [
   { key: "total_earnings", direction: "desc" },
 ];
@@ -41,24 +36,13 @@ const columns: ColumnDef<CashierEarnings>[] = [
 ];
 
 /**
- * Who collected what, admin-only.
+ * Who collected what, admin-only. Holds its own query and renders only on
+ * the admin branch, so a cashier's dashboard never issues the request.
  *
- * Rendered only on the admin branch, and it holds its own query, so a
- * cashier's dashboard never issues this request. `/reports/*` is behind
- * `role:admin` and would answer them with a 403.
- *
- * **No toolbar.** `DataTable.Search` would need a `filter[search]` the
- * reports endpoints do not accept, and a page-size control would let an
- * admin pull 100 cashiers onto a dashboard whose whole point is a glance.
- * Paging at the endpoint's own five is the behaviour the spec asks for.
- *
- * **The endpoint's own default order is declared rather than left
- * implicit.** `-total_earnings` is what `/reports/cashier-earnings`
- * applies when sent no sort, so the rows were already right either way.
- * Declaring it is what makes the header say so: left implicit, the
- * caret is absent while the rows are plainly ordered by that column, and
- * the first click on Total Earnings reads as reversing a sort the table
- * never admitted to.
+ * No toolbar: the reports endpoints accept no `filter[search]`, and a
+ * page-size control would pull 100 cashiers onto a dashboard meant for a
+ * glance. The endpoint's default order is declared, not left implicit, so
+ * the header carries a caret.
  */
 export function CashierEarningsTable() {
   const tableState = useServerTableState({

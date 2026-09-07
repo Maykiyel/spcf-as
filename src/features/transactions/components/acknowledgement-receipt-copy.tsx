@@ -9,17 +9,12 @@ type AcknowledgementReceiptCopyProps = {
   copyLabel: string;
 };
 
-// Renders one full printed copy of an Acknowledgement Receipt. Used twice
-// by PrintAcknowledgementReceiptPage (Accounting Office's / Student's),
-// parameterized only by copyLabel — the two copies share this one
-// template rather than being hand-duplicated markup, so they structurally
-// cannot drift out of sync with each other. No Control ID here (already
-// shown one click prior, on the View Transaction page).
+// One printed copy of an Acknowledgement Receipt, rendered twice and
+// parameterised only by `copyLabel`, so the two copies cannot drift apart.
+// No Control ID: it was shown one click prior.
 //
-// Kept deliberately compact throughout (small logo, plain bold text
-// instead of a full Title, tight gaps) — the physical page is only 4
-// inches tall (see PrintAcknowledgementReceiptPage), so screen-comfortable
-// spacing here would overflow onto an unwanted extra page per copy.
+// Compact throughout on purpose. The physical page is 4 inches tall, so
+// screen-comfortable spacing overflows onto an extra page per copy.
 export function AcknowledgementReceiptCopy({
   transaction,
   copyLabel,

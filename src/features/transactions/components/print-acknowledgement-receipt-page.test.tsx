@@ -100,15 +100,10 @@ describe("PrintAcknowledgementReceiptPage", () => {
   });
 
   it("calls window.print() only once when the transaction is already cached (warm from the View page) under StrictMode", async () => {
-    // Reproduces the real-world path: both pages call useTransactionDetail
-    // with the identical queryKey (["transactions", controlId]) against
-    // the same app-wide QueryClient. By the time a cashier clicks Print,
-    // the View page's fetch has already warmed this exact cache entry —
-    // so on the Print page's very first render, `transaction` is already
-    // truthy, synchronously, putting the print-triggering effect run
-    // inside StrictMode's double-invoke window (which only wraps the
-    // initial mount, not later re-runs from a cold, asynchronously
-    // resolving fetch).
+    // The real path: both pages share one query key and one QueryClient, so
+    // arriving from View the transaction is truthy on the very first
+    // render. That puts the print effect inside StrictMode's double-invoke
+    // window, which a cold fetch never reaches.
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -175,15 +170,11 @@ describe("PrintAcknowledgementReceiptPage", () => {
 
       await screen.findByText(/only a completed transaction/i);
 
-      // The effect fires the dialog when the transaction resolves, so
-      // gating only the JSX would still pop a dialog over the refusal and
-      // leave someone cancelling it to read why they can't print.
+      // Gating only the JSX would still pop a dialog over the refusal.
       //
-      // A fixed flush, not `waitFor`. A negative assertion passes on
-      // waitFor's very first check and returns immediately, so it would
-      // wait for nothing and this test would pass against an ungated
-      // effect. The wait has to clear the image timeout (400ms) and the
-      // two nested rAFs that stand between the effect and window.print().
+      // A fixed flush, not `waitFor`: a negative assertion passes on its
+      // first check, so it would wait for nothing. The wait clears the
+      // 400ms image timeout and the two rAFs before `window.print()`.
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 600));
       });

@@ -8,19 +8,13 @@ import { LOGIN_PATH } from "@/config/pages";
 import { ProtectedRoute } from "./protected-route";
 import type { AuthUser } from "@/features/auth/types";
 
-// Seam: the router tree rendered through ProtectedRoute — asserting on
-// what's on screen (where a refused navigation lands, vs. the target
-// page's own content), never on pages.ts internals or ProtectedRoute's
-// implementation.
+// Seam: the router tree through ProtectedRoute, asserting on what is on
+// screen rather than on pages.ts internals.
 //
-// `<Notifications />` is mounted alongside the router so the explanation
-// that accompanies a forbidden redirect is asserted the way a user meets
-// it — as text on screen — rather than by spying on the toast module.
+// `<Notifications />` is mounted so a refusal is read as a user meets it.
 // Mantine's notification store is module-level and outlives RTL's
-// unmount, so it has to be emptied between tests as well: without that a
-// toast raised by one test is still queued when the next test mounts its
-// own `<Notifications />`, and every later assertion on that text finds
-// two elements.
+// unmount, so it must be emptied between tests or a stale toast makes the
+// next assertion find two elements.
 
 const cashier: AuthUser = {
   id: 1,

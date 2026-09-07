@@ -11,19 +11,10 @@ type DateRangeFilterProps = {
 };
 
 /**
- * The shared date-range control. Domain-agnostic: it knows about calendar
- * dates and the API's wire format, and nothing about transactions, reports
- * or activity logs.
- *
- * Two properties it guarantees, both so that no page has to re-solve them:
- *
- * 1. **It can only emit `Y-m-d`.** `DateRangeValue` carries `ApiDate`, which
- *    `toApiDate` is the only producer of. There is no path through this
- *    component that puts another format on the wire.
- *
- * 2. **It never emits a half-picked range.** The rule is `nextDateRange`,
- *    kept pure and tested there; this component only holds the draft the
- *    calendar is showing while the rule says hold.
+ * The shared date-range control, domain-agnostic. It guarantees two things
+ * so no page re-solves them: it can only emit `Y-m-d` (`ApiDate` has one
+ * producer), and it never emits a half-picked range (the rule is
+ * `nextDateRange`, kept pure and tested there).
  */
 export function DateRangeFilter({
   value,
@@ -33,11 +24,9 @@ export function DateRangeFilter({
 }: DateRangeFilterProps) {
   const [draft, setDraft] = useState<DatesRangeValue>([value.from, value.to]);
 
-  // Re-sync when the range changes from somewhere other than this control —
-  // a restored URL, a Clear button elsewhere on the page, back/forward
-  // navigation. Keyed on the committed ends only, so a half-picked draft is
-  // never clobbered mid-pick: while one end is selected `value` hasn't
-  // moved, and this doesn't fire.
+  // Re-sync when the range changes elsewhere: a restored URL, a Clear, or
+  // back/forward. Keyed on the committed ends, so a half-picked draft is
+  // never clobbered mid-pick.
   useEffect(() => {
     setDraft([value.from, value.to]);
   }, [value.from, value.to]);

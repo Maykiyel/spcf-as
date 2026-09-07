@@ -11,24 +11,17 @@ import { getTransactions } from "../api/get-transactions";
 import type { TransactionListRow } from "../types";
 import { TransactionListPage } from "./transaction-list-page";
 
-// Seam: the page component, with the list fetcher and the cashier lookup
-// mocked at the module boundary. What a user can see and do — which rows
-// render, what a filter change put on the wire, where a row click landed.
-// Nothing here asserts on table plumbing; DataTable and
-// useServerTableState have their own tests.
+// Seam: the page component, fetchers mocked at the module boundary.
 //
-// **Filters are asserted through the params the fetcher was called with,
-// because that is what a server filter does.** The rows come back already
-// narrowed, so a test that stubbed narrowed rows would pass whatever the
-// page actually sent — including a filter key `/transactions` answers with
-// a 400.
+// Filters are asserted through the params the fetcher received, because
+// stubbing narrowed rows would pass whatever the page actually sent.
 
 vi.mock("../api/get-transactions");
 const mockGetTransactions = vi.mocked(getTransactions);
 
 vi.mock("@/api/cashiers", async () => {
-  // The query key builder is not a collaborator — mocking it would let the
-  // two cashier-list variants share a key without anything noticing.
+  // The key builder is not a collaborator: mocking it would let the two
+  // cashier-list variants share a key unnoticed.
   const actual = await vi.importActual<typeof import("@/api/cashiers")>(
     "@/api/cashiers",
   );
@@ -36,9 +29,8 @@ vi.mock("@/api/cashiers", async () => {
 });
 const mockGetCashiers = vi.mocked(getCashiers);
 
-// Mantine's Select renders its dropdown inside a ScrollArea, and so does
-// `DataTable.Grid`; both subscribe to a ResizeObserver on mount, which
-// jsdom doesn't implement. Same stub as manage-accounts-page.test.tsx.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -46,10 +38,9 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
-// Mantine's Combobox scrolls its active option into view on open, and
-// jsdom implements no scrolling. Without this a Select throws outside the
-// assertion, as an unhandled rejection — every test stays green while the
-// run exits non-zero.
+// jsdom implements no scrolling, and Mantine's Combobox scrolls its active
+// option into view on open. Without this a Select throws as an unhandled
+// rejection: every test stays green and the run exits non-zero.
 Element.prototype.scrollIntoView = vi.fn();
 
 const rows: TransactionListRow[] = [
@@ -70,9 +61,7 @@ const rows: TransactionListRow[] = [
     ],
   },
   {
-    // Never saved: no series number, no payer, no total, no items. This
-    // page lists every status, so the empty cells are a real row shape and
-    // not a contrived one.
+    // Never saved, so the empty cells are a real row shape here.
     control_id: 1202,
     cashier: { id: 8, full_name: "Noli Cruz" },
     series_number: null,
@@ -125,15 +114,9 @@ function renderPage(initialEntry = "/transactions/receipts") {
  * by the same text appearing in a filter control above it. */
 const tableRows = () => within(screen.getByRole("table"));
 
-/** Picks an option out of one Mantine `Select`.
- *
- * By role and accessible name, not by label text: a `Select` renders a
- * hidden input carrying the same value alongside the visible combobox, and
- * both answer to the label. The options are then scoped to that combobox's
- * own dropdown through `aria-controls` — this page renders three selects
- * (status, cashier, and the toolbar's page size), so a global option query
- * would reach into whichever one it found first.
- */
+/** By role, not label text: a `Select` renders a hidden input that also
+ * answers to the label. Options are scoped through `aria-controls`, since
+ * a global query would reach into whichever select it found first. */
 function chooseFromSelect(label: string, optionText: string) {
   const combobox = screen.getByRole("combobox", { name: label });
   fireEvent.click(combobox);
@@ -161,8 +144,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Mantine's notification store is module-level and outlives RTL's
-  // unmount, so a toast raised in one test is still queued in the next.
+  // Module-level and outlives RTL's unmount, so a toast raised in one test
+  // is still queued in the next.
   notifications.clean();
 });
 
@@ -307,15 +290,12 @@ describe("TransactionListPage", () => {
         target: { value: prefix },
       });
     }
-    // Wait for the debounced request rather than assuming 600ms of real
-    // time is enough for it: this is the one place `flush` was carrying a
-    // positive assertion, and a loaded machine can push a 400ms debounce
-    // plus its render past a fixed wait. #62 added the 39th jsdom file to
-    // the suite, which is what made that margin too thin to rely on.
+    // Wait for the debounced request rather than assume a fixed 600ms
+    // covers it: under full-suite load it does not.
     //
-    // The negative half keeps the fixed flush, and is the reason the two
-    // are split: `waitFor` alone would return on the first call and prove
-    // nothing about the five that must not follow.
+    // The negative half keeps the fixed flush, which is why the two are
+    // split: `waitFor` alone returns on the first call and proves nothing
+    // about the five that must not follow.
     await waitFor(() =>
       expect(mockGetTransactions.mock.calls.length).toBe(before + 1),
     );

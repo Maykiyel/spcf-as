@@ -20,15 +20,12 @@ type UserAccountActionsCellProps = {
 };
 
 /**
- * Deactivate (or activate) as the obvious action, delete as the lesser one.
- * That ordering is the point: deactivation always works and is reversible,
- * while deletion is refused for anyone holding any history at all, which is
- * every cashier who has ever worked a shift.
+ * Deactivate as the obvious action, delete as the lesser one: deactivation
+ * always works and is reversible, while deletion is refused for anyone
+ * holding any history, which is every cashier who has worked a shift.
  *
- * Neither action is offered on the signed-in admin's own row. The API
- * permits both, and either one locks them out of the product on the spot —
- * `EnsureAccountIsActive` refuses a deactivated user on every endpoint —
- * with no way back except another admin.
+ * Neither is offered on the signed-in admin's own row. The API permits
+ * both, and either locks them out on the spot with no way back.
  */
 export function UserAccountActionsCell({
   account,

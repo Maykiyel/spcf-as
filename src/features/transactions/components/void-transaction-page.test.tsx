@@ -14,24 +14,15 @@ import type { TransactionListRow } from "../types";
 import { VoidTransactionPage } from "./void-transaction-page";
 
 // Seam: the page component, with the list fetcher and the void action
-// mocked at the module boundary. What an admin can see and do — which rows
-// render, what the confirmation says before anything is reversed, what the
-// void put on the wire, and what the app looks like afterwards.
+// mocked at the module boundary.
 //
-// **`get-transactions` is mocked, not `get-voidable-transactions`.** The
-// second is where the status pin lives, and mocking it would mock away the
-// only thing this page's list does differently from the receipts list. One
-// level down, `filters.status` is a fact about the request rather than
-// about a stub, which is the same reason #61 asserts its filters through
-// the params the fetcher received.
+// `get-transactions` is mocked, not `get-voidable-transactions`: the
+// second is where the status pin lives, so mocking it would mock away the
+// only thing this list does differently.
 
 vi.mock("../api/get-transactions", async () => {
-  // A factory, not a bare `vi.mock`. Automocking replaces every export of
-  // the module, and it empties exported arrays — which is how the receipts
-  // page's default sort silently became `[]` earlier on this branch. The
-  // query keys have since moved to their own unmocked module, so nothing
-  // in this file depends on that any more, but a bare mock here would put
-  // the hazard back the moment a constant returns to this module.
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // any constant that returns to this module would silently become `[]`.
   const actual = await vi.importActual<
     typeof import("../api/get-transactions")
   >("../api/get-transactions");
@@ -43,8 +34,8 @@ vi.mock("../api/void-transaction");
 const mockVoidTransaction = vi.mocked(voidTransaction);
 
 vi.mock("@/api/cashiers", async () => {
-  // The query key builder is not a collaborator — mocking it would let the
-  // two cashier-list variants share a key without anything noticing.
+  // The key builder is not a collaborator: mocking it would let the two
+  // cashier-list variants share a key unnoticed.
   const actual = await vi.importActual<typeof import("@/api/cashiers")>(
     "@/api/cashiers",
   );
@@ -52,9 +43,8 @@ vi.mock("@/api/cashiers", async () => {
 });
 const mockGetCashiers = vi.mocked(getCashiers);
 
-// Mantine's Select renders its dropdown inside a ScrollArea, and so does
-// `DataTable.Grid`; both subscribe to a ResizeObserver on mount, which
-// jsdom doesn't implement. Same stub as transaction-list-page.test.tsx.
+// jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
+// to one on mount.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -62,15 +52,12 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
-// Mantine's Combobox scrolls its active option into view on open, and
-// jsdom implements no scrolling. Without this a Select throws outside the
-// assertion, as an unhandled rejection — every test stays green while the
-// run exits non-zero.
+// jsdom implements no scrolling, and Mantine's Combobox scrolls its active
+// option into view on open. Without this a Select throws as an unhandled
+// rejection: every test stays green and the run exits non-zero.
 Element.prototype.scrollIntoView = vi.fn();
 
-// Every row this page can show is `completed`: that is the whole list, and
-// the only status `POST /void` accepts. A pending or already-voided row
-// here would be a row whose only action is guaranteed to 409.
+// Every row here is `completed`, the only status `POST /void` accepts.
 const rows: TransactionListRow[] = [
   {
     control_id: 1201,
@@ -85,8 +72,8 @@ const rows: TransactionListRow[] = [
     items: [{ id: 11, name: "SHS GRADUATION FEE" }],
   },
   {
-    // The adjacent row the confirmation exists to be distinguished from:
-    // same cashier, same day, a series number one away.
+    // The adjacent row the confirmation exists to distinguish: same
+    // cashier, same day, a series number one away.
     control_id: 1202,
     cashier: { id: 7, full_name: "Jaypee Pahayahay" },
     series_number: 4502,
@@ -108,8 +95,7 @@ const page = (data: TransactionListRow[]) => ({ data, total: data.length });
 const lastRequest = () =>
   mockGetTransactions.mock.calls[mockGetTransactions.mock.calls.length - 1][0];
 
-/** `MemoryRouter` keeps its history off `window.location`, so staying on
- * the page has to be read through the router rather than the address bar. */
+/** `MemoryRouter` keeps history off `window.location`. */
 function LocationProbe() {
   const location = useLocation();
   return <span data-testid="location">{location.pathname}</span>;
@@ -118,8 +104,7 @@ function LocationProbe() {
 function renderPage(initialEntry = "/void") {
   return renderWithQueryClient(
     <>
-      {/* Mounted the way the app mounts it, so a success or a refusal that
-          surfaces only as a toast is still visible to these tests. */}
+      {/* Mounted as the app mounts it, so a toast is visible here. */}
       <Notifications />
       <MemoryRouter initialEntries={[initialEntry]}>
         <VoidTransactionPage />
@@ -133,13 +118,11 @@ function renderPage(initialEntry = "/void") {
  * by the same text appearing in a filter control or a dialog. */
 const tableRows = () => within(screen.getByRole("table"));
 
-/** The open confirmation, scoped — every identifier it carries also
- * appears in the row behind it, which is the point of showing them. */
+/** Scoped: every identifier it carries also appears in the row behind. */
 const dialog = () => within(screen.getByRole("dialog"));
 
-/** Opens the confirmation for one row. The buttons are named per row
- * rather than all reading "Void", because a column of identically named
- * buttons is ambiguous to anything that can't see which row it is in. */
+/** Buttons are named per row, since a column of identical "Void" buttons
+ * is ambiguous to anything that can't see which row it is in. */
 async function openConfirmFor(controlId: number) {
   fireEvent.click(
     await screen.findByRole("button", {
@@ -149,9 +132,8 @@ async function openConfirmFor(controlId: number) {
   return screen.findByRole("dialog");
 }
 
-/** A 409 from `ensureActionAllowed`, in the envelope the API sends it in.
- * The wording is the server's own: it names the status it found, which is
- * how an admin learns someone else voided this row first. */
+/** A 409 in the envelope the API sends it in. The wording is the
+ * server's own. */
 const conflict = (message: string) =>
   new AxiosError(message, "409", undefined, undefined, {
     status: 409,
@@ -265,17 +247,10 @@ describe("VoidTransactionPage", () => {
   });
 
   it("refreshes the list, and leaves nothing stale to show for that transaction", async () => {
-    // The detail half is the load-bearing one, and marking it stale is not
-    // enough. Voiding happens on this page, so that query is inactive and
-    // an invalidation only flags it; React Query then hands the next
-    // mount the cached entry synchronously and revalidates behind it.
-    // Found in a browser: the View page painted "Completed" on a
-    // transaction that had just been voided.
-    //
-    // So the assertion is that the entry is *gone*, not that it is
-    // flagged. `isInvalidated` was true the whole time the page was
-    // rendering the wrong status, which is what made the old version of
-    // this test agree with a real defect.
+    // The entry must be *gone*, not flagged. `isInvalidated` was true the
+    // whole time the View page rendered a voided transaction as
+    // "Completed", which is how the old version of this test agreed with
+    // a real defect.
     const { queryClient } = renderPage();
     const detailKey = transactionDetailQueryKey(1201);
     seedDetail(queryClient, detailKey);
@@ -360,10 +335,9 @@ describe("VoidTransactionPage", () => {
   });
 });
 
-/** A detail entry already in cache, the way it would be for an admin who
- * opened the transaction from the receipts list before voiding it. The
- * status is the field that matters: this is the value the View page would
- * paint if anything survived the void. */
+/** A cached detail entry, as an admin who opened the transaction before
+ * voiding would have. The status is what the View page would paint if
+ * anything survived. */
 function seedDetail(
   queryClient: QueryClient,
   key: ReturnType<typeof transactionDetailQueryKey>,

@@ -9,16 +9,12 @@ type DataTableToolbarProps = {
   children: ReactNode;
 };
 
-/** A row of table controls, composed from the pieces a given table needs —
- * `DataTable.PageSize`, `DataTable.Search`, and whatever filter controls the
- * feature supplies. It renders its children and nothing else.
+/** A row of table controls, composed from the pieces a table needs. It
+ * renders its children and nothing else.
  *
- * `children` is required rather than optional on purpose. Most endpoints in
- * this API reject a `search` filter with a 400, so a toolbar that rendered a
- * search input by default would ship a control that fails the first time
- * someone types into it. Making the pieces explicit means that can't happen,
- * and it keeps a childless toolbar from meaning something a reader could only
- * discover by opening this file. */
+ * `children` is required, not optional: most endpoints here reject a
+ * `search` filter with a 400, so a toolbar that rendered one by default
+ * would ship a control that fails the first time anyone types. */
 export function DataTableToolbar({ children }: DataTableToolbarProps) {
   return (
     <Group gap="lg" wrap="wrap">
