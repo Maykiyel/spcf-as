@@ -4,8 +4,9 @@
 export type ApiDate = string & { readonly __brand: "ApiDate" };
 
 // A date-only value, as distinct from a full timestamp. The same regex and
-// local-components rule live in `features/transactions/lib/transaction-date.ts`;
-// this tier can't import from `features/*`, so change one and look at the other.
+// local-components rule live in `utils/date-time.ts`, which renders a
+// timestamp rather than branding one for the wire. Change one, look at the
+// other.
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 // Leading date part of an ISO-8601 timestamp.
