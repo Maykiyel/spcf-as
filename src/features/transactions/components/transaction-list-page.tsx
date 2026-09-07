@@ -3,7 +3,6 @@ import { useNavigate } from "react-router";
 import {
   DataTable,
   useServerTableState,
-  type SortEntry,
   type TableFilters,
 } from "@/components/ui/data-table";
 import { useAuthStore } from "@/stores/auth-store";
@@ -12,21 +11,14 @@ import {
   TRANSACTIONS_QUERY_KEY,
 } from "../api/get-transactions";
 import type { TransactionListRow } from "../types";
+import { transactionFiltersUsable } from "../lib/transaction-filters";
 import { TransactionListFilters } from "./transaction-list-filters";
-import { transactionListColumns } from "./transaction-list-columns";
+import {
+  transactionListColumns,
+  TRANSACTIONS_DEFAULT_SORTS,
+} from "./transaction-list-columns";
 
 const URL_KEY = "receipts";
-
-/** `/transactions` sorts by `-created_at` when asked for nothing. Declaring
- * it puts a caret on the Date header saying so, instead of rows that are
- * plainly newest-first under a column that looks unsorted — which makes the
- * first click on it appear to reverse a sort nobody indicated was there.
- *
- * `created_at` is the endpoint's name for it, matching the Date column's
- * `sortKey`. It reaches the wire on the first request, so it is one of the
- * two places getting that name wrong is a 422 before the user touches
- * anything. */
-const INITIAL_SORTS: SortEntry[] = [{ key: "created_at", direction: "desc" }];
 
 /** The six filters `/transactions` allows everyone, keyed by the API's own
  * filter names, with `null` for unfiltered. Module scope, not rebuilt per
@@ -53,14 +45,6 @@ const BASE_FILTERS: TableFilters = {
  * hand-editing the address bar either. Hiding the control alone would leave
  * that door open. */
 const ADMIN_FILTERS: TableFilters = { ...BASE_FILTERS, cashier_id: null };
-
-/** The recipe from the shared README: while one end of the range is set and
- * the other isn't, the range isn't a filter yet and the query doesn't run.
- * `to_date` carries `after_or_equal:from_date`, so sending half of one is a
- * 422. `DateRangeFilter` never emits a half-picked range, but a restored
- * URL can still carry one. */
-const filtersUsable = (filters: TableFilters) =>
-  Boolean(filters.from_date) === Boolean(filters.to_date);
 
 /**
  * View Transactions (Per Receipt) — the app's only route to finding a
@@ -97,9 +81,9 @@ export function TransactionListPage() {
     queryFn: getTransactions,
     columns,
     urlKey: URL_KEY,
-    initialSorts: INITIAL_SORTS,
+    initialSorts: TRANSACTIONS_DEFAULT_SORTS,
     initialFilters: isAdmin ? ADMIN_FILTERS : BASE_FILTERS,
-    filtersUsable,
+    filtersUsable: transactionFiltersUsable,
   });
 
   return (
@@ -112,6 +96,7 @@ export function TransactionListPage() {
         filters={tableState.filters}
         onChange={tableState.setFilters}
         includeCashier={isAdmin}
+        includeStatus
       />
       <Divider />
       <DataTable.Toolbar>

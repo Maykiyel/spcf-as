@@ -38,9 +38,12 @@ function makeQueryClient() {
 // renderHook, which takes a `wrapper` rather than rendering an element.
 // Hook tests used to hand-roll this; sharing it is what keeps a hook test
 // and a component test agreeing about retry and cache isolation.
-function createQueryWrapper() {
-  const queryClient = makeQueryClient();
-
+//
+// The client is a parameter so a test that needs to reach the cache — to
+// seed an entry, or to assert something invalidated one — can hold the
+// same client the tree is using. Defaulted, so every existing caller keeps
+// getting its own isolated client without saying so.
+function createQueryWrapper(queryClient: QueryClient = makeQueryClient()) {
   return function QueryWrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -52,9 +55,13 @@ function createQueryWrapper() {
 
 function renderWithQueryClient(
   ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper">,
+  options?: Omit<RenderOptions, "wrapper"> & { queryClient?: QueryClient },
 ) {
-  return render(ui, { wrapper: createQueryWrapper(), ...options });
+  const { queryClient, ...renderOptions } = options ?? {};
+  return render(ui, {
+    wrapper: createQueryWrapper(queryClient),
+    ...renderOptions,
+  });
 }
 
 // Re-export everything from RTL so test files only need one import source.
@@ -63,4 +70,5 @@ export {
   renderWithProviders as render,
   renderWithQueryClient,
   createQueryWrapper,
+  makeQueryClient,
 };

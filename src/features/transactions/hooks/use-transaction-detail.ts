@@ -10,6 +10,16 @@ function isFetchableControlId(controlId: number): boolean {
   return Number.isInteger(controlId) && controlId > 0;
 }
 
+/** One transaction's detail entry, under the same `transactions` prefix
+ * the two lists sit beneath.
+ *
+ * Named rather than written inline because a void has to invalidate it:
+ * `TRANSACTIONS_QUERY_KEY` is that prefix, so one `invalidateQueries` on it
+ * reaches this entry as well as the lists. That only holds while this key
+ * starts with the same word, and a name is what lets a test say so. */
+export const transactionDetailQueryKey = (controlId: number) =>
+  ["transactions", controlId] as const;
+
 // Shared by ViewTransactionPage and the Print page so their 403
 // classification can't silently drift apart.
 //
@@ -31,7 +41,7 @@ export function useTransactionDetail(controlId: number) {
   const canFetch = isFetchableControlId(controlId);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["transactions", controlId],
+    queryKey: transactionDetailQueryKey(controlId),
     queryFn: () => getTransaction(controlId),
     enabled: canFetch,
   });

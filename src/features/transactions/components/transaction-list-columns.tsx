@@ -1,12 +1,30 @@
 import type { ReactNode } from "react";
 import { Anchor } from "@mantine/core";
 import { Link } from "react-router";
-import type { ColumnDef } from "@/components/ui/data-table";
+import type { ColumnDef, SortEntry } from "@/components/ui/data-table";
 import { formatCurrency } from "@/utils/currency";
 import { formatTransactionDate } from "../lib/transaction-date";
 import type { TransactionListRow } from "../types";
 import { TransactionItemNamesCell } from "./transaction-item-names-cell";
 import { TransactionStatusBadge } from "./transaction-status-badge";
+
+/** `/transactions` sorts by `-created_at` when asked for nothing.
+ * Declaring it puts a caret on the Date header saying so, instead of rows
+ * that are plainly newest-first under a column that looks unsorted, which
+ * makes the first click on it appear to reverse a sort nobody indicated
+ * was there.
+ *
+ * `created_at` is the endpoint's name for it, and it has to stay equal to
+ * the Date column's `sortKey` below. That is why it lives here and not
+ * beside the fetcher: the two names that must agree are now three lines
+ * apart. It reaches the wire on the first request, so getting it wrong is
+ * a 422 before the user touches anything.
+ *
+ * Both pages that list transactions want the same caret on the same
+ * column, so both take this rather than restating it. */
+export const TRANSACTIONS_DEFAULT_SORTS: SortEntry[] = [
+  { key: "created_at", direction: "desc" },
+];
 
 type TransactionListColumnsOptions = {
   /** Whether the Cashier column belongs on this table.

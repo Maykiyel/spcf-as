@@ -139,6 +139,20 @@ type TransactionListFiltersProps = {
    * outright. What must not vary is that a `false` here means the control
    * is never mounted — see `TransactionCashierFilter`. */
   includeCashier: boolean;
+  /** Whether the status filter belongs on this panel.
+   *
+   * `false` on the Void page, where the status is pinned to `completed`
+   * because that is the only one `POST /void` accepts. Offering the control
+   * there would let an admin build a list where every row's action fails
+   * with a 409.
+   *
+   * Not rendering it is the smaller half of that. The value itself is
+   * pinned in `getVoidableTransactions`, past the point a hand-edited URL
+   * can reach, because the Void page declares no `status` filter at all —
+   * a hidden control over a declared filter would still leave the address
+   * bar open. Unlike `includeCashier`, nothing here is admin-gated: the
+   * status filter is everyone's on the receipts list. */
+  includeStatus: boolean;
 };
 
 /**
@@ -154,6 +168,7 @@ export function TransactionListFilters({
   filters,
   onChange,
   includeCashier,
+  includeStatus,
 }: TransactionListFiltersProps) {
   return (
     // `align="flex-end"` so the labelled inputs sit on one baseline
@@ -171,10 +186,12 @@ export function TransactionListFilters({
         value={filters.item_name}
         onChange={(item_name) => onChange({ item_name })}
       />
-      <TransactionStatusFilter
-        value={filters.status}
-        onChange={(status) => onChange({ status })}
-      />
+      {includeStatus && (
+        <TransactionStatusFilter
+          value={filters.status}
+          onChange={(status) => onChange({ status })}
+        />
+      )}
       {/* `toApiDate` on the way in rather than a cast: the values are
           strings off the URL, and this is the one function that decides
           whether a string is a date the API will take. */}

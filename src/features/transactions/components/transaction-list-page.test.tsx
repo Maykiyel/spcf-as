@@ -307,6 +307,18 @@ describe("TransactionListPage", () => {
         target: { value: prefix },
       });
     }
+    // Wait for the debounced request rather than assuming 600ms of real
+    // time is enough for it: this is the one place `flush` was carrying a
+    // positive assertion, and a loaded machine can push a 400ms debounce
+    // plus its render past a fixed wait. #62 added the 39th jsdom file to
+    // the suite, which is what made that margin too thin to rely on.
+    //
+    // The negative half keeps the fixed flush, and is the reason the two
+    // are split: `waitFor` alone would return on the first call and prove
+    // nothing about the five that must not follow.
+    await waitFor(() =>
+      expect(mockGetTransactions.mock.calls.length).toBe(before + 1),
+    );
     await flush();
 
     expect(mockGetTransactions.mock.calls.length).toBe(before + 1);
