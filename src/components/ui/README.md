@@ -132,7 +132,7 @@ function SupplierTable({ data }: { data: Supplier[] }) {
 | `DataTable.Toolbar`    | A row of controls, composed from the pieces below. Omit entirely for a table with no controls at all.    |
 | `DataTable.PageSize`   | The "Show N entries" select. Omit for a table that doesn't let the user change the page size.            |
 | `DataTable.Search`     | The search input. Right-aligns itself. **On a server-backed table, only compose this on an endpoint that accepts a search filter** — see below. Always safe on a client-side one. |
-| `DataTable.Grid`       | The actual `<table>` — headers (with sort toggle if `sortable: true`), rows, loading/error/empty states. |
+| `DataTable.Grid`       | The actual `<table>` — headers (with sort toggle if `sortable: true`), rows, loading/error/empty states. Takes an optional `onRowClick`; see [Rows that navigate](#rows-that-navigate). |
 | `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging.       |
 
 ### Composing the toolbar
@@ -376,6 +376,7 @@ type ColumnDef<T> = {
   id?: string; // set this if `key` collides with another column (e.g. two columns both keyed on 'id')
   header: string; // column header label
   sortable?: boolean; // enables the sort-toggle icons in the header
+  sortKey?: string; // the name the endpoint sorts this column by, when it isn't `key`
   render?: (row: T) => ReactNode; // custom cell content — omit to just print the raw field value
 };
 ```
@@ -399,6 +400,48 @@ sort/page changes.
 visible column, and changes over time). If it drifts out of sync,
 `useServerTableState` recovers automatically (see below) rather than leaving
 the table stuck — but it's still worth getting right at the source.
+
+**Set `sortKey` when the endpoint's name for a column's sort isn't the name
+of the field the cell reads.** `/transactions` is the case it exists for:
+the response carries `date` and `customer_name`, and the same two columns
+sort as `created_at` and `customer`. `key` is constrained to `keyof T`, so
+without `sortKey` a column like that could be read or sorted but not both,
+and the only way out would be renaming the row's own fields to the wire's
+sort names — which forks `TransactionListRow` off the detail type it
+deliberately shares a base with.
+
+It defaults to `key`, so every existing column is unaffected. Getting it
+wrong is a 422 on the first header click, exactly like getting `key` wrong
+was before it existed, and the same recovery applies.
+
+Note what this does **not** separate: display naming from field naming. A
+column's header is already free (`header: "Cashier"` over `key:
+"account"`); `sortKey` frees the sort name, not the field one.
+
+### Rows that navigate
+
+`DataTable.Grid` takes an optional `onRowClick`. A table that omits it
+renders exactly as before — no pointer cursor, no handler:
+
+```tsx
+<DataTable.Grid onRowClick={(row) => navigate(`/transactions/${row.control_id}`)} />
+```
+
+It's a prop on the piece rather than part of the shared state because the
+state comes from `useClientTableState`/`useServerTableState`, and neither
+knows anything about navigation.
+
+**A click that landed on a control inside a row doesn't fire it.** Anchors,
+buttons and form controls in a cell are their own action — the Void page
+puts a Void button on every row of the same table the receipts list
+navigates from, and without that rule voiding would also navigate away
+from the page the admin is working through.
+
+**Pair it with a real link in one cell.** `onRowClick` is a mouse
+affordance and nothing else: a `<tr>` is not focusable, and a screen reader
+in table mode won't announce one as actionable. The receipts list renders
+its Control ID cell as a `react-router` `Link`, which is what gives keyboard
+users a target, and what makes middle-click and open-in-new-tab work.
 
 ### Custom cells
 
@@ -664,6 +707,43 @@ what an `is_active` flag is worth on the wire lives with the feature that
 knows. Composing a bare `TableFilterSegments` in a toolbar isn't wrong, but
 it puts the wire-value decision in a page's JSX rather than somewhere a
 reader looking for it will think to look.
+
+---
+
+## TableFilterText
+
+A free-text control for a table filter the endpoint matches partially —
+payer name, item name, series number. Domain-agnostic in the same way
+`TableFilterSegments` is, and wrapped per feature for the same reason.
+
+```tsx
+export function TransactionPayerFilter(props: {
+  value: string | null;
+  onChange: (value: string | null) => void;
+}) {
+  return <TableFilterText label="Payer Name" placeholder="Any payer" {...props} />;
+}
+```
+
+Two things it owns, both of which a re-implementation gets subtly wrong:
+
+- **The `null` ↔ `""` bridge.** Same shape as the segmented control's `null`
+  ↔ "all": an unset filter is `null` and gets dropped from the request,
+  while a text input's unset value is `""`. Sending the empty string
+  instead is a 400 here rather than an ignored parameter. The value is
+  trimmed on the way out, because every text filter this API offers is a
+  partial match, so a stray trailing space narrows the result rather than
+  being ignored.
+- **The debounce.** 400ms, matching what `useServerTableState` already
+  applies to search, and for the same reason: without it, typing `santos`
+  puts six requests on the wire, one per prefix.
+
+**It holds the draft, not the filter.** The committed value stays where
+every other filter's does — in `useServerTableState`, in the query key and
+in the URL. The draft only exists so that what the user has typed survives
+the 400ms before it becomes a filter, and it re-syncs when the value
+changes from outside the control (a restored URL, back/forward navigation)
+without clobbering a half-typed word.
 
 ---
 

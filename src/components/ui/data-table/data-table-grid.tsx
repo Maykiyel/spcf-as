@@ -5,7 +5,26 @@ import { DataTableSkeleton } from "./data-table-skeleton";
 
 const MAX_SKELETON_ROWS = 10;
 
-export function DataTableGrid<T extends Record<string, any>>() {
+/** A click that landed on a control inside a row is that control's, not
+ * the row's. The receipts list puts a link on the Control ID cell and the
+ * Void page puts a button on every row, so without this a Void click would
+ * also navigate away from the page it was meant to act on. */
+const INTERACTIVE_WITHIN_ROW = "a,button,input,select,textarea";
+
+type DataTableGridProps<T> = {
+  /** What clicking a row does. Omitted by default, and a table that omits
+   * it renders exactly as it did before this existed — no pointer cursor,
+   * no handler.
+   *
+   * This is a prop rather than part of the shared state because the state
+   * comes from `useClientTableState`/`useServerTableState`, and neither
+   * knows anything about navigation. */
+  onRowClick?: (row: T) => void;
+};
+
+export function DataTableGrid<T extends Record<string, any>>({
+  onRowClick,
+}: DataTableGridProps<T> = {}) {
   const {
     columns,
     rows,
@@ -42,7 +61,10 @@ export function DataTableGrid<T extends Record<string, any>>() {
                 );
               }
 
-              const sortIndex = sorts.findIndex((s) => s.key === col.key);
+              // The name the endpoint knows this column by, which is not
+              // always the field the cell reads — see `sortKey`.
+              const sortKey = col.sortKey ?? col.key;
+              const sortIndex = sorts.findIndex((s) => s.key === sortKey);
               const active = sortIndex !== -1;
               const direction = active ? sorts[sortIndex].direction : null;
               const showPriorityBadge = active && sorts.length > 1;
@@ -61,7 +83,7 @@ export function DataTableGrid<T extends Record<string, any>>() {
                       : "none"
                   }
                 >
-                  <UnstyledButton onClick={() => onSort(col.key)}>
+                  <UnstyledButton onClick={() => onSort(sortKey)}>
                     <Group gap={4} wrap="nowrap">
                       <Text fw={600} size="sm">
                         {col.header}
@@ -117,7 +139,24 @@ export function DataTableGrid<T extends Record<string, any>>() {
             </Table.Tr>
           ) : (
             rows.map((row, i) => (
-              <Table.Tr key={row.id ?? i}>
+              <Table.Tr
+                key={row.id ?? i}
+                onClick={
+                  onRowClick
+                    ? (event) => {
+                        if (
+                          (event.target as HTMLElement).closest(
+                            INTERACTIVE_WITHIN_ROW,
+                          )
+                        ) {
+                          return;
+                        }
+                        onRowClick(row);
+                      }
+                    : undefined
+                }
+                style={onRowClick ? { cursor: "pointer" } : undefined}
+              >
                 {columns.map((col) => (
                   <Table.Td key={col.id ?? col.key}>
                     {col.render ? col.render(row) : String(row[col.key] ?? "")}

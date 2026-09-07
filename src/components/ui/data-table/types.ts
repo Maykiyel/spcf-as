@@ -5,6 +5,21 @@ export type ColumnDef<T> = {
   id?: string;
   header: string;
   sortable?: boolean;
+  /** The name the endpoint allow-lists for this column's sort, when it
+   * isn't the field the cell reads. Defaults to `key`.
+   *
+   * It exists because a backend is free to name a response field and its
+   * sort differently for the same column, and `/transactions` does:
+   * `date` sorts as `created_at`, `customer_name` sorts as `customer`.
+   * Without this, a column could be read or sorted but not both — `key`
+   * is constrained to `keyof T`, so naming the sort there would mean
+   * forking those fields off the row type, and `TransactionListRow`
+   * shares them with the detail type on purpose.
+   *
+   * Only meaningful alongside `sortable`. Getting it wrong is a 422 on
+   * the first header click (or on the first request, via `initialSorts`),
+   * exactly like getting `key` wrong was before this existed. */
+  sortKey?: string;
   render?: (row: T) => ReactNode;
 };
 
