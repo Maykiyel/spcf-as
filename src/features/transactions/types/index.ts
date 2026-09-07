@@ -72,18 +72,58 @@ export type PendingLineItemIntent =
   | { type: "setQuantity"; quantity: number }
   | { type: "remove" };
 
-// Mirrors TransactionResource — the full shape returned by save/cancel/show.
-export type TransactionDTO = {
+// Mirrors TransactionItemResource as the *index* endpoint sends it. That
+// query selects only `id, service_name, transaction_id, subtotal`, and the
+// resource suppresses `subtotal` when `price` is absent — so a list row's
+// items carry a name and nothing else. Checked against the backend source;
+// not worth a backend change, because the receipts list deliberately shows
+// no per-item money (per-item money is what the detail page is for).
+export type TransactionListItemDTO = {
+  id: number;
+  name: string;
+};
+
+// Every scalar TransactionResource returns, which is every context's
+// version of the same transaction. Three variants exist across the app —
+// the detail pages (full items), the receipts and Void lists (names only),
+// and the report endpoints (no items at all) — and the *only* thing that
+// differs between them is the item shape, so it is the only thing the
+// variants below restate.
+//
+// Not exported: nothing consumes a transaction without knowing which
+// variant it holds, and a bare base would be a fourth shape that means
+// "some transaction, items unknown".
+//
+// `voided_at` and `voided_by` are absent deliberately. Both are `when(...)`
+// on the resource, and `voided_by` needs an eager load the index endpoint
+// doesn't do — so they belong to whichever variant can actually promise
+// them, not here. #62 is where that gets settled.
+type TransactionBase = {
   control_id: number;
   cashier: { id: number; full_name: string } | null;
   series_number: number | null;
   customer_name: string | null;
-  items: TransactionItemDTO[];
   total: number | null;
   amount_paid: number;
   change_amount: number;
   status: TransactionStatus;
   date: string;
+};
+
+// The full shape returned by save/cancel/show.
+export type TransactionDTO = TransactionBase & {
+  items: TransactionItemDTO[];
+};
+
+// One row of `GET /transactions`.
+//
+// A distinct type rather than a loosened `TransactionDTO`: making
+// `price`/`quantity`/`subtotal` optional so one type could serve both
+// would push null-handling into the detail and print pages, where those
+// values are genuinely guaranteed — weakening types that are accurate
+// today to describe a context that never sees them.
+export type TransactionListRow = TransactionBase & {
+  items: TransactionListItemDTO[];
 };
 
 export const PRICE_RANGE_VALUES = [

@@ -17,7 +17,7 @@ import {
   notifyMutationError,
   notifyWarning,
 } from "@/lib/notifications/notifications";
-import { getCashiers } from "../api/get-cashiers";
+import { getCashiers, cashiersQueryKey } from "@/api/cashiers";
 import { getLatestFrom } from "../api/get-latest-from";
 import {
   createSeriesReceipt,
@@ -37,9 +37,12 @@ const DEFAULT_VALUES = { cashierId: 0, sheets: 1 };
 export function SeriesReceiptForm() {
   const queryClient = useQueryClient();
 
+  // Active only: `POST /series-receipts` refuses an inactive cashier with
+  // a 403, so offering one is a dead end. The Transactions list's cashier
+  // filter asks for the unnarrowed list, and the key keeps the two apart.
   const cashiersQuery = useQuery({
-    queryKey: ["cashiers"],
-    queryFn: getCashiers,
+    queryKey: cashiersQueryKey({ activeOnly: true }),
+    queryFn: () => getCashiers({ activeOnly: true }),
   });
 
   const latestFromQuery = useQuery({

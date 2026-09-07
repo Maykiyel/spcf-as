@@ -372,7 +372,14 @@ hand-built `{id, status, cashier}` object rather than a
 
 The `index` endpoint selects only `id, service_name, transaction_id,
 subtotal`, so `price` and `quantity` are **absent from list rows** and
-present on `show`.
+present on `show`. `subtotal` is absent too: the resource emits it only
+when `price` is non-null, and `price` was never selected. A list row's
+item is therefore an id and a name, and nothing else.
+
+`index` eager-loads both `items` and `cashier`, so both are present on
+every list row. It does **not** load `voidedBy`, so `voided_by` is absent
+from list rows even for a voided transaction; `voided_at` is a plain
+column and is present whenever it is non-null.
 
 Because `service_name` is stored on the item, renaming a Service later does
 not change what past transactions display.
@@ -439,10 +446,15 @@ a date filter.
 
 Powered by spatie/laravel-query-builder.
 
-- Filters: `series_number`, `customer` (partial match on `customer_name`),
-  `status`, `from_date`, `to_date` (both `Y-m-d` only — see above),
-  `item_name` (partial match on item `service_name`), and `cashier_id`
-  (admin only).
+- Filters: `series_number` (**partial**), `customer` (partial match on
+  `customer_name`), `status` (exact), `from_date`, `to_date` (both `Y-m-d`
+  only — see above), `item_name` (partial match on item `service_name`),
+  and `cashier_id` (admin only, exact).
+- **A filter registered as a bare string is a partial match**, not an exact
+  one. `allowedFilters` converts a plain string to `AllowedFilter::partial`,
+  which is why `series_number` matches partially while `status` — declared
+  as `AllowedFilter::exact` — does not. Only the ones this list marks exact
+  are exact.
 - Sorts: `created_at`, `status`, `customer` (maps to `customer_name`),
   `series_number`. Default is `-created_at`.
 - Pagination: `per_page`; the response carries

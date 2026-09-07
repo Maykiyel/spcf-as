@@ -1,35 +1,13 @@
-import { Badge, Group, Stack, Text } from "@mantine/core";
+import { Box, Group, Stack, Text } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/ui/button";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
-import {
-  isPrintable,
-  printRefusalReason,
-  TRANSACTION_STATUS_LABEL,
-} from "../lib/transaction-status";
-import type { TransactionStatus } from "../types";
+import { isPrintable, printRefusalReason } from "../lib/transaction-status";
 import { TransactionItemsTable } from "./transaction-items-table";
+import { TransactionStatusBadge } from "./transaction-status-badge";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
-
-// Green only for the one status that means the payment stands. `returned`
-// is the outcome of an admin voiding a completed transaction, so it is the
-// one a cashier most needs to notice.
-//
-// Total over the union, like `TRANSACTION_STATUS_LABEL`, and for the same
-// reason: a partial map with a fallback would give a sixth status a
-// plausible-looking badge in the wrong colour, silently. The label map
-// gets that right; a colour map beside it that didn't would undo half of
-// it. Colour stays here rather than joining the label in `lib/`, because
-// the print page has no badge and shouldn't import a palette.
-const STATUS_COLOR: Record<TransactionStatus, string> = {
-  pending: "tertiary",
-  abandoned: "tertiary",
-  completed: "success",
-  cancelled: "tertiary",
-  returned: "danger",
-};
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
@@ -55,13 +33,9 @@ export function ViewTransactionPage() {
                 <Text size="sm" fw={700}>
                   {transaction.customer_name ?? "—"}
                 </Text>
-                <Badge
-                  color={STATUS_COLOR[transaction.status]}
-                  variant="light"
-                  ml="xs"
-                >
-                  {TRANSACTION_STATUS_LABEL[transaction.status]}
-                </Badge>
+                <Box ml="xs">
+                  <TransactionStatusBadge status={transaction.status} />
+                </Box>
               </Group>
               <Stack gap={0} align="flex-end">
                 <Text size="sm" c="dimmed">

@@ -1,3 +1,5 @@
+import { TransactionListPage } from "@/features/transactions/components/transaction-list-page";
+
 export const Component = () => {
-  return <h1>View Transactions (Per Receipt)</h1>;
+  return <TransactionListPage />;
 };
