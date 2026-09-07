@@ -130,8 +130,9 @@ const tableRows = () => within(screen.getByRole("table"));
  * By role and accessible name, not by label text: a `Select` renders a
  * hidden input carrying the same value alongside the visible combobox, and
  * both answer to the label. The options are then scoped to that combobox's
- * own dropdown through `aria-controls` � this toolbar has three selects,
- * so a global option query would reach into whichever one it found first.
+ * own dropdown through `aria-controls` — this page renders three selects
+ * (status, cashier, and the toolbar's page size), so a global option query
+ * would reach into whichever one it found first.
  */
 function chooseFromSelect(label: string, optionText: string) {
   const combobox = screen.getByRole("combobox", { name: label });

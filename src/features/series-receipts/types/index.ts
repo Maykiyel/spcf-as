@@ -1,11 +1,10 @@
+// `Cashier` was defined here until the Transactions list's cashier filter
+// became a second consumer of it and of `getCashiers`; both moved to
+// `src/api/cashiers.ts` under the promotion rule in CONTEXT.md. Imported
+// rather than re-exported: `SeriesReceipt` is the only thing in this
+// feature that needs the type, and a re-export nothing imports is a hop
+// through this file for no reason.
 import type { Cashier } from "@/api/cashiers";
-
-// Promoted to `src/api/cashiers.ts` alongside the fetcher, when the
-// Transactions list became a second consumer of both. Re-exported rather
-// than repointed at every use site: `SeriesReceipt` below is the reason
-// the type exists in this feature's vocabulary, and CONTEXT.md's Cashier
-// entry is written about that relation.
-export type { Cashier };
 
 export type SeriesReceipt = {
   id: number;

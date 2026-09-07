@@ -432,10 +432,11 @@ state comes from `useClientTableState`/`useServerTableState`, and neither
 knows anything about navigation.
 
 **A click that landed on a control inside a row doesn't fire it.** Anchors,
-buttons and form controls in a cell are their own action — the Void page
-puts a Void button on every row of the same table the receipts list
-navigates from, and without that rule voiding would also navigate away
-from the page the admin is working through.
+buttons and form controls in a cell are their own action. The case it was
+built for is the Void page (#62, not yet built), which puts a Void button
+on every row of the same table the receipts list navigates from: without
+that rule, voiding would also navigate away from the page the admin is
+working through.
 
 **Pair it with a real link in one cell.** `onRowClick` is a mouse
 affordance and nothing else: a `<tr>` is not focusable, and a screen reader
@@ -744,6 +745,14 @@ in the URL. The draft only exists so that what the user has typed survives
 the 400ms before it becomes a filter, and it re-syncs when the value
 changes from outside the control (a restored URL, back/forward navigation)
 without clobbering a half-typed word.
+
+**There is deliberately no `TableFilterSelect`.** A dropdown filter composes
+Mantine's `Select` directly, in the feature: `Select` already holds
+`string | null`, and `clearable` already reports `null` when cleared, so
+there is no bridge to own and no debounce to apply. A wrapper would forward
+six props unchanged and add a name to look up. That is the test for
+promoting a control here — it earns the place by owning something a
+re-implementation gets wrong, not by resembling one that does.
 
 ---
 

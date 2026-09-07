@@ -6,9 +6,10 @@ import { DataTableSkeleton } from "./data-table-skeleton";
 const MAX_SKELETON_ROWS = 10;
 
 /** A click that landed on a control inside a row is that control's, not
- * the row's. The receipts list puts a link on the Control ID cell and the
- * Void page puts a button on every row, so without this a Void click would
- * also navigate away from the page it was meant to act on. */
+ * the row's. The receipts list puts a link on the Control ID cell, and #62
+ * will put a Void button on every row of that same table — without this,
+ * voiding would also navigate away from the page it was meant to act
+ * on. */
 const INTERACTIVE_WITHIN_ROW = "a,button,input,select,textarea";
 
 type DataTableGridProps<T> = {

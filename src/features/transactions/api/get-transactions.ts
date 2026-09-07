@@ -17,8 +17,9 @@ export const TRANSACTIONS_QUERY_KEY = ["transactions"] as const;
  *
  * **No `supportsSearch`.** `/transactions` accepts no `filter[search]`, and
  * an unknown filter key is a 400 rather than an ignored parameter — which
- * is why the page composes no search box either. Its seven filters are
- * what narrows it.
+ * is why the page composes no search box either. Its filter panel is what
+ * narrows it: six filters for a cashier, and a seventh — `cashier_id` —
+ * that only an admin is allow-listed for.
  *
  * **Rows are scoped by the server.** A cashier's request is narrowed to
  * their own transactions before any filter applies, and `filter[cashier_id]`

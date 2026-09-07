@@ -446,10 +446,15 @@ a date filter.
 
 Powered by spatie/laravel-query-builder.
 
-- Filters: `series_number`, `customer` (partial match on `customer_name`),
-  `status`, `from_date`, `to_date` (both `Y-m-d` only — see above),
-  `item_name` (partial match on item `service_name`), and `cashier_id`
-  (admin only).
+- Filters: `series_number` (**partial**), `customer` (partial match on
+  `customer_name`), `status` (exact), `from_date`, `to_date` (both `Y-m-d`
+  only — see above), `item_name` (partial match on item `service_name`),
+  and `cashier_id` (admin only, exact).
+- **A filter registered as a bare string is a partial match**, not an exact
+  one. `allowedFilters` converts a plain string to `AllowedFilter::partial`,
+  which is why `series_number` matches partially while `status` — declared
+  as `AllowedFilter::exact` — does not. Only the ones this list marks exact
+  are exact.
 - Sorts: `created_at`, `status`, `customer` (maps to `customer_name`),
   `series_number`. Default is `-created_at`.
 - Pagination: `per_page`; the response carries

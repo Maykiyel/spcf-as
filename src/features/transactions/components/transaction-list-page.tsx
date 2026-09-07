@@ -7,7 +7,6 @@ import {
   type SortEntry,
   type TableFilters,
 } from "@/components/ui/data-table";
-import { DateRangeFilter, toApiDate } from "@/components/ui/date-range";
 import { useAuthStore } from "@/stores/auth-store";
 import { formatCurrency } from "@/utils/currency";
 import {
@@ -16,13 +15,7 @@ import {
 } from "../api/get-transactions";
 import { formatTransactionDate } from "../lib/transaction-date";
 import type { TransactionListRow } from "../types";
-import {
-  TransactionCashierFilter,
-  TransactionItemNameFilter,
-  TransactionPayerFilter,
-  TransactionSeriesNumberFilter,
-  TransactionStatusFilter,
-} from "./transaction-list-filters";
+import { TransactionListFilters } from "./transaction-list-filters";
 import { TransactionItemNamesCell } from "./transaction-item-names-cell";
 import { TransactionStatusBadge } from "./transaction-status-badge";
 
@@ -177,49 +170,18 @@ export function TransactionListPage() {
 
   return (
     <DataTable.Root title="Transactions" state={tableState}>
+      {/* The page leads with the filter panel, not with a search box.
+          The toolbar below carries the page-size control and nothing
+          else — there is no search piece to compose, because the
+          endpoint has no search filter to compose one against. */}
+      <TransactionListFilters
+        filters={tableState.filters}
+        onChange={tableState.setFilters}
+        includeCashier={isAdmin}
+      />
+      <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />
-        <Divider orientation="vertical" visibleFrom="xs" />
-        <TransactionPayerFilter
-          value={tableState.filters.customer}
-          onChange={(customer) => tableState.setFilters({ customer })}
-        />
-        <TransactionSeriesNumberFilter
-          value={tableState.filters.series_number}
-          onChange={(series_number) => tableState.setFilters({ series_number })}
-        />
-        <TransactionItemNameFilter
-          value={tableState.filters.item_name}
-          onChange={(item_name) => tableState.setFilters({ item_name })}
-        />
-        <TransactionStatusFilter
-          value={tableState.filters.status}
-          onChange={(status) => tableState.setFilters({ status })}
-        />
-        {/* Both ends move together, which is why `setFilters` takes a patch
-            rather than a single key: two sequential writes would mean two
-            refetches for one user action. `toApiDate` on the way in rather
-            than a cast — the values are strings off the URL, and this is
-            the one function that decides whether a string is a date. */}
-        <DateRangeFilter
-          label="Date Range"
-          value={{
-            from: toApiDate(tableState.filters.from_date),
-            to: toApiDate(tableState.filters.to_date),
-          }}
-          onChange={(range) =>
-            tableState.setFilters({
-              from_date: range.from,
-              to_date: range.to,
-            })
-          }
-        />
-        {isAdmin && (
-          <TransactionCashierFilter
-            value={tableState.filters.cashier_id}
-            onChange={(cashier_id) => tableState.setFilters({ cashier_id })}
-          />
-        )}
       </DataTable.Toolbar>
       <DataTable.Grid
         onRowClick={(row: TransactionListRow) =>
