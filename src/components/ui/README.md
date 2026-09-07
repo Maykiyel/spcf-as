@@ -257,6 +257,9 @@ accept — and put back the per-consumer mapping step this mechanism removed.
 and both say so at their declaration. A value that genuinely can't survive
 the URL as a string is the case `getX` is still for; a boolean isn't one.
 
+Those two, and `UserAccountRoleFilter`, are all built on
+`TableFilterSegments` below.
+
 Filter controls are toolbar children, wired by the page:
 
 ```tsx
@@ -550,6 +553,71 @@ not special-cased this way — it surfaces as the generic error state above.
 tree** (typically inside `MantineProvider`). If it isn't mounted, the sort
 still resets correctly, but the toast explaining why silently does nothing —
 worth confirming this is in place before relying on it.
+
+---
+
+## TableFilterSegments
+
+A segmented control for a table filter that takes one of a few fixed
+values. Domain-agnostic: it knows a filter is a string or `null`, and that
+a `SegmentedControl` cannot hold `null`, and nothing else.
+
+```tsx
+<TableFilterSegments
+  label="Status"
+  allLabel="All Statuses"
+  options={[
+    { label: "Active", value: "1" },
+    { label: "Inactive", value: "0" },
+  ]}
+  value={tableState.filters.is_active}
+  onChange={(is_active) => tableState.setFilters({ is_active })}
+/>
+```
+
+**The `null` ↔ "all" bridge is the whole reason this is shared.** A filter's
+unset value is `null`, which is what `useServerTableState` drops from the
+request rather than sending empty — and a `SegmentedControl` has no null to
+show for it. Every re-implementation of that bridge is a chance to send
+`"all"` to an endpoint that has no such value, or to render an unfiltered
+control as blank. It is handled here once and nowhere else.
+
+`allLabel` is the caller's, not this component's. "All" and "All Statuses"
+are both right, depending on how many filters sit side by side in that
+toolbar. `label` is required because it names the control for assistive
+tech and scopes it in tests: segment labels are routinely the same words as
+the values they filter on, so "Active" on its own does not distinguish this
+control from a row in the table below it.
+
+**Wrap it in your feature; don't compose it bare.** Both consumers today
+are three-line components in `features/*/components/` that name their
+filter, its options, and the wire values those options carry:
+
+```tsx
+export function ServiceStatusFilter(props: {
+  value: string | null;
+  onChange: (value: string | null) => void;
+}) {
+  return (
+    <TableFilterSegments
+      label="Status"
+      allLabel="All"
+      options={[
+        { label: "Active", value: "1" },
+        { label: "Inactive", value: "0" },
+      ]}
+      {...props}
+    />
+  );
+}
+```
+
+That split is the rule at the bottom of this file applied to one control:
+the piece with no domain knowledge lives here, and the piece that knows
+what an `is_active` flag is worth on the wire lives with the feature that
+knows. Composing a bare `TableFilterSegments` in a toolbar isn't wrong, but
+it puts the wire-value decision in a page's JSX rather than somewhere a
+reader looking for it will think to look.
 
 ---
 
