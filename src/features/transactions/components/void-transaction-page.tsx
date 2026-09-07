@@ -4,11 +4,11 @@ import {
   DataTable,
   useServerTableState,
   type TableFilters,
+  dateRangeFiltersUsable,
 } from "@/components/ui/data-table";
 import { getVoidableTransactions } from "../api/get-voidable-transactions";
 import { VOIDABLE_TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
 import type { TransactionListRow } from "../types";
-import { transactionFiltersUsable } from "../lib/transaction-filters";
 import { TransactionListFilters } from "./transaction-list-filters";
 import {
   transactionListColumns,
@@ -59,7 +59,7 @@ export function VoidTransactionPage() {
     urlKey: URL_KEY,
     initialSorts: TRANSACTIONS_DEFAULT_SORTS,
     initialFilters: VOIDABLE_FILTERS,
-    filtersUsable: transactionFiltersUsable,
+    filtersUsable: dateRangeFiltersUsable,
   });
 
   return (

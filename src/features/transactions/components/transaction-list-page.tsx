@@ -4,12 +4,12 @@ import {
   DataTable,
   useServerTableState,
   type TableFilters,
+  dateRangeFiltersUsable,
 } from "@/components/ui/data-table";
 import { useAuthStore } from "@/stores/auth-store";
 import { getTransactions } from "../api/get-transactions";
 import { TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
 import type { TransactionListRow } from "../types";
-import { transactionFiltersUsable } from "../lib/transaction-filters";
 import { TransactionListFilters } from "./transaction-list-filters";
 import {
   transactionListColumns,
@@ -60,7 +60,7 @@ export function TransactionListPage() {
     urlKey: URL_KEY,
     initialSorts: TRANSACTIONS_DEFAULT_SORTS,
     initialFilters: isAdmin ? ADMIN_FILTERS : BASE_FILTERS,
-    filtersUsable: transactionFiltersUsable,
+    filtersUsable: dateRangeFiltersUsable,
   });
 
   return (
