@@ -75,6 +75,12 @@ abandons every one of that cashier's `pending` transactions before creating
 the new one, writing a `TRANSACTION_ABANDONED` activity entry for each. It
 was previously a declared-but-unused state.
 
+**The creation response does not say what it abandoned.** It returns the
+trimmed `{id, status, cashier}` shape and nothing about the rows it just
+discarded. Counting them beforehand is the only way to know:
+`GET /transactions?filter[status]=pending` answers with a `pagination.total`
+that a cashier's own scoping already narrows to their rows.
+
 ### Which actions each status allows
 
 Enforced by `TransactionAction::isAllowedFor`; a violation is **409**.

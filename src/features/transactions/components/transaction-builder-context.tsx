@@ -14,6 +14,7 @@ import {
   canConfirmTransaction,
   getMissingRequirements,
 } from "../lib/transaction-draft";
+import { useDiscardedTransactionNotice } from "../hooks/use-discarded-transaction-notice";
 import { useLineItemSync } from "../hooks/use-line-item-sync";
 import type {
   FeeCatalogItem,
@@ -67,6 +68,8 @@ export function TransactionBuilderProvider({
   });
 
   const catalog = catalogOverride ?? fetchedCatalog ?? EMPTY_CATALOG;
+
+  useDiscardedTransactionNotice(lineItemSync.transactionId);
 
   const toggleItemCode = (itemCode: string) => {
     setSelectedItemCodes((current) =>

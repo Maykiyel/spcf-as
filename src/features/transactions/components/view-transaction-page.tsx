@@ -1,11 +1,35 @@
-import { Center, Group, Stack, Text } from "@mantine/core";
+import { Badge, Group, Stack, Text } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/ui/button";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
+import {
+  isPrintable,
+  printRefusalReason,
+  TRANSACTION_STATUS_LABEL,
+} from "../lib/transaction-status";
+import type { TransactionStatus } from "../types";
 import { TransactionItemsTable } from "./transaction-items-table";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
+
+// Green only for the one status that means the payment stands. `returned`
+// is the outcome of an admin voiding a completed transaction, so it is the
+// one a cashier most needs to notice.
+//
+// Total over the union, like `TRANSACTION_STATUS_LABEL`, and for the same
+// reason: a partial map with a fallback would give a sixth status a
+// plausible-looking badge in the wrong colour, silently. The label map
+// gets that right; a colour map beside it that didn't would undo half of
+// it. Colour stays here rather than joining the label in `lib/`, because
+// the print page has no badge and shouldn't import a palette.
+const STATUS_COLOR: Record<TransactionStatus, string> = {
+  pending: "tertiary",
+  abandoned: "tertiary",
+  completed: "success",
+  cancelled: "tertiary",
+  returned: "danger",
+};
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
@@ -29,36 +53,54 @@ export function ViewTransactionPage() {
                   Customer Name:
                 </Text>
                 <Text size="sm" fw={700}>
-                  {transaction.customer_name}
+                  {transaction.customer_name ?? "—"}
                 </Text>
+                <Badge
+                  color={STATUS_COLOR[transaction.status]}
+                  variant="light"
+                  ml="xs"
+                >
+                  {TRANSACTION_STATUS_LABEL[transaction.status]}
+                </Badge>
               </Group>
               <Stack gap={0} align="flex-end">
                 <Text size="sm" c="dimmed">
                   Control ID: {transaction.control_id}
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Series No.: {transaction.series_number}
+                  Series No.: {transaction.series_number ?? "—"}
                 </Text>
               </Stack>
             </Group>
 
             <TransactionItemsTable
               items={transaction.items}
-              total={transaction.total ?? 0}
+              total={transaction.total}
               amountPaid={transaction.amount_paid}
               changeAmount={transaction.change_amount}
             />
 
-            <Center>
+            {/* The button stays, disabled, rather than disappearing.
+                Someone who prints these all day reads a missing Print
+                button as the page having failed to load; the badge above
+                and the reason below answer the question before it is
+                asked. */}
+            <Stack gap={4} align="center">
               <PrimaryButton
                 onClick={() =>
                   navigate(`/transactions/${transaction.control_id}/print`)
                 }
                 leftSection={<IconPrinter size={16} />}
+                disabled={!isPrintable(transaction.status)}
               >
                 Print
               </PrimaryButton>
-            </Center>
+              {!isPrintable(transaction.status) && (
+                <Text size="xs" c="dimmed" ta="center">
+                  {printRefusalReason(transaction.status)}
+                </Text>
+              )}
+            </Stack>
           </Stack>
         )}
       </Card.Body>
