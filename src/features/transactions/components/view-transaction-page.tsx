@@ -9,6 +9,7 @@ import { isPrintable, printRefusalReason } from "../lib/transaction-status";
 import { TransactionItemsTable } from "./transaction-items-table";
 import { TransactionStatusBadge } from "./transaction-status-badge";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
+import { TransactionDetailSkeleton } from "./transaction-detail-skeleton";
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
@@ -23,7 +24,10 @@ export function ViewTransactionPage() {
       <Card.Divider />
       <Card.Body>
         {isUnavailable || !transaction ? (
-          <TransactionDetailFallback detail={detail} />
+          <TransactionDetailFallback
+            detail={detail}
+            loading={<TransactionDetailSkeleton />}
+          />
         ) : (
           <Stack gap="md">
             <Group justify="space-between" align="flex-start">

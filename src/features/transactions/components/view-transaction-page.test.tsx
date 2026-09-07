@@ -80,11 +80,24 @@ describe("ViewTransactionPage", () => {
     expect(mockGetTransaction).toHaveBeenCalledWith(62598);
   });
 
-  it("shows a loading state before the fetch resolves", () => {
+  it("shows the page's own shape while the fetch is in flight", () => {
+    // A skeleton, not a spinner, and specifically this page's skeleton:
+    // the header, the four-column items table and the totals are known
+    // before the transaction is. The Print page keeps the spinner, its
+    // layout being two compact copies on 8.5 by 4 inch stock.
+    //
+    // This path matters more since #62: voiding removes the transaction's
+    // cached detail rather than marking it stale, so an admin who voids
+    // one and opens it lands here rather than on a cached page.
     mockGetTransaction.mockReturnValue(new Promise(() => {})); // never resolves
     renderPage();
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(
+      screen.getByTestId("transaction-detail-skeleton"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Service" })).toBeInTheDocument();
+    // Nothing to print yet, and nothing claiming there is.
+    expect(screen.queryByRole("button", { name: /print/i })).toBeNull();
   });
 
   it("shows a distinct message when access is forbidden (403)", async () => {
