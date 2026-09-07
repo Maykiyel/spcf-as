@@ -3,7 +3,7 @@ import { Anchor } from "@mantine/core";
 import { Link } from "react-router";
 import type { ColumnDef, SortEntry } from "@/components/ui/data-table";
 import { formatCurrency } from "@/utils/currency";
-import { formatTransactionDate } from "../lib/transaction-date";
+import { formatDateTime } from "@/utils/date-time";
 import type { TransactionListRow } from "../types";
 import { TransactionItemNamesCell } from "./transaction-item-names-cell";
 import { TransactionStatusBadge } from "./transaction-status-badge";
@@ -47,7 +47,7 @@ export function transactionListColumns({
       sortKey: "created_at",
       header: "Date",
       sortable: true,
-      render: (row) => formatTransactionDate(row.date),
+      render: (row) => formatDateTime(row.date),
     },
     {
       key: "control_id",

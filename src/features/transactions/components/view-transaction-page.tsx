@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/ui/button";
 import { useTransactionDetail } from "../hooks/use-transaction-detail";
-import { formatTransactionDate } from "../lib/transaction-date";
+import { formatDateTime } from "@/utils/date-time";
 import { isPrintable, printRefusalReason } from "../lib/transaction-status";
 import { TransactionItemsTable } from "./transaction-items-table";
 import { TransactionStatusBadge } from "./transaction-status-badge";
@@ -61,7 +61,7 @@ export function ViewTransactionPage() {
                 admin rather than as a missing line. */}
             {transaction.voided_at && (
               <Text size="sm" c="dimmed">
-                Voided on {formatTransactionDate(transaction.voided_at)} by{" "}
+                Voided on {formatDateTime(transaction.voided_at)} by{" "}
                 {transaction.voided_by?.full_name ?? "an unknown admin"}
               </Text>
             )}
