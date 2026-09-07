@@ -1,19 +1,14 @@
-/** Who performed an action. A system-generated entry arrives with a null
- * `id` and the name "System", so there is no null case for the UI to
- * invent copy for. */
+/** A system-generated entry arrives with a null `id` and the name
+ * "System", so there is no null case to write copy for. */
 export type ActivityLogActor = {
   id: number | null;
   name: string;
   role: string | null;
 };
 
-/** One row of `GET /activity-logs`.
- *
- * `context` is the readable sentence, generated when the entry was
- * written, and `type` is already a display string ("Transaction - Void"),
- * not a code. Both are rendered as they arrive; nothing here is built
- * client-side. The list carries no subject and no details — those are what
- * the detail request is for. */
+/** One row of `GET /activity-logs`. `context` is a readable sentence and
+ * `type` a display string ("Transaction - Void"), both rendered as they
+ * arrive. Subject and details are the detail request's. */
 export type ActivityLogListRow = {
   id: number;
   type: string;
@@ -22,26 +17,24 @@ export type ActivityLogListRow = {
   actor: ActivityLogActor;
 };
 
-/** One field of an entry's detail. Values arrive fully formatted, currency
- * symbols and before/after arrows included, so they are printed verbatim.
- * The backend's formatter interface requires this shape for every action,
- * which is what lets seventeen event types render through one component. */
+/** The backend's formatter interface requires this shape for every
+ * action, and formats `value` server-side — peso signs and `from → to`
+ * arrows included. Printed verbatim; never parsed or re-formatted. */
 export type ActivityLogDetailField = {
   label: string;
   value: string;
 };
 
-/** The record an entry acted on. `type` is the model's name in snake case
- * (`transaction`, `service`, `series_receipt`, `user`), and `exists` is
- * false once the record has been deleted. */
+/** The record an entry acted on. `type` is a model class name in snake
+ * case, derived at runtime rather than drawn from a fixed set. */
 export type ActivityLogSubject = {
   type: string;
   id: number;
   exists: boolean;
 };
 
-/** `GET /activity-logs/{activity}`. A superset of the list row: the drawer
- * already holds everything but `subject` and `details` at click time. */
+/** `GET /activity-logs/{activity}`: the list row plus the only two
+ * fields the drawer does not already hold at click time. */
 export type ActivityLogDetail = ActivityLogListRow & {
   subject: ActivityLogSubject;
   details: ActivityLogDetailField[];

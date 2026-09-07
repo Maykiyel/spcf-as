@@ -1,14 +1,11 @@
 import { Group, Skeleton, Stack } from "@mantine/core";
 
-/** Most actions produce three or four detail fields, so the drawer neither
- * jumps taller nor collapses when they land. */
+/** Most actions produce three or four fields, so the drawer neither jumps
+ * taller nor collapses when they land. */
 const PLACEHOLDER_FIELD_COUNT = 3;
 
-/**
- * The details region's own shape in placeholders, matching how the shared
- * table loads. Only this region is a skeleton: type, description, actor and
- * timestamp came off the row and are already on screen.
- */
+/** Only this region is a skeleton: an entry's type, context, actor and
+ * timestamp came off the row and are already on screen. */
 export function ActivityDetailsSkeleton() {
   return (
     <Stack gap="sm" aria-busy="true" data-testid="activity-details-skeleton">

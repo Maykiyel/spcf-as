@@ -18,19 +18,13 @@ import {
 
 const URL_KEY = "activity";
 
-/** The endpoint's whole filter surface. Module scope, not rebuilt per
- * render: the query key includes it. */
-const FILTERS: TableFilters = { from_date: null, to_date: null };
+/** Module scope, not rebuilt per render: the query key includes it. */
+const DATE_RANGE_FILTERS: TableFilters = { from_date: null, to_date: null };
 
 /**
- * The Activity Log — the audit trail of everything consequential the
- * backend records, and the only place the admin who voided a transaction
- * is visible.
- *
- * Admin-only through the page registry, with the endpoint enforcing the
- * same rule independently. Page pagination rather than cursor, because the
- * shared pagination control needs a total row count and cursor mode gives
- * none.
+ * The Activity Log. Page pagination rather than the cursor mode the
+ * endpoint also offers, because `DataTable.Pagination` needs a total row
+ * count and cursor mode returns none.
  */
 export function ActivityLogPage() {
   const [selected, setSelected] = useState<ActivityLogListRow | null>(null);
@@ -41,7 +35,7 @@ export function ActivityLogPage() {
     columns: activityLogColumns,
     urlKey: URL_KEY,
     initialSorts: ACTIVITY_LOG_DEFAULT_SORTS,
-    initialFilters: FILTERS,
+    initialFilters: DATE_RANGE_FILTERS,
     filtersUsable: dateRangeFiltersUsable,
   });
 
@@ -55,14 +49,13 @@ export function ActivityLogPage() {
       <DataTable.Toolbar>
         <DataTable.PageSize />
       </DataTable.Toolbar>
-      {/* Annotated, because the grid's row type is not inferred from
-          the state it was built with. */}
+      {/* Annotated: the grid's row type isn't inferred from the state. */}
       <DataTable.Grid
         onRowClick={(row: ActivityLogListRow) => setSelected(row)}
       />
       <DataTable.Pagination />
-      {/* Local state, not the URL: the date filter is what a refresh or a
-          shared link needs to restore, and an open drawer is not. */}
+      {/* Local state, not the URL: #63 asks for the date filter to
+          survive a refresh, not an open drawer. */}
       <ActivityLogDrawer entry={selected} onClose={() => setSelected(null)} />
     </DataTable.Root>
   );

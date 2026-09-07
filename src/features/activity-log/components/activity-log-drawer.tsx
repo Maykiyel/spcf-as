@@ -21,18 +21,14 @@ import type {
 import { ActivityDetailsSkeleton } from "./activity-details-skeleton";
 
 type ActivityLogDrawerProps = {
-  /** The clicked row, or `null` when nothing is open. Holding the row
-   * rather than an id is what lets the drawer open on data already in
-   * hand. */
+  /** The clicked row, not an id: holding it is what lets the drawer open
+   * on data already in hand. */
   entry: ActivityLogListRow | null;
   onClose: () => void;
 };
 
-/**
- * One entry's detail. Opens immediately on the row's own type,
- * description, actor and timestamp, and fetches only the two things the
- * list doesn't carry: the field-level details and the subject reference.
- */
+/** One entry's detail, opened on the row's own type, context, actor and
+ * timestamp while the rest is still loading. */
 export function ActivityLogDrawer({ entry, onClose }: ActivityLogDrawerProps) {
   return (
     <Drawer
@@ -48,11 +44,8 @@ export function ActivityLogDrawer({ entry, onClose }: ActivityLogDrawerProps) {
   );
 }
 
-/**
- * Split out so the query lives in a component that exists only while an
- * entry is open: unmounted, it never fires, and a second click on the same
- * row is served from the cache rather than re-requested.
- */
+/** Split out so the query exists only while an entry is open: unmounted,
+ * it never fires. */
 function ActivityLogDrawerBody({ entry }: { entry: ActivityLogListRow }) {
   const { data, isLoading, isError } = useQuery({
     queryKey: activityLogDetailQueryKey(entry.id),
@@ -97,13 +90,8 @@ function ActivityLogDrawerBody({ entry }: { entry: ActivityLogListRow }) {
   );
 }
 
-/**
- * A flat label/value list with no per-type branching. The backend's
- * formatter interface requires every action's details to be label/value
- * pairs, and values arrive fully formatted — currency symbols and
- * before/after arrows included — so nothing here parses or re-formats
- * them. Seventeen event types render through this.
- */
+/** No per-type branching: every action's details arrive in one shape,
+ * already formatted. See `ActivityLogDetailField`. */
 function ActivityDetailsList({ detail }: { detail: ActivityLogDetail }) {
   return (
     <Stack gap="md">
@@ -143,8 +131,7 @@ function ActivityDetailsList({ detail }: { detail: ActivityLogDetail }) {
 }
 
 /** Type and identifier always; a link only when the record still exists
- * and its type has a route. A deleted record says so, rather than becoming
- * a dead link or disappearing. */
+ * and its type has a route. */
 function ActivitySubjectReference({
   subject,
 }: {

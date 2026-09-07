@@ -10,14 +10,37 @@ import type { ActivityLogDetail, ActivityLogListRow } from "../types";
 import { ActivityLogPage } from "./activity-log-page";
 
 // Seam: the page component, both fetchers mocked at the module boundary.
-// The list and the drawer are one surface — a row click is what opens the
-// drawer — so splitting them would need a second seam for no gain.
 
 vi.mock("../api/get-activity-logs");
 const mockGetActivityLogs = vi.mocked(getActivityLogs);
 
 vi.mock("../api/get-activity-log-detail");
 const mockGetDetail = vi.mocked(getActivityLogDetail);
+
+// Mantine's picker popover never opens under jsdom, so the shared control
+// is stood in for by a button emitting one fixed range. A factory, not a
+// bare `vi.mock`: automock would empty `toApiDate` too, and the
+// URL-restore tests below read dates through it.
+vi.mock("@/components/ui/date-range", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/components/ui/date-range")>(
+      "@/components/ui/date-range",
+    );
+  return {
+    ...actual,
+    DateRangeFilter: ({
+      onChange,
+    }: {
+      onChange: (value: { from: string; to: string }) => void;
+    }) => (
+      <button
+        onClick={() => onChange({ from: "2026-08-01", to: "2026-08-31" })}
+      >
+        Pick range
+      </button>
+    ),
+  };
+});
 
 // jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes to
 // one on mount, and the Drawer contains one.
@@ -160,6 +183,21 @@ describe("ActivityLogPage — the list", () => {
     });
   });
 
+  it("sends both ends of a picked date range to the endpoint", async () => {
+    renderPage();
+    await screen.findByText(rows[0].context);
+
+    fireEvent.click(screen.getByRole("button", { name: "Pick range" }));
+
+    // One patch, not two writes: the range moves both ends at once, and
+    // two would mean two refetches for one action.
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { from_date: "2026-08-01", to_date: "2026-08-31" },
+      }),
+    );
+  });
+
   it("asks for nothing while a restored date range has only one end", async () => {
     // `to_date` carries `after_or_equal:from_date`, so half a range is a
     // 422 rather than a looser filter.
@@ -192,8 +230,8 @@ describe("ActivityLogPage — the detail drawer", () => {
     renderPage();
     await openFirstEntry();
 
-    // Type, description, actor and timestamp are all in hand at click
-    // time, so a full-drawer spinner would hide what is already known.
+    // All four came off the row, so a full-drawer spinner would hide
+    // what is already known.
     expect(drawer().getByText("Transaction - Void")).toBeInTheDocument();
     expect(drawer().getByText(rows[0].context)).toBeInTheDocument();
     expect(drawer().getByText("Mike Bautista")).toBeInTheDocument();
@@ -256,6 +294,31 @@ describe("ActivityLogPage — the detail drawer", () => {
 
     expect(await drawer().findByText(/Service #42/)).toBeInTheDocument();
     expect(drawer().queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("calls an account subject an account, not a user", async () => {
+    // ACCOUNT_CREATED logs against the User model, so `user` is what the
+    // wire sends. "Account" is this app's word for it.
+    mockGetDetail.mockResolvedValue({
+      ...voidDetail,
+      subject: { type: "user", id: 7, exists: true },
+    });
+    renderPage();
+    await openFirstEntry();
+
+    expect(await drawer().findByText(/Account #7/)).toBeInTheDocument();
+    expect(drawer().queryByText(/User #7/)).not.toBeInTheDocument();
+  });
+
+  it("names a series receipt subject the way the glossary spells it", async () => {
+    mockGetDetail.mockResolvedValue({
+      ...voidDetail,
+      subject: { type: "series_receipt", id: 4501, exists: true },
+    });
+    renderPage();
+    await openFirstEntry();
+
+    expect(await drawer().findByText(/Series receipt #4501/)).toBeInTheDocument();
   });
 
   it("closes back to the list", async () => {

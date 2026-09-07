@@ -9,12 +9,8 @@ type ActivityLogFiltersProps = {
   onChange: (patch: TableFilters) => void;
 };
 
-/**
- * The endpoint's entire filter surface: a date range, and nothing else.
- * There is no search box because `/activity-logs` accepts no
- * `filter[search]`, and no filter on event type or actor because neither
- * is supported — the type filter is the one worth asking the backend for.
- */
+/** The endpoint's entire filter surface. It allow-lists no search, no
+ * event type and no actor, and an unknown key is a 400. */
 export function ActivityLogFilters({
   filters,
   onChange,
