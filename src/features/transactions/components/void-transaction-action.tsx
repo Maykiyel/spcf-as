@@ -7,7 +7,10 @@ import {
   notifyMutationError,
 } from "@/lib/notifications/notifications";
 import { formatCurrency } from "@/utils/currency";
-import { TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
+import {
+  TRANSACTIONS_QUERY_KEY,
+  transactionDetailQueryKey,
+} from "../api/transaction-query-keys";
 import { voidTransaction } from "../api/void-transaction";
 import type { TransactionListRow } from "../types";
 
@@ -61,16 +64,47 @@ export function VoidTransactionAction({
     useDisclosure(false);
   const queryClient = useQueryClient();
 
+  /** What this transaction's caches are worth once the server has spoken
+   * about it, on either path.
+   *
+   * **The lists are invalidated and the detail entry is removed**, which is
+   * not the same thing and the difference is the whole point.
+   *
+   * `invalidateQueries` defaults to `refetchType: "active"`. Voiding
+   * happens on this page, so the detail query is *inactive* at that moment
+   * and invalidation only marks it. React Query then hands a remount that
+   * cached entry synchronously and revalidates behind it, so opening the
+   * transaction paints the pre-void data first and corrects itself a
+   * moment later. Reported from a browser: the View page showed
+   * "Completed" on a transaction that had just been voided.
+   *
+   * A moment of a wrong badge would be bad enough against #62's "see it
+   * reflected immediately". It is worse than cosmetic: `isPrintable` is
+   * `status === "completed"`, so for that window the Print button is live
+   * on a reversed payment, and the print page reads this same entry.
+   *
+   * Removing it leaves nothing to render stale. The detail page shows its
+   * ordinary loading fallback, which offers no Print button at all, and
+   * then the real voided transaction. `refetchType: "all"` would also
+   * refetch it, but it would refetch every other inactive transaction
+   * query too, and it would still lose the race against a fast navigation
+   * because the stale entry stays readable until the response lands.
+   *
+   * The lists keep plain invalidation on purpose. The one on screen
+   * refetches at once; the others are marked and refetch when next shown,
+   * and a list correcting one row's badge behind the user is the ordinary
+   * stale-while-revalidate trade, with no action hanging off it. */
+  const forgetWhatWeKnew = () => {
+    queryClient.invalidateQueries({ queryKey: [...TRANSACTIONS_QUERY_KEY] });
+    queryClient.removeQueries({
+      queryKey: transactionDetailQueryKey(transaction.control_id),
+    });
+  };
+
   const voidMutation = useMutation({
     mutationFn: () => voidTransaction(transaction.control_id),
     onSuccess: () => {
-      // The shared prefix, deliberately, and not this page's list alone.
-      // It matches three things that are all now wrong: this list, the
-      // receipts list, and the transaction's own detail entry — which is
-      // the load-bearing one, because that query has a stale window of
-      // about a minute, so an admin who voids a transaction and opens it
-      // straight away would otherwise be shown it still marked completed.
-      queryClient.invalidateQueries({ queryKey: [...TRANSACTIONS_QUERY_KEY] });
+      forgetWhatWeKnew();
       closeConfirm();
       notifySuccess(`Transaction ${transaction.control_id} was voided.`);
     },
@@ -79,12 +113,11 @@ export function VoidTransactionAction({
       // is how an admin learns another admin voided this row first. Worth
       // more than a generic failure, so it is shown as written.
       notifyMutationError(error, "Couldn't void this transaction.");
-      // And then the same invalidation as a success, because a refusal on
-      // this page is itself evidence the list is stale: every row here is
-      // meant to be voidable, and the server has just said this one isn't.
-      // Leaving it on screen would leave a Void button that can only 409
-      // again, which is the state the pinned status exists to prevent.
-      queryClient.invalidateQueries({ queryKey: [...TRANSACTIONS_QUERY_KEY] });
+      // The same forgetting as a success, because a refusal here is itself
+      // evidence that what we hold is stale: every row on this page is
+      // meant to be voidable, and the server has just said this one is
+      // not. That makes the cached detail as suspect as the list row.
+      forgetWhatWeKnew();
       closeConfirm();
     },
   });

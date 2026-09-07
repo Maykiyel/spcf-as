@@ -264,11 +264,18 @@ describe("VoidTransactionPage", () => {
     );
   });
 
-  it("refreshes the list and that transaction's own detail entry", async () => {
-    // The detail invalidation is the load-bearing half: the detail query
-    // has a stale window of about a minute, so without it an admin who
-    // voids a transaction and immediately opens it is shown it still
-    // marked completed.
+  it("refreshes the list, and leaves nothing stale to show for that transaction", async () => {
+    // The detail half is the load-bearing one, and marking it stale is not
+    // enough. Voiding happens on this page, so that query is inactive and
+    // an invalidation only flags it; React Query then hands the next
+    // mount the cached entry synchronously and revalidates behind it.
+    // Found in a browser: the View page painted "Completed" on a
+    // transaction that had just been voided.
+    //
+    // So the assertion is that the entry is *gone*, not that it is
+    // flagged. `isInvalidated` was true the whole time the page was
+    // rendering the wrong status, which is what made the old version of
+    // this test agree with a real defect.
     const { queryClient } = renderPage();
     const detailKey = transactionDetailQueryKey(1201);
     seedDetail(queryClient, detailKey);
@@ -282,7 +289,7 @@ describe("VoidTransactionPage", () => {
         requestsBefore,
       ),
     );
-    expect(queryClient.getQueryState(detailKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData(detailKey)).toBeUndefined();
   });
 
   it("says the void succeeded, and stays on the list", async () => {
@@ -354,8 +361,9 @@ describe("VoidTransactionPage", () => {
 });
 
 /** A detail entry already in cache, the way it would be for an admin who
- * looked at the transaction before voiding it. Its content is irrelevant;
- * what matters is that an entry exists to be invalidated. */
+ * opened the transaction from the receipts list before voiding it. The
+ * status is the field that matters: this is the value the View page would
+ * paint if anything survived the void. */
 function seedDetail(
   queryClient: QueryClient,
   key: ReturnType<typeof transactionDetailQueryKey>,
