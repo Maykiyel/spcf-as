@@ -14,14 +14,18 @@ export type ServerTableParams = {
   filters?: TableFilters;
 };
 
-export type ServerTableResponse<T> = {
+export type ServerTableResponse<T, TMeta = undefined> = {
   data: T[];
   total: number;
+  /** Whatever the envelope carries beside the rows. Optional because it is
+   * genuinely unknown until the first response lands, which is what lets a
+   * page tell "not loaded yet" from a real zero. */
+  meta?: TMeta;
 };
 
-type UseServerTableStateOptions<T> = {
+type UseServerTableStateOptions<T, TMeta> = {
   queryKey: unknown[];
-  queryFn: (params: ServerTableParams) => Promise<ServerTableResponse<T>>;
+  queryFn: (params: ServerTableParams) => Promise<ServerTableResponse<T, TMeta>>;
   columns: ColumnDef<T>[];
   initialPageSize?: number;
   urlKey?: string;
@@ -40,7 +44,10 @@ type UseServerTableStateOptions<T> = {
   filtersUsable?: (filters: TableFilters) => boolean;
 };
 
-export function useServerTableState<T extends Record<string, any>>({
+export function useServerTableState<
+  T extends Record<string, any>,
+  TMeta = undefined,
+>({
   queryKey,
   queryFn,
   columns,
@@ -49,7 +56,7 @@ export function useServerTableState<T extends Record<string, any>>({
   initialFilters,
   initialSorts,
   filtersUsable,
-}: UseServerTableStateOptions<T>) {
+}: UseServerTableStateOptions<T, TMeta>) {
   const {
     page,
     pageSize,
@@ -103,6 +110,7 @@ export function useServerTableState<T extends Record<string, any>>({
     columns,
     rows: data?.data ?? [],
     totalCount: data?.total ?? 0,
+    meta: data?.meta,
     isLoading: isLoading || isFetching,
     isError,
     errorMessage: isError ? "Couldn't load data. Please try again." : null,

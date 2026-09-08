@@ -156,6 +156,34 @@ describe("createListAdapter", () => {
     expect(result).toEqual({ data: widgets, total: 42 });
   });
 
+  it("surfaces a value sitting beside the rows in the envelope", async () => {
+    // `/reports/transactions` computes its period total server-side and
+    // returns it as a sibling of the rows, not inside them.
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { widgets: [{ id: "1" }], total_earnings: 48250, pagination: { total: 42 } },
+    } as any);
+
+    const getWidgets = createListAdapter<{ id: string }, number>(
+      "/widgets",
+      "widgets",
+      { selectMeta: (body) => body.total_earnings as number },
+    );
+    const result = await getWidgets(baseParams);
+
+    expect(result).toEqual({ data: [{ id: "1" }], total: 42, meta: 48250 });
+  });
+
+  it("leaves meta absent for an endpoint that declares no selector", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: { widgets: [], total_earnings: 48250, pagination: { total: 0 } },
+    } as any);
+
+    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets");
+    const result = await getWidgets(baseParams);
+
+    expect(result.meta).toBeUndefined();
+  });
+
   it("reads the response using the given responseKey", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       data: { gizmos: [{ id: "g1" }], pagination: { total: 1 } },

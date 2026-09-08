@@ -32,8 +32,8 @@ function createWrapper(initialEntries: string[] = ["/"]) {
 
 /** Reads the query string alongside the hook, so a test can assert on what
  * a shared link would actually carry rather than on internal state. */
-function renderTable(
-  options: Parameters<typeof useServerTableState<Row>>[0],
+function renderTable<TMeta = undefined>(
+  options: Parameters<typeof useServerTableState<Row, TMeta>>[0],
   initialEntries?: string[],
 ) {
   return renderHook(
@@ -378,6 +378,32 @@ describe("useServerTableState filter guards", () => {
     );
     expect(result.current.search).not.toContain("nonsense");
     expect(result.current.table.filters).toEqual({ status: "completed" });
+  });
+});
+
+describe("useServerTableState meta", () => {
+  it("hands back the value the fetcher returned beside the rows", async () => {
+    const queryFn = vi.fn(async () => ({
+      data: [{ id: "1", name: "Row" }],
+      total: 1,
+      meta: 48250,
+    }));
+
+    const { result } = renderTable({ queryKey: ["widgets"], queryFn, columns });
+
+    await waitFor(() => expect(result.current.table.meta).toBe(48250));
+  });
+
+  it("reports no meta before the first response lands", async () => {
+    const queryFn = vi.fn(
+      () => new Promise<never>(() => {}), // never settles
+    );
+
+    const { result } = renderTable({ queryKey: ["widgets"], queryFn, columns });
+
+    // Undefined rather than a zero: the page has to be able to tell "not
+    // loaded yet" from a genuine total of nothing.
+    expect(result.current.table.meta).toBeUndefined();
   });
 });
 

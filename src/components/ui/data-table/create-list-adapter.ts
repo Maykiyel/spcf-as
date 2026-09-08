@@ -5,11 +5,15 @@ import type {
   ServerTableResponse,
 } from "./use-server-table-state";
 
-type ListAdapterOptions = {
+type ListAdapterOptions<TMeta> = {
   /** Whether this endpoint accepts `filter[search]`. Only item codes,
    * services and series receipts do; elsewhere an unknown filter key is a
    * 400, not an ignored parameter. See BACKEND_NOTES.md. */
   supportsSearch?: boolean;
+  /** Reads a value the envelope carries beside the rows, such as the
+   * transactions report's server-computed `total_earnings`. Omitted by
+   * every endpoint whose envelope holds nothing but rows. */
+  selectMeta?: (body: Record<string, unknown>) => TMeta;
 };
 
 // Every list endpoint returns the same envelope and takes the same params,
@@ -31,15 +35,15 @@ function toFilterParams(
   );
 }
 
-export function createListAdapter<T>(
+export function createListAdapter<T, TMeta = undefined>(
   url: string,
   responseKey: string,
-  { supportsSearch = false }: ListAdapterOptions = {},
+  { supportsSearch = false, selectMeta }: ListAdapterOptions<TMeta> = {},
 ) {
   return async (
     params: ServerTableParams,
     extra?: Record<string, unknown>,
-  ): Promise<ServerTableResponse<T>> => {
+  ): Promise<ServerTableResponse<T, TMeta>> => {
     const response = await apiClient.get<Record<string, unknown>>(url, {
       params: {
         per_page: params.per_page,
@@ -58,6 +62,7 @@ export function createListAdapter<T>(
     return {
       data: response.data[responseKey] as T[],
       total: pagination.total,
+      meta: selectMeta?.(response.data),
     };
   };
 }
