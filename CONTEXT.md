@@ -61,6 +61,20 @@ _Avoid_: category list, item code manager
 A dedicated location for API calls genuinely needed by more than one feature, sitting outside `src/features/*` — per the project's reference architecture (bulletproof-react), which explicitly allows this as an alternative to duplicating a call across features. Distinct from `components/ui`: this tier is allowed to know about domain concepts, whereas `components/ui` must stay domain-agnostic. It holds `item-codes.ts` (the shared `ItemCode` type and `searchItemCodes`), `services.ts` (the `Service` shape alone — both features fetch it differently), and `cashiers.ts` (the `Cashier` type and `getCashiers`, promoted out of Series Receipts when the Transactions list's cashier filter became a second consumer). Only promote something here once a second real feature actually needs it — don't pre-build shared modules for hypothetical future consumers (e.g. the item-code combobox UI itself stayed feature-local to Services for exactly this reason; only the type + fetcher moved here). Promote as much as is genuinely shared and no more: `services.ts` is a type with no fetcher for exactly that reason.
 _Avoid_: treating this as a place for anything reusable in general — it's specifically for cross-feature API calls, not a catch-all
 
+**`src/components/filters/` (shared filter controls)**:
+The tier for a filter control that more than one feature's table needs and
+that knows a domain concept, which is what keeps it out of `components/ui`
+(domain-agnostic by rule) and out of `src/api/` (API calls, not React). It
+holds `cashier-filter.tsx`, promoted out of the Transactions list when the
+Transactions Report became a second page needing the same picker. A control
+here owns its own query, so "not rendered" means "never requested", which is
+what an admin-only endpoint requires of a control a cashier must never fire.
+Same promotion rule as the tiers above: move something here once a second
+feature actually needs it, and no sooner.
+_Avoid_: a home for every filter control (a filter used by one feature stays
+in that feature); confusing it with `components/ui/table-filter`, which holds
+the domain-agnostic input primitives these are built from
+
 **`src/utils/` (shared helpers)**:
 The same idea as `src/api/`, one tier over: pure functions with no API call and no React in them, needed by more than one feature. It holds `currency.ts` (`formatCurrency`, `roundToCents`), which lived in `features/transactions/lib/` until the Dashboard needed to format money too — a feature importing from another feature is the thing this tier exists to avoid. Same promotion rule as `src/api/`: move something here when a second feature actually needs it, not before.
 _Avoid_: a dumping ground for anything that isn't a component — a helper used by one feature stays in that feature's `lib/`
