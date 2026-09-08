@@ -39,7 +39,7 @@ _Avoid_: auth store (that's the state container it manages, not the module itsel
 
 **Dashboard (page)**:
 The page at `/dashboard` that everyone lands on after signing in. Everyone sees today's transaction count and today's earnings, scoped to them by the endpoint. An admin additionally sees a monthly earnings bar chart for a chosen year and a table of earnings per cashier. **The role branch is forced by the API, not chosen for design reasons**: `GET /dashboard` scopes itself and serves both roles, but `/reports/*` is admin-only and answers a cashier with a 403, so a cashier's dashboard must not request those at all. That is why each admin-only section is a component holding its own query — unmounted, it never fires — rather than one page-level fetch with the results hidden. The same structure gives each section its own loading and error state, so one failing request does not blank the other two.
-_Avoid_: home, landing page (the login screen is what people mean by those); "the reports page" (`/reports` is a separate, unbuilt page)
+_Avoid_: home, landing page (the login screen is what people mean by those); "the reports page" (Reports is a nav group of its own, and its leaves are separate pages)
 
 **Item code**:
 A category of billable service or fee (e.g. "GRADUATION FEE", "RENTAL"). Owns a `name` and `description`; has many Services. Managed on its own catalog page, independent of adding Services.
@@ -119,6 +119,45 @@ _Avoid_: cancel (a different action on a different status — cancelling is the 
 **Voided (status)**:
 What the UI calls a transaction whose status is `returned` on the wire. The backend enum says `returned`; every label a user reads says "Voided", including the status filter's option and the badge, because voiding is the action that produces it and the word an admin will look for. The wire's spelling stays in types, filter values and query params; the translation happens once, in `TRANSACTION_STATUS_LABEL`.
 _Avoid_: returned (in user-facing copy — correct in code, where it is the API's own value)
+
+**Reports (sidebar nav group)**:
+The top-level, admin-only navigation group over `/reports/*`. It replaced a
+single `/reports` page holding one heading, because the two reports beneath it
+answer different questions and have different shapes. Holds the Transactions
+Report, and the Services Sold report (#65) once that page exists. Admin-only
+throughout: every `/reports/*` endpoint answers a cashier with a 403.
+_Avoid_: analytics, statistics; "the reports page" (there is no page at
+`/reports` itself, only leaves under it)
+
+**Transactions Report (page)**:
+The admin-only page at `/reports/transactions`: a server-paginated table of
+completed transactions for a chosen period, with the period's total earnings
+beneath it. Named for what it is. It was specified as "Consolidated Item
+Reports", which was wrong twice over, since it carries no item data at all and
+"item" means the category in this glossary.
+
+**The total is the server's, never a sum of the visible rows.** The endpoint
+computes it across the whole filtered set, so a client-side sum would answer a
+different question and disagree with itself page by page. A failure shows
+"Unavailable" rather than a formatted zero, because a report that reads zero
+when it actually broke is the one failure an accounting figure must not have.
+
+**Its filter surface is a date range and a cashier, and nothing else.** No
+search box, since the endpoint allow-lists no `filter[search]` and an unknown
+key is a 400; no status filter, because only completed transactions are in
+scope and the endpoint enforces it. The cashier picker offers real cashiers
+alone, as the endpoint validates the identifier against the cashier role.
+
+Its sort allow-list is not the Transactions list's: it names the payer sort
+`customer_name` rather than `customer`, allows `cashier_name` where the list
+does not, and allows no `series_number` sort at all.
+
+Windows on the transaction's creation time, while the Dashboard's cashier
+earnings window on completion time. Two figures over "the same" month can
+therefore disagree for a transaction that straddled a boundary. Neither is
+wrong; they answer slightly different questions.
+_Avoid_: Consolidated Item Reports (the old name, wrong on both words), earnings
+report (that is the Dashboard's charted figure), item report
 
 **Activity entry**:
 One recorded event in the system's audit trail — a transaction initiated, an item removed, a series receipt exhausted, an account created. Seventeen kinds, written by the backend and never by this application. Its parts each have a fixed name: the **actor** who did it, the **subject** it acted on, its **type**, its **context**, and its **details**. It is the only place the admin who voided a transaction is recorded; the transaction itself does not carry them in any list.

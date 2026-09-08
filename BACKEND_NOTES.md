@@ -326,9 +326,51 @@ instants of 31 December fall outside it.
 - **No `search` filter** on `/activity-logs`, `/reports/*`, `/users` or
   `/cashiers`. Activity logs remain date-only with `created_at` as the
   sole sort.
-- **`/reports/transactions` computes `total_earnings` from the same
-  builder instance `paginate()` was called on**, so the offset may leak
-  into the aggregate and zero the total on page 2 onward. Unverified.
+- **`/reports/transactions` returns `total_earnings: 0` from page 2
+  onward.** Confirmed by reading the controller and the vendored
+  framework at `0d81988`, not yet against a running server. `paginate()`
+  and `sum('total')` run on the same builder: Spatie's `__call` forwards
+  without cloning, `Eloquent\Builder::paginate()` applies `forPage()`
+  which mutates `offset`/`limit` in place, and `Query\Builder::aggregate()`
+  clones without `columns` only, so both survive. Page 2 emits
+  `select sum(total) ... limit 25 offset 25`; `SUM` is one row, the offset
+  skips it, and `(float) null` is `0.0`. Page 1 is correct.
+
+  The cursor branch is wrong differently: no offset, but the cursor's
+  `where` narrows the sum to the rows from the cursor onward. Nothing uses
+  cursor mode.
+
+  Fix is to take the sum **before** the `match` that paginates.
+  `aggregate()` already works on a clone, so the builder survives for
+  `paginate()`. Reported to the backend team; the Transactions Report
+  displays whatever the endpoint sends rather than working around it
+  client-side (#64).
+
+## `GET /reports/transactions`
+
+Admin only, under `throttle:reports`. Envelope is the usual one plus a
+sibling of the rows:
+
+```json
+{ "transactions": [...], "total_earnings": 48250.0, "pagination": {...} }
+```
+
+Rows are `TransactionResource` with **`cashier` eager-loaded and `items`
+not**, so the `items` key is absent from the payload rather than empty:
+`whenLoaded` yields a `MissingValue`, and `removeMissingValues` drops the
+key. Only `completed` transactions, enforced server-side, windowed on
+`created_at`.
+
+Filters: `cashier_id` (exact, validated against the cashier role, so an
+identifier that is not a cashier is a 422), `from_date`, `to_date`. All
+optional. No `search`.
+
+Sorts: `created_at`, `id`, `customer_name`, `total`, `amount_paid`,
+`change_amount`, `cashier_name`. Default `-created_at, id`.
+
+**Not the same allow-list as `/transactions`**: the payer sort is
+`customer_name` here and `customer` there, `cashier_name` is allowed here
+and not there, and `series_number` is allowed there and not here.
 
 ## Response shapes
 

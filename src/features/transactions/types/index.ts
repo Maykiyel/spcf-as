@@ -1,3 +1,5 @@
+import type { TransactionScalars } from "@/api/transactions";
+
 // The Fee Catalog's display shape, built from `Service` via
 // `serviceToFeeCatalogItem`. Separate because the catalog's filtering lib
 // wants a flat `itemCode: string`, not `Service`'s optional object.
@@ -63,22 +65,12 @@ export type TransactionListItemDTO = {
   name: string;
 };
 
-// Every scalar TransactionResource returns. The variants below differ only
-// in their item shape, so it is the only thing they restate. Not exported:
-// a bare base would mean "some transaction, items unknown".
-//
-// The void fields live on whichever variant can actually promise them,
-// which is `TransactionDTO` and nothing else.
-type TransactionBase = {
-  control_id: number;
-  cashier: { id: number; full_name: string } | null;
-  series_number: number | null;
-  customer_name: string | null;
-  total: number | null;
-  amount_paid: number;
-  change_amount: number;
+// Not exported: a bare base would mean "some transaction, items unknown",
+// and the variants below differ only in the item shape they add. `status` is
+// here rather than in `TransactionScalars`: nothing outside this feature
+// reads it.
+type TransactionBase = TransactionScalars & {
   status: TransactionStatus;
-  date: string;
 };
 
 // The full shape returned by save/cancel/show. The void fields are

@@ -205,12 +205,22 @@ export const pages: TopLevelPage[] = [
     roles: ["admin"],
   },
   {
+    // A group with one leaf today. The Services Sold report (#65) is its
+    // second, and is added when that page exists rather than as a link
+    // onto nothing.
     key: "reports",
-    path: "/reports",
-    lazyImport: () => import("@/app/routes/app/reports"),
     label: "Reports",
     icon: IconReportAnalytics,
     roles: ["admin"],
+    children: [
+      {
+        key: "transactionsReport",
+        path: "/reports/transactions",
+        lazyImport: () => import("@/app/routes/app/reports/transactions"),
+        label: "Transactions Report",
+        icon: IconEye,
+      },
+    ],
   },
   {
     key: "activityLog",
