@@ -175,11 +175,15 @@ describe("TransactionReportPage — the rows", () => {
     renderPage();
     await screen.findByText("Anna Reyes");
 
-    // The endpoint's own `defaultSort`, declared so the caret shows. This
-    // reaches the wire before the user touches anything.
+    // Both halves of the endpoint's own `defaultSort`. The `id` tiebreaker
+    // is what keeps page order defined when two transactions share a
+    // `created_at`, and sending any sort suppresses the server's default.
     expect(lastRequest()).toMatchObject({
       page: 1,
-      sorts: [{ key: "created_at", direction: "desc" }],
+      sorts: [
+        { key: "created_at", direction: "desc" },
+        { key: "id", direction: "asc" },
+      ],
       filters: { from_date: null, to_date: null, cashier_id: null },
     });
   });
@@ -282,7 +286,7 @@ describe("TransactionReportPage — the filters", () => {
 
   it("restores a date range and a cashier from the URL", async () => {
     renderPage(
-      "/reports/transactions?report_from_date=2026-08-01&report_to_date=2026-08-31&report_cashier_id=8",
+      "/reports/transactions?transactions_report_from_date=2026-08-01&transactions_report_to_date=2026-08-31&transactions_report_cashier_id=8",
     );
     await screen.findByText("Anna Reyes");
 
@@ -299,7 +303,7 @@ describe("TransactionReportPage — the filters", () => {
   it("asks for nothing while a restored date range has only one end", async () => {
     // `to_date` carries `after_or_equal:from_date`, so half a range is a 422
     // rather than a looser filter.
-    renderPage("/reports/transactions?report_from_date=2026-08-01");
+    renderPage("/reports/transactions?transactions_report_from_date=2026-08-01");
     await flush();
 
     expect(mockGetReport).not.toHaveBeenCalled();

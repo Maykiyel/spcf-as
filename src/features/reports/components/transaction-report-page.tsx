@@ -14,7 +14,7 @@ import {
   TRANSACTION_REPORT_DEFAULT_SORTS,
 } from "./transaction-report-columns";
 
-const URL_KEY = "report";
+const URL_KEY = "transactions_report";
 
 /** Module scope, not rebuilt per render: the query key includes it. */
 const REPORT_FILTERS: TableFilters = {

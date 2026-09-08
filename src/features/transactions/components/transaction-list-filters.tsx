@@ -1,8 +1,7 @@
 import { Group, Select } from "@mantine/core";
 import type { TableFilters } from "@/components/ui/data-table";
-import { DateRangeFilter, toApiDate } from "@/components/ui/date-range";
 import { TableFilterText } from "@/components/ui/table-filter";
-import { CashierFilter } from "@/components/filters";
+import { CashierFilter, DateRangeTableFilter } from "@/components/filters";
 import { TRANSACTION_STATUS_LABEL } from "../lib/transaction-status";
 import { TRANSACTION_STATUSES } from "../types";
 
@@ -114,18 +113,7 @@ export function TransactionListFilters({
           onChange={(status) => onChange({ status })}
         />
       )}
-      {/* `toApiDate`, not a cast: the values are strings off the URL, and
-          this is what decides whether one is a date the API takes. */}
-      <DateRangeFilter
-        label="Date Range"
-        value={{
-          from: toApiDate(filters.from_date),
-          to: toApiDate(filters.to_date),
-        }}
-        onChange={(range) =>
-          onChange({ from_date: range.from, to_date: range.to })
-        }
-      />
+      <DateRangeTableFilter filters={filters} onChange={onChange} />
       {includeCashier && (
         <CashierFilter
           value={filters.cashier_id}

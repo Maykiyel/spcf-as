@@ -205,9 +205,7 @@ export const pages: TopLevelPage[] = [
     roles: ["admin"],
   },
   {
-    // A group with one leaf today. The Services Sold report (#65) is its
-    // second, and is added when that page exists rather than as a link
-    // onto nothing.
+    // One leaf until #65 lands; see the Reports entry in CONTEXT.md.
     key: "reports",
     label: "Reports",
     icon: IconReportAnalytics,

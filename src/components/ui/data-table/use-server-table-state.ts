@@ -17,9 +17,8 @@ export type ServerTableParams = {
 export type ServerTableResponse<T, TMeta = undefined> = {
   data: T[];
   total: number;
-  /** Whatever the envelope carries beside the rows. Optional because it is
-   * genuinely unknown until the first response lands, which is what lets a
-   * page tell "not loaded yet" from a real zero. */
+  /** Whatever the envelope carries beside the rows, for the adapters that
+   * declare a `selectMeta`. Absent on every other one. */
   meta?: TMeta;
 };
 
