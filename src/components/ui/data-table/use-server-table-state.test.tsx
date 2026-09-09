@@ -12,8 +12,8 @@ import type { SortPlan } from "./sort-plan";
 type Row = { id: string; name: string };
 
 const columns: ColumnDef<Row>[] = [
-  { key: "id", header: "ID" },
-  { key: "name", header: "Name" },
+  { field: "id", header: "ID" },
+  { field: "name", header: "Name" },
 ];
 
 // A Router is required even with no `urlKey`: both adapters are always
@@ -429,9 +429,11 @@ describe("useServerTableState columns", () => {
     // The Services Sold row link needs the period, which isn't known until
     // after this hook runs — the reason `columns` accepts a function.
     const queryFn = createFetcher();
-    const build = vi.fn(({ period }: { period: DateRangePeriod }) => [
-      { key: "name" as const, header: `Rows for ${period.from}` },
-    ]);
+    const build = vi.fn(
+      ({ period }: { period: DateRangePeriod }): ColumnDef<Row>[] => [
+        { field: "name", header: `Rows for ${period.from}` },
+      ],
+    );
 
     const { result } = renderTable(
       {

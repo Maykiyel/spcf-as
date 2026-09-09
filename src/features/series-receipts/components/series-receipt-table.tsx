@@ -12,20 +12,18 @@ import type { SeriesReceipt } from "../types";
 export function SeriesReceiptTable() {
   const columns: ColumnDef<SeriesReceipt>[] = [
     {
-      key: "cashier",
+      field: "cashier",
       // The wire still calls this field `account`, so that is what a header
       // click has to send. `SERIES_RECEIPTS_SORT_PLAN` allow-lists it.
       sortKey: "account",
       header: "Cashier",
-      sortable: true,
       render: (row) => row.cashier.full_name,
     },
-    { key: "from", header: "From", sortable: true },
-    { key: "to", header: "To", sortable: true },
+    { field: "from", header: "From" },
+    { field: "to", header: "To" },
     {
-      key: "remaining_sheets",
+      field: "remaining_sheets",
       header: "Remaining Sheets",
-      sortable: true,
     },
   ];
 

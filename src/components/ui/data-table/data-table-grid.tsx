@@ -1,6 +1,7 @@
 import { Table, UnstyledButton, Group, Text } from "@mantine/core";
 import { IconCaretUpFilled, IconCaretDownFilled } from "@tabler/icons-react";
 import { useDataTableContext } from "./data-table-context";
+import { columnId, columnSortKey } from "./sort-plan";
 import { DataTableSkeleton } from "./data-table-skeleton";
 
 const MAX_SKELETON_ROWS = 10;
@@ -47,7 +48,7 @@ export function DataTableGrid<T extends Record<string, any>>({
             {columns.map((col) => {
               if (!col.sortable) {
                 return (
-                  <Table.Th key={col.id ?? col.key}>
+                  <Table.Th key={columnId(col)}>
                     <Text fw={600} size="sm">
                       {col.header}
                     </Text>
@@ -55,9 +56,9 @@ export function DataTableGrid<T extends Record<string, any>>({
                 );
               }
 
-              // The endpoint's name for the column, not always the field
-              // the cell reads. See `sortKey`.
-              const sortKey = col.sortKey ?? col.key;
+              // Non-null: `sortable` is derived from this key being in the
+              // endpoint's plan, so a sortable column always has one.
+              const sortKey = columnSortKey(col) as string;
               const sortIndex = sorts.findIndex((s) => s.key === sortKey);
               const active = sortIndex !== -1;
               const direction = active ? sorts[sortIndex].direction : null;
@@ -67,7 +68,7 @@ export function DataTableGrid<T extends Record<string, any>>({
                 // Carets are drawn with opacity, so the sorted state is
                 // invisible to a screen reader and a test. This is both.
                 <Table.Th
-                  key={col.id ?? col.key}
+                  key={columnId(col)}
                   aria-sort={
                     active
                       ? direction === "asc"
@@ -151,8 +152,8 @@ export function DataTableGrid<T extends Record<string, any>>({
                 style={onRowClick ? { cursor: "pointer" } : undefined}
               >
                 {columns.map((col) => (
-                  <Table.Td key={col.id ?? col.key}>
-                    {col.render ? col.render(row) : String(row[col.key] ?? "")}
+                  <Table.Td key={columnId(col)}>
+                    {col.render ? col.render(row) : String(col.field ? (row[col.field] ?? "") : "")}
                   </Table.Td>
                 ))}
               </Table.Tr>

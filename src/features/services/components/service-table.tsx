@@ -24,31 +24,27 @@ const INITIAL_FILTERS = { is_active: null };
 export function ServiceTable({ onEdit }: ServiceTableProps) {
   const columns: ColumnDef<Service>[] = [
     {
-      key: "item_code",
+      field: "item_code",
       header: "Item Code",
-      sortable: true,
       render: (row) => row.item_code?.name ?? "",
     },
-    { key: "name", header: "Service", sortable: true },
+    { field: "name", header: "Service" },
     {
-      key: "description",
+      field: "description",
       header: "Description",
       render: (row) => row.description ?? "—",
     },
     {
-      key: "price",
+      field: "price",
       header: "Price",
-      sortable: true,
       render: (row) => `₱${row.price.toFixed(2)}`,
     },
     {
-      key: "id",
       id: "is_active",
       header: "Active",
       render: (row) => <ServiceActiveToggle service={row} />,
     },
     {
-      key: "id",
       id: "actions",
       header: "Actions",
       render: (row) => <ServiceActionsCell service={row} onEdit={onEdit} />,

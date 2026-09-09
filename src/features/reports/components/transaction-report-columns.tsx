@@ -1,9 +1,7 @@
-import { TRANSACTION_REPORT_SORT_PLAN } from "../api/get-transaction-report";
 import { reportTransactionColumns } from "./report-transaction-columns";
 
-/** The columns of `GET /reports/transactions`. Which of them sort, and
- * under what names, comes from the endpoint's plan. */
+/** The columns of `GET /reports/transactions`. Which of them sort comes
+ * from `TRANSACTION_REPORT_SORT_PLAN`, applied by the table. */
 export const transactionReportColumns = reportTransactionColumns({
-  plan: TRANSACTION_REPORT_SORT_PLAN,
   includeAmounts: true,
 });

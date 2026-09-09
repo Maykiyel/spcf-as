@@ -2,10 +2,13 @@ import { describe, it, expect } from "vitest";
 import type { ColumnDef } from "./types";
 import {
   allowedSorts,
+  columnId,
   columnSortKey,
+  isColumnSortable,
+  sortableColumnIds,
   sortPlanDefault,
   sortPlanDefaultIsTotalOrder,
-  sortPlanViolations,
+  unreachableSortKeys,
   type SortPlan,
 } from "./sort-plan";
 
@@ -22,13 +25,84 @@ const plan: SortPlan = {
 
 describe("columnSortKey", () => {
   it("falls back to the field the cell reads", () => {
-    expect(columnSortKey<Row>({ key: "name", header: "Name" })).toBe("name");
+    expect(columnSortKey<Row>({ field: "name", header: "Name" })).toBe("name");
   });
 
   it("prefers the wire name when the two differ", () => {
     expect(
-      columnSortKey<Row>({ key: "name", sortKey: "full_name", header: "Name" }),
+      columnSortKey<Row>({
+        field: "name",
+        sortKey: "full_name",
+        header: "Name",
+      }),
     ).toBe("full_name");
+  });
+
+  it("is undefined for a column that reads no field", () => {
+    // The whole reason `field` and `id` are separate: an action column has
+    // no key to sort under, so it cannot be derived into a sortable one.
+    expect(
+      columnSortKey<Row>({
+        id: "actions",
+        header: "Actions",
+        render: () => null,
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe("columnId", () => {
+  it("is the field when nothing overrides it", () => {
+    expect(columnId<Row>({ field: "name", header: "Name" })).toBe("name");
+  });
+
+  it("is the id when two columns read the same field", () => {
+    expect(
+      columnId<Row>({ field: "name", id: "nickname", header: "Nick" }),
+    ).toBe("nickname");
+  });
+});
+
+describe("isColumnSortable", () => {
+  it("is true for an allow-listed field", () => {
+    expect(isColumnSortable<Row>({ field: "name", header: "Name" }, plan)).toBe(
+      true,
+    );
+  });
+
+  it("is true for an allow-listed wire name the field doesn't match", () => {
+    expect(
+      isColumnSortable<Row>(
+        { field: "name", sortKey: "id", header: "Name" },
+        plan,
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for a field the endpoint doesn't allow-list", () => {
+    expect(
+      isColumnSortable<Row>({ field: "total", header: "T" }, {
+        allowed: ["name"],
+      }),
+    ).toBe(false);
+  });
+
+  it("is false for a rendered column, whatever the plan allows", () => {
+    // Guards the bug derivation would otherwise have: Manage Accounts'
+    // Actions column used to be keyed `full_name`, which `/users`
+    // allow-lists, and would have become a sortable Actions header.
+    expect(
+      isColumnSortable<Row>(
+        { id: "actions", header: "Actions", render: () => null },
+        plan,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false for every column when the table declares no plan", () => {
+    expect(isColumnSortable<Row>({ field: "name", header: "Name" })).toBe(
+      false,
+    );
   });
 });
 
@@ -51,8 +125,8 @@ describe("sortPlanDefaultIsTotalOrder", () => {
   });
 
   it("is false when the unique key is not last", () => {
-    // Order matters: a unique key ahead of another makes the rest inert,
-    // it doesn't make the whole default a total order.
+    // Order matters: a unique key ahead of another makes the rest inert, it
+    // doesn't make the whole default a total order.
     expect(
       sortPlanDefaultIsTotalOrder({
         ...plan,
@@ -75,9 +149,9 @@ describe("sortPlanDefaultIsTotalOrder", () => {
 
 describe("allowedSorts", () => {
   it("drops a key the endpoint would reject", () => {
-    expect(
-      allowedSorts([{ key: "nonsense", direction: "asc" }], plan),
-    ).toEqual([]);
+    expect(allowedSorts([{ key: "nonsense", direction: "asc" }], plan)).toEqual(
+      [],
+    );
   });
 
   it("keeps allow-listed keys in the order given", () => {
@@ -94,53 +168,27 @@ describe("allowedSorts", () => {
   });
 });
 
-describe("sortPlanViolations", () => {
+describe("sortableColumnIds and unreachableSortKeys", () => {
   const columns: ColumnDef<Row>[] = [
-    { key: "name", header: "Name", sortable: true },
-    { key: "total", header: "Total", sortable: true },
-    { key: "id", header: "Actions" },
+    { field: "name", header: "Name" },
+    { field: "total", header: "Total" },
+    { id: "actions", header: "Actions", render: () => null },
   ];
 
-  it("is empty when the columns agree with the plan", () => {
-    expect(sortPlanViolations(plan, columns)).toEqual([]);
+  it("names the columns a header will offer a sort on, in column order", () => {
+    expect(sortableColumnIds(plan, columns)).toEqual(["name", "total"]);
   });
 
-  it("names a sortable column the endpoint doesn't allow-list", () => {
-    const violations = sortPlanViolations(plan, [
-      ...columns,
-      { key: "name", id: "nickname", sortKey: "nick", header: "Nick", sortable: true },
-    ]);
-
-    expect(violations).toHaveLength(1);
-    expect(violations[0]).toContain("nickname");
-    expect(violations[0]).toContain("nick");
+  it("names allow-listed keys no column offers", () => {
+    // Not a defect: an endpoint may allow-list more than a table shows.
+    expect(unreachableSortKeys(plan, columns)).toEqual(["id"]);
   });
 
-  it("ignores a column that borrows a key but isn't sortable", () => {
-    // The Actions-column shape: `key` names a real field, and would look
-    // sortable to anything deriving rather than reading `sortable`.
-    expect(
-      sortPlanViolations(plan, [{ key: "id", id: "actions", header: "Actions" }]),
-    ).toEqual([]);
-  });
-
-  it("catches a default sort outside the allow-list", () => {
-    const violations = sortPlanViolations(
-      { allowed: ["name"], default: [{ key: "created_at", direction: "desc" }] },
-      [],
-    );
-
-    expect(violations).toEqual([
-      'declared default "created_at" isn\'t allow-listed',
-    ]);
-  });
-
-  it("catches a unique key outside the allow-list", () => {
-    const violations = sortPlanViolations(
-      { allowed: ["name"], unique: ["id"] },
-      [],
-    );
-
-    expect(violations).toEqual(['unique key "id" isn\'t allow-listed']);
+  it("counts a column by its wire name, not the field it reads", () => {
+    const withSortKey: ColumnDef<Row>[] = [
+      { field: "name", sortKey: "id", header: "Name" },
+    ];
+    expect(sortableColumnIds(plan, withSortKey)).toEqual(["name"]);
+    expect(unreachableSortKeys(plan, withSortKey)).toEqual(["name", "total"]);
   });
 });

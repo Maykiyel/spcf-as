@@ -12,7 +12,7 @@ import {
   type DateRangePeriod,
   type DateRangeSpec,
 } from "./date-range-filter";
-import type { SortPlan } from "./sort-plan";
+import { isColumnSortable, type SortPlan } from "./sort-plan";
 import { useTableControls } from "./use-table-controls";
 
 export type ServerTableParams = {
@@ -143,8 +143,16 @@ export function useServerTableState<
     });
   }, [isError, error, sorts, resetSort]);
 
+  const declaredColumns =
+    typeof columns === "function" ? columns({ period }) : columns;
+
   return {
-    columns: typeof columns === "function" ? columns({ period }) : columns,
+    // Sortability resolved here, where the plan is, so the headers and
+    // anything reading `tableState.columns` see the same answer.
+    columns: declaredColumns.map((column) => ({
+      ...column,
+      sortable: isColumnSortable(column, sortPlan),
+    })),
     rows: data?.data ?? [],
     totalCount: data?.total ?? 0,
     meta: data?.meta,

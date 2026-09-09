@@ -1,17 +1,41 @@
 import type { ReactNode } from "react";
 
-export type ColumnDef<T> = {
-  key: keyof T & string;
-  id?: string;
+type ColumnDefBase = {
   header: string;
-  sortable?: boolean;
-  /** The name the endpoint allow-lists for this column's sort, when it
+  /** The name the endpoint allow-lists for this column's sort, when that
    * isn't the field the cell reads (`/transactions` sorts `date` as
-   * `created_at`). Only meaningful with `sortable`; getting it wrong is a
-   * 422 on the first header click. Defaults to `key`. */
+   * `created_at`). A column sorts exactly when this, or its `field`, is in
+   * the endpoint's sort plan; there is no `sortable` to set. */
   sortKey?: string;
+};
+
+/** A column that reads a field off the row. `id` only when two columns read
+ * the same one. */
+type FieldColumn<T> = ColumnDefBase & {
+  field: keyof T & string;
+  id?: string;
   render?: (row: T) => ReactNode;
 };
+
+/** A column that renders something the row has no single field for: an
+ * action, a badge, a toggle. It has an identity and no field, which is what
+ * stops it being mistaken for sortable. */
+type RenderedColumn<T> = ColumnDefBase & {
+  id: string;
+  field?: never;
+  render: (row: T) => ReactNode;
+};
+
+/**
+ * One column, as declared. `field`, `id` and `sortKey` name three separate
+ * jobs that a single `key` used to do at once: what the cell reads, what
+ * identifies the column, and what the wire calls its sort.
+ */
+export type ColumnDef<T> = FieldColumn<T> | RenderedColumn<T>;
+
+/** A column as the table hands it back, with sortability resolved against
+ * the endpoint's plan. Declared columns never carry it. */
+export type ResolvedColumn<T> = ColumnDef<T> & { sortable: boolean };
 
 export type SortDirection = "asc" | "desc" | null;
 
@@ -36,7 +60,7 @@ export const MAX_SORT_COLUMNS = 2;
 export type TableFilters = Record<string, string | null>;
 
 export type DataTableContextValue<T> = {
-  columns: ColumnDef<T>[];
+  columns: ResolvedColumn<T>[];
   rows: T[]; // current page's rows, already filtered/sorted/sliced
   totalCount: number; // total matching rows, pre-pagination
   isLoading: boolean;

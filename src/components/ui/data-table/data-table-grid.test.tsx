@@ -4,7 +4,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { theme } from "@/config/theme";
 import { DataTable } from "./index";
-import type { ColumnDef, DataTableContextValue } from "./types";
+import type { ResolvedColumn, DataTableContextValue } from "./types";
 
 // Seam: the grid under a real DataTable.Root, with the table state
 // hand-built as a double. Two behaviours here fail silently:
@@ -51,7 +51,7 @@ function stubState(
 }
 
 function renderGrid(
-  columns: ColumnDef<Row>[],
+  columns: ResolvedColumn<Row>[],
   {
     onRowClick,
     ...overrides
@@ -75,7 +75,7 @@ const rowFor = (name: string) => screen.getByText(name).closest("tr")!;
 describe("DataTable.Grid — sort keys", () => {
   it("sorts by the column's key when it names no other", () => {
     const onSort = vi.fn();
-    renderGrid([{ key: "name", header: "Name", sortable: true }], { onSort });
+    renderGrid([{ field: "name", header: "Name", sortable: true }], { onSort });
 
     fireEvent.click(screen.getByText("Name"));
 
@@ -89,7 +89,7 @@ describe("DataTable.Grid — sort keys", () => {
     renderGrid(
       [
         {
-          key: "recorded",
+          field: "recorded",
           sortKey: "created_at",
           header: "Date",
           sortable: true,
@@ -110,7 +110,7 @@ describe("DataTable.Grid — sort keys", () => {
     renderGrid(
       [
         {
-          key: "recorded",
+          field: "recorded",
           sortKey: "created_at",
           header: "Date",
           sortable: true,
@@ -127,12 +127,12 @@ describe("DataTable.Grid — sort keys", () => {
 });
 
 describe("DataTable.Grid — rows that navigate", () => {
-  const columns: ColumnDef<Row>[] = [
-    { key: "name", header: "Name" },
+  const columns: ResolvedColumn<Row>[] = [
+    { field: "name", header: "Name", sortable: false },
     {
-      key: "id",
       id: "actions",
       header: "Actions",
+      sortable: false,
       render: () => (
         <button type="button" onClick={() => undefined}>
           Void
@@ -168,8 +168,9 @@ describe("DataTable.Grid — rows that navigate", () => {
     renderGrid(
       [
         {
-          key: "name",
+          field: "name",
           header: "Name",
+          sortable: false,
           // `preventDefault` only so jsdom does not log an unimplemented
           // navigation. It does not stop propagation, so the guard under
           // test still sees the click.

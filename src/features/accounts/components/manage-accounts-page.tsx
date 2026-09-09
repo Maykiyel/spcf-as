@@ -39,10 +39,10 @@ const INITIAL_FILTERS = { role: null, is_active: null };
 // key it doesn't know is a 400 on the first header click, which is why
 // `username` is renamed at the fetcher rather than carrying `user_name`.
 const columns: ColumnDef<UserAccount>[] = [
-  { key: "full_name", header: "Name", sortable: true },
-  { key: "username", header: "Username", sortable: true },
+  { field: "full_name", header: "Name" },
+  { field: "username", header: "Username" },
   {
-    key: "role",
+    field: "role",
     header: "Role",
     render: (row) => (
       <Badge
@@ -54,10 +54,8 @@ const columns: ColumnDef<UserAccount>[] = [
     ),
   },
   {
-    // Borrows a declared key, as `id` requires: `key` names the field the
-    // cell reads, and this one's raw value is `true`/`false`, not what the
-    // badge says.
-    key: "role",
+    // No field: the badge reads `is_active`, but shows a word rather than
+    // the raw `true`/`false`.
     id: "status",
     header: "Status",
     render: (row) => (
@@ -67,7 +65,6 @@ const columns: ColumnDef<UserAccount>[] = [
     ),
   },
   {
-    key: "full_name",
     id: "actions",
     header: "Actions",
     render: (row) => <UserAccountActionsCell account={row} />,

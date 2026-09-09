@@ -20,10 +20,26 @@ export type SortPlan = {
   default?: readonly SortEntry[];
 };
 
-/** The wire name a column sorts under. `key` also names the field the cell
- * reads, so a column sorted under another name says so with `sortKey`. */
-export const columnSortKey = <T>(column: ColumnDef<T>): string =>
-  column.sortKey ?? column.key;
+/** The wire name a column sorts under, or `undefined` for a column that
+ * reads no field and names no sort — an action or a badge, which is exactly
+ * what must never become sortable by accident. */
+export const columnSortKey = <T>(column: ColumnDef<T>): string | undefined =>
+  column.sortKey ?? column.field;
+
+/** A column's identity, for a React key and for naming it in a test. */
+export const columnId = <T>(column: ColumnDef<T>): string =>
+  column.id ?? (column.field as string);
+
+/** Sortability is derived, never declared: the endpoint's allow-list is the
+ * only thing that decides, so a column cannot claim a sort the wire rejects
+ * and cannot miss one it offers. */
+export const isColumnSortable = <T>(
+  column: ColumnDef<T>,
+  plan?: SortPlan,
+): boolean => {
+  const key = columnSortKey(column);
+  return Boolean(plan && key && plan.allowed.includes(key));
+};
 
 export const sortPlanDefault = (plan?: SortPlan): SortEntry[] =>
   plan?.default ? [...plan.default] : [];
@@ -43,41 +59,24 @@ export const allowedSorts = (
 ): SortEntry[] =>
   plan ? sorts.filter((sort) => plan.allowed.includes(sort.key)) : sorts;
 
-/**
- * Every way a table's columns can disagree with its endpoint's plan, as
- * readable lines. Empty means they agree.
- *
- * For tests, not for the app: both sides are static data, so checking them
- * needs no rendering, no fetcher and no header click.
- */
-export function sortPlanViolations<T>(
+/** The columns a table actually offers a sort on, by identity, in column
+ * order. What a header shows a caret over. */
+export const sortableColumnIds = <T>(
   plan: SortPlan,
   columns: ColumnDef<T>[],
-): string[] {
-  const violations: string[] = [];
+): string[] =>
+  columns.filter((column) => isColumnSortable(column, plan)).map(columnId);
 
-  for (const column of columns) {
-    if (!column.sortable) continue;
-
-    const key = columnSortKey(column);
-    if (!plan.allowed.includes(key)) {
-      violations.push(
-        `column "${column.id ?? column.key}" sorts as "${key}", which this endpoint doesn't allow-list`,
-      );
-    }
-  }
-
-  for (const entry of plan.default ?? []) {
-    if (!plan.allowed.includes(entry.key)) {
-      violations.push(`declared default "${entry.key}" isn't allow-listed`);
-    }
-  }
-
-  for (const key of plan.unique ?? []) {
-    if (!plan.allowed.includes(key)) {
-      violations.push(`unique key "${key}" isn't allow-listed`);
-    }
-  }
-
-  return violations;
-}
+/** Allow-listed keys this table offers no header for. Never empty by
+ * definition — an endpoint may allow-list more than a table shows, as
+ * `/users` does with `first_name` and `last_name` — so a test names the
+ * ones it expects rather than requiring none. */
+export const unreachableSortKeys = <T>(
+  plan: SortPlan,
+  columns: ColumnDef<T>[],
+): string[] => {
+  const offered = new Set(
+    columns.map(columnSortKey).filter((key): key is string => Boolean(key)),
+  );
+  return plan.allowed.filter((key) => !offered.has(key));
+};

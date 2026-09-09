@@ -75,6 +75,22 @@ _Avoid_: a home for every filter control (a filter used by one feature stays
 in that feature); confusing it with `components/ui/table-filter`, which holds
 the domain-agnostic input primitives these are built from
 
+**Column `field`, `id` and `sortKey`**:
+The three jobs a `ColumnDef` used to do with a single `key`: what the cell
+reads, what identifies the column, and what the wire calls its sort. A
+column is one of two shapes — a field column (`field`, optional `id`) or a
+rendered one (`id` and `render`, no `field`) — so an action, a badge or a
+toggle no longer borrows an unrelated field to satisfy a required `key`.
+Six columns did, three of them with a comment apologising for it.
+
+Splitting them is what makes [[sort-plan]] derivation safe: a rendered
+column has no `field` and no `sortKey`, so nothing can make it sortable,
+where Manage Accounts' Actions column keyed `full_name` would have lit a
+caret because `/users` allow-lists that key. There is no `sortable` on a
+column any more.
+_Avoid_: `key` (gone; it meant two things), column name (that is `header`,
+which has always been free of all three)
+
 **Sort plan**:
 One endpoint's sort surface, declared once beside the fetcher that owns it
 and passed to `useServerTableState` as `sortPlan`. Three parts: `allowed`
@@ -91,13 +107,14 @@ total-order claim from a hand-maintained boolean into something derived from
 `unique`. It also narrows what a URL may carry, the way `declaredOnly` does
 for filters.
 
-**Sortability is still declared per column, not derived from the plan**, for
-as long as `ColumnDef.key` doubles as identity: an Actions column keyed
-`full_name` would otherwise become sortable because `/users` allow-lists
-that key. `reportTransactionColumns` is the one exception and takes a plan
-directly, because it serves two endpoints with different allow-lists and
-borrows no keys. `app/sort-plan-conformance.test.ts` checks the two agree
-per endpoint, over static data.
+**Sortability is derived from the plan, never declared.** A column sorts
+exactly when its `sortKey ?? field` is allow-listed, resolved by
+`useServerTableState` before the grid sees it. That was unsafe while
+`ColumnDef.key` doubled as identity, and became safe with [[column-field-and-id]].
+`app/sort-plan-conformance.test.ts` names what each table offers, since
+derivation makes "a sortable column names an allow-listed key" true by
+construction: the risk moved to the plan, where a key wrongly added to
+`allowed` silently lights up a header.
 _Avoid_: sort config, allow-list on its own (that is one of the three
 parts), default sorts (the old `*_DEFAULT_SORTS` constants, now gone)
 

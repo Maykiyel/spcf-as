@@ -15,10 +15,9 @@ export function servicesSoldColumns(
 ): ColumnDef<ServiceSoldRow>[] {
   return [
     {
-      key: "service",
+      field: "service",
       sortKey: "service_name",
       header: "Service",
-      sortable: true,
       // A real link, not just a clickable row: it is what a keyboard
       // reaches, a screen reader announces, and middle-click opens.
       render: (row) =>
@@ -34,15 +33,13 @@ export function servicesSoldColumns(
         ),
     },
     {
-      key: "total_quantity",
+      field: "total_quantity",
       header: "Quantity Sold",
-      sortable: true,
       render: (row) => row.total_quantity.toLocaleString("en-PH"),
     },
     {
-      key: "subtotal",
+      field: "subtotal",
       header: "Revenue",
-      sortable: true,
       render: (row) => formatCurrency(row.subtotal),
     },
   ];
