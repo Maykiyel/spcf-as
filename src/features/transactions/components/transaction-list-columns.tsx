@@ -1,20 +1,12 @@
 import type { ReactNode } from "react";
 import { Anchor } from "@mantine/core";
 import { Link } from "react-router";
-import type { ColumnDef, SortEntry } from "@/components/ui/data-table";
+import type { ColumnDef } from "@/components/ui/data-table";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/date-time";
 import type { TransactionListRow } from "../types";
 import { TransactionItemNamesCell } from "./transaction-item-names-cell";
 import { TransactionStatusBadge } from "./transaction-status-badge";
-
-/** `/transactions` sorts by `-created_at` when asked for nothing, so
- * declaring it puts a caret on the Date header rather than leaving rows
- * plainly ordered under a column that looks unsorted. Must stay equal to
- * the Date column's `sortKey` below, which is why it lives here. */
-export const TRANSACTIONS_DEFAULT_SORTS: SortEntry[] = [
-  { key: "created_at", direction: "desc" },
-];
 
 type TransactionListColumnsOptions = {
   /** The caller decides, since the reason differs by page: the receipts
@@ -32,9 +24,9 @@ type TransactionListColumnsOptions = {
  * The columns of a `/transactions` list, shared by the receipts list and
  * the Void page, which differ only in the three options above.
  *
- * Only the four keys the endpoint allow-lists are `sortable`; anything
- * else is a 422 on the first header click. Two are named through `sortKey`
- * because the endpoint returns them in differently named fields.
+ * Only the four keys `TRANSACTIONS_SORT_PLAN` allow-lists are `sortable`;
+ * anything else is a 422 on the first header click. Two are named through
+ * `sortKey` because the endpoint returns them in differently named fields.
  */
 export function transactionListColumns({
   includeCashier,

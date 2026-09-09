@@ -16,7 +16,12 @@ import { TransactionListPage } from "./transaction-list-page";
 // Filters are asserted through the params the fetcher received, because
 // stubbing narrowed rows would pass whatever the page actually sent.
 
-vi.mock("../api/get-transactions");
+vi.mock("../api/get-transactions", async () => {
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // this module's sort plan would silently become a table with no sort.
+  const actual = await vi.importActual<typeof import("../api/get-transactions")>("../api/get-transactions");
+  return { ...actual, getTransactions: vi.fn() };
+});
 const mockGetTransactions = vi.mocked(getTransactions);
 
 vi.mock("@/api/cashiers", async () => {

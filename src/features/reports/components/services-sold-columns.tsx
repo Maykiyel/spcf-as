@@ -1,6 +1,6 @@
 import { Anchor } from "@mantine/core";
 import { Link } from "react-router";
-import type { ColumnDef, SortEntry } from "@/components/ui/data-table";
+import type { ColumnDef } from "@/components/ui/data-table";
 import { formatCurrency } from "@/utils/currency";
 import type { ServiceSoldRow } from "../types";
 import {
@@ -8,15 +8,8 @@ import {
   type ReportPeriod,
 } from "../lib/services-sold-routes";
 
-/** Declared so the header lights the caret the rows are actually in.
- * `getServicesSold` is what keeps the key on the wire under every other
- * sort; this is only the starting one. */
-export const SERVICES_SOLD_DEFAULT_SORTS: SortEntry[] = [
-  { key: "service_name", direction: "asc" },
-];
-
-/** The columns of `GET /reports/services-sold`. It allow-lists three sorts
- * and no others: `service_name`, `total_quantity` and `subtotal`. */
+/** The columns of `GET /reports/services-sold`. All three sort, under the
+ * keys `SERVICES_SOLD_SORT_PLAN` allow-lists. */
 export function servicesSoldColumns(
   period: ReportPeriod,
 ): ColumnDef<ServiceSoldRow>[] {

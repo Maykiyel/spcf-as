@@ -3,17 +3,22 @@ import {
   useServerTableState,
   type ColumnDef,
 } from "@/components/ui/data-table";
-import { getSeriesReceipts } from "../api/get-series-receipts";
+import {
+  getSeriesReceipts,
+  SERIES_RECEIPTS_SORT_PLAN,
+} from "../api/get-series-receipts";
 import type { SeriesReceipt } from "../types";
 
 export function SeriesReceiptTable() {
   const columns: ColumnDef<SeriesReceipt>[] = [
     {
-      // Wire sort key stays "account" — backend field name, see CONTEXT.md.
-      key: "account",
+      key: "cashier",
+      // The wire still calls this field `account`, so that is what a header
+      // click has to send. `SERIES_RECEIPTS_SORT_PLAN` allow-lists it.
+      sortKey: "account",
       header: "Cashier",
       sortable: true,
-      render: (row) => row.account.full_name,
+      render: (row) => row.cashier.full_name,
     },
     { key: "from", header: "From", sortable: true },
     { key: "to", header: "To", sortable: true },
@@ -29,6 +34,7 @@ export function SeriesReceiptTable() {
     queryFn: getSeriesReceipts,
     columns,
     urlKey: "series-receipts",
+    sortPlan: SERIES_RECEIPTS_SORT_PLAN,
   });
 
   return (

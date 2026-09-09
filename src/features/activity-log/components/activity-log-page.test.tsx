@@ -11,7 +11,12 @@ import { ActivityLogPage } from "./activity-log-page";
 
 // Seam: the page component, both fetchers mocked at the module boundary.
 
-vi.mock("../api/get-activity-logs");
+vi.mock("../api/get-activity-logs", async () => {
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // this module's sort plan would silently become a table with no sort.
+  const actual = await vi.importActual<typeof import("../api/get-activity-logs")>("../api/get-activity-logs");
+  return { ...actual, getActivityLogs: vi.fn() };
+});
 const mockGetActivityLogs = vi.mocked(getActivityLogs);
 
 vi.mock("../api/get-activity-log-detail");

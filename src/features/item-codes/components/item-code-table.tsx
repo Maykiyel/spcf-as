@@ -3,7 +3,7 @@ import {
   useServerTableState,
   type ColumnDef,
 } from "@/components/ui/data-table";
-import { getItemCodes } from "../api/get-item-codes";
+import { getItemCodes, ITEM_CODES_SORT_PLAN } from "../api/get-item-codes";
 import { ItemCodeActionsCell } from "./item-code-actions-cell";
 import type { ItemCode } from "@/api/item-codes";
 
@@ -28,6 +28,7 @@ export function ItemCodeTable({ onEdit }: ItemCodeTableProps) {
     queryFn: getItemCodes,
     columns,
     urlKey: "item_codes",
+    sortPlan: ITEM_CODES_SORT_PLAN,
   });
 
   return (

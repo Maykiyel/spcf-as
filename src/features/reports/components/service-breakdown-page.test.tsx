@@ -12,7 +12,12 @@ import { ServiceBreakdownPage } from "./service-breakdown-page";
 // Seam: the page component, with the breakdown fetcher and the service
 // fetcher mocked at the module boundary.
 
-vi.mock("../api/get-service-breakdown");
+vi.mock("../api/get-service-breakdown", async () => {
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // this module's sort plan would silently become a table with no sort.
+  const actual = await vi.importActual<typeof import("../api/get-service-breakdown")>("../api/get-service-breakdown");
+  return { ...actual, getServiceBreakdown: vi.fn() };
+});
 vi.mock("../api/get-service");
 const mockGetBreakdownFor = vi.mocked(getServiceBreakdown);
 const mockGetService = vi.mocked(getService);

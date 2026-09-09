@@ -6,7 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { DataTable, useServerTableState } from "@/components/ui/data-table";
 import { currentMonthRange } from "@/components/ui/date-range";
 import { DateRangeTableFilter } from "@/components/filters";
-import { getServiceBreakdown } from "../api/get-service-breakdown";
+import {
+  getServiceBreakdown,
+  SERVICE_BREAKDOWN_SORT_PLAN,
+} from "../api/get-service-breakdown";
 import { getService } from "../api/get-service";
 import {
   SERVICE_BREAKDOWN_QUERY_KEY,
@@ -16,10 +19,7 @@ import {
   SERVICE_BREAKDOWN_URL_KEY,
   servicesSoldPath,
 } from "../lib/services-sold-routes";
-import {
-  serviceBreakdownColumns,
-  SERVICE_BREAKDOWN_DEFAULT_SORTS,
-} from "./service-breakdown-columns";
+import { serviceBreakdownColumns } from "./service-breakdown-columns";
 
 /**
  * The transactions behind one service's figure.
@@ -38,9 +38,7 @@ export function ServiceBreakdownPage() {
     queryFn,
     columns: serviceBreakdownColumns,
     urlKey: SERVICE_BREAKDOWN_URL_KEY,
-    initialSorts: SERVICE_BREAKDOWN_DEFAULT_SORTS,
-    // `id` is unique, so every other header would be inert behind it.
-    initialSortsAreTotalOrder: true,
+    sortPlan: SERVICE_BREAKDOWN_SORT_PLAN,
     // Both dates are `required` here, so an absent range is a 422 rather
     // than an unfiltered request.
     dateRange: { required: true, default: currentMonthRange },

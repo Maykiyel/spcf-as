@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useServerTableState } from "./use-server-table-state";
 import type { ColumnDef, SortEntry, TableFilters } from "./types";
 import type { DateRangePeriod } from "./date-range-filter";
+import type { SortPlan } from "./sort-plan";
 
 type Row = { id: string; name: string };
 
@@ -483,9 +484,11 @@ describe("useServerTableState meta", () => {
 describe("useServerTableState initial sort", () => {
   let queryFn: ReturnType<typeof createFetcher>;
 
-  const DEFAULT_SORTS: SortEntry[] = [
-    { key: "name", direction: "desc" },
-  ];
+  const DEFAULT_SORTS: SortEntry[] = [{ key: "name", direction: "desc" }];
+  const DEFAULT_PLAN: SortPlan = {
+    allowed: ["name", "id"],
+    default: DEFAULT_SORTS,
+  };
 
   beforeEach(() => {
     queryFn = createFetcher();
@@ -496,7 +499,7 @@ describe("useServerTableState initial sort", () => {
       queryKey: ["widgets"],
       queryFn,
       columns,
-      initialSorts: DEFAULT_SORTS,
+      sortPlan: DEFAULT_PLAN,
     });
 
     await waitFor(() => expect(queryFn).toHaveBeenCalled());
@@ -510,7 +513,7 @@ describe("useServerTableState initial sort", () => {
       queryKey: ["widgets"],
       queryFn,
       columns,
-      initialSorts: DEFAULT_SORTS,
+      sortPlan: DEFAULT_PLAN,
     });
 
     expect(result.current.table.sorts).toEqual(DEFAULT_SORTS);
@@ -522,7 +525,7 @@ describe("useServerTableState initial sort", () => {
       queryFn,
       columns,
       urlKey: "tx",
-      initialSorts: DEFAULT_SORTS,
+      sortPlan: DEFAULT_PLAN,
     });
 
     await waitFor(() => expect(queryFn).toHaveBeenCalled());
@@ -538,7 +541,7 @@ describe("useServerTableState initial sort", () => {
       queryFn,
       columns,
       urlKey: "tx",
-      initialSorts: DEFAULT_SORTS,
+      sortPlan: DEFAULT_PLAN,
     });
 
     act(() => result.current.table.onSort("name"));
@@ -559,7 +562,7 @@ describe("useServerTableState initial sort", () => {
         queryFn,
         columns,
         urlKey: "tx",
-        initialSorts: DEFAULT_SORTS,
+        sortPlan: DEFAULT_PLAN,
       },
       ["/?tx_sort=none"],
     );

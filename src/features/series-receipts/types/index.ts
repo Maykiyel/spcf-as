@@ -8,7 +8,7 @@ import type { Cashier } from "@/api/cashiers";
 
 export type SeriesReceipt = {
   id: number;
-  account: Cashier; // wire name for "cashier" — see CONTEXT.md
+  cashier: Cashier; // `account` on the wire, renamed in `getSeriesReceipts`
   from: number;
   to: number;
   remaining_sheets: number;

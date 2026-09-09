@@ -6,13 +6,11 @@ import {
   type TableFilters,
 } from "@/components/ui/data-table";
 import { getVoidableTransactions } from "../api/get-voidable-transactions";
+import { TRANSACTIONS_SORT_PLAN } from "../api/get-transactions";
 import { VOIDABLE_TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
 import type { TransactionListRow } from "../types";
 import { TransactionListFilters } from "./transaction-list-filters";
-import {
-  transactionListColumns,
-  TRANSACTIONS_DEFAULT_SORTS,
-} from "./transaction-list-columns";
+import { transactionListColumns } from "./transaction-list-columns";
 import { VoidTransactionAction } from "./void-transaction-action";
 
 const URL_KEY = "void";
@@ -54,7 +52,7 @@ export function VoidTransactionPage() {
     queryFn: getVoidableTransactions,
     columns,
     urlKey: URL_KEY,
-    initialSorts: TRANSACTIONS_DEFAULT_SORTS,
+    sortPlan: TRANSACTIONS_SORT_PLAN,
     initialFilters: VOIDABLE_FILTERS,
     dateRange: {},
   });
