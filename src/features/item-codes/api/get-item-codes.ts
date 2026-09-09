@@ -9,9 +9,10 @@ export const getItemCodes = createListAdapter<ItemCode>(
   { supportsSearch: true },
 );
 
-/** Not documented in `BACKEND_NOTES.md`: transcribed from the one key this
- * catalog has always sorted under. Check against the backend before adding
- * another. */
+/** Read from `ItemCodeController::index` at backend `0428e2c`:
+ * `allowedSorts('name', 'description')`, no `defaultSort`. `description`
+ * was missing here until the allow-list was checked against the source, so
+ * the Description column offered no sort the endpoint would have served. */
 export const ITEM_CODES_SORT_PLAN: SortPlan = {
-  allowed: ["name"],
+  allowed: ["name", "description"],
 };

@@ -41,10 +41,11 @@ export const getSeriesReceipts = async (
   };
 };
 
-/** Not documented in `BACKEND_NOTES.md`: transcribed from the four keys
- * this table has always sorted under. `account` is the wire's name for the
- * assigned cashier and stays the sort key; the column reaches it through
- * `sortKey` rather than by being named for it. */
+/** Read from `SeriesReceiptController::index` at backend `0428e2c`: `from`,
+ * `to`, `remaining_sheets`, and `account` as an `AllowedSort::custom` over
+ * the assigned cashier's name. No `defaultSort`. `account` is the wire's
+ * word for the cashier and stays the sort key; the column reaches it
+ * through `sortKey` rather than by being named for it. */
 export const SERIES_RECEIPTS_SORT_PLAN: SortPlan = {
   allowed: ["account", "from", "to", "remaining_sheets"],
 };

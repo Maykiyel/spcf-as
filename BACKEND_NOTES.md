@@ -462,6 +462,28 @@ Sorts: `created_at`, `id`, `series_number`, `customer_name`, `total`,
 `change_amount`, which that endpoint does. Its default is a single key and
 needs no tiebreaker, `id` being unique.
 
+## Catalog and series-receipt sorts
+
+Read directly from the controllers at backend `0428e2c`, not inferred from
+what the frontend happens to send. These three had no entry here until the
+sort plans were written and the allow-lists checked against the source.
+
+`GET /item-codes` — `allowedSorts('name', 'description')`. No `defaultSort`.
+**`description` is allow-listed**, which the frontend did not know: the
+catalog's Description column offered no sort the endpoint would have served.
+
+`GET /services` — `allowedSorts('name', 'price', AllowedSort::custom('item_code', ItemCodeNameSort))`.
+No `defaultSort`. `item_code` sorts by the parent Item code's name, not by a
+column on `services`.
+
+`GET /series-receipts` — `allowedSorts('from', 'to', 'remaining_sheets', AllowedSort::custom('account', SeriesAccountNameSort))`.
+No `defaultSort`. `account` sorts by the assigned cashier's `full_name`; it
+is the wire's word for the cashier, and the frontend keeps it as a `sortKey`
+while naming the field `cashier` everywhere else. See CONTEXT.md.
+
+None of the three declares a `defaultSort`, so an unsorted request returns
+rows in whatever order the database gives, which is not stable across pages.
+
 ## Response shapes
 
 ### `TransactionResource`

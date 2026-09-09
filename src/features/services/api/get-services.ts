@@ -8,10 +8,9 @@ export const getServices = createListAdapter<Service>("/services", "services", {
   supportsSearch: true,
 });
 
-/** Not documented in `BACKEND_NOTES.md`: this transcribes the three keys
- * the catalog has always sorted under, which is evidence from a working UI
- * rather than a read of the allow-list. Check it against the backend before
- * adding a fourth. No `defaultSort` is declared here. */
+/** Read from `ServiceController::index` at backend `0428e2c`: `name`,
+ * `price`, and `item_code` as an `AllowedSort::custom` over the parent's
+ * name. No `defaultSort`. */
 export const SERVICES_SORT_PLAN: SortPlan = {
   allowed: ["item_code", "name", "price"],
 };
