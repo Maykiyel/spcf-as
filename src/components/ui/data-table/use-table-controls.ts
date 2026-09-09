@@ -118,8 +118,7 @@ export function sortsAfterClick(
   const activeIdx = base.findIndex((sort) => sort.key === key);
   const isDeclared = initialSorts.some((sort) => sort.key === key);
 
-  // A declared column flips in place rather than cycling off, so it is a
-  // two-state header. Removing it would leave no caret lit anywhere.
+  // Removing a declared column would leave no caret lit anywhere.
   if (isDeclared && activeIdx !== -1) {
     const next = [...base];
     next[activeIdx] = {
@@ -130,8 +129,12 @@ export function sortsAfterClick(
   }
 
   const next = nextSorts(base, key);
-  // Off, for any other column, means the declared order rather than none.
-  return next.length === 0 ? initialSorts : next;
+  // Off means the declared order, not none. Measured on what the user
+  // chose: a declared tiebreaker left on its own is no order a header shows.
+  const chosen = next.filter(
+    (sort) => !initialSorts.some((declared) => declared.key === sort.key),
+  );
+  return chosen.length === 0 ? initialSorts : next;
 }
 
 // `key:dir,key:dir` in one param, string order being priority order. The

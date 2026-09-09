@@ -81,8 +81,7 @@ describe("sortsToExtend", () => {
   });
 
   it("keeps the declared sort when the clicked column is the declared one", () => {
-    // What it extends is unaffected. Where the cycle then lands is
-    // `sortsAfterClick`'s, not this function's.
+    // Only what a click extends; where it lands is `sortsAfterClick`'s.
     const declared = [asc("service_name")];
     expect(sortsToExtend(declared, "service_name", declared, true)).toEqual(
       declared,
@@ -149,6 +148,20 @@ describe("sortsAfterClick", () => {
     const declared = [asc("service_name")];
     expect(
       sortsAfterClick([desc("subtotal")], "subtotal", declared, true),
+    ).toEqual(declared);
+  });
+
+  it("restores a declared tiebreaker the removal would have stranded", () => {
+    // Leaving `id` behind on its own is the unstable paging the declared
+    // pair exists to prevent, and no header shows a caret for it.
+    const declared = [desc("created_at"), asc("id")];
+    expect(
+      sortsAfterClick(
+        [desc("subtotal"), asc("created_at")],
+        "subtotal",
+        declared,
+        true,
+      ),
     ).toEqual(declared);
   });
 

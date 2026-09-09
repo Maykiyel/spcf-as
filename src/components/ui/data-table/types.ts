@@ -16,7 +16,8 @@ export type ColumnDef<T> = {
 export type SortDirection = "asc" | "desc" | null;
 
 /** An active sort column. A column with no direction isn't in the array at
- * all. See `nextSorts` in `use-table-controls.ts` for the cycle rules. */
+ * all. See `sortsAfterClick` in `use-table-controls.ts` for the cycle
+ * rules. */
 export type SortEntry = {
   key: string;
   direction: "asc" | "desc";
