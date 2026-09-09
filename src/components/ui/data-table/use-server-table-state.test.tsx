@@ -456,11 +456,10 @@ describe("useServerTableState initial sort", () => {
     expect(result.current.search).toBe("");
   });
 
-  it("cycles a declared descending column straight to unsorted", async () => {
-    // `nextSorts` takes desc to removed. The point of this test is that
-    // "removed" survives a round trip through the URL: without a marker
-    // for it, an absent param would read back as the declared sort and
-    // the column could never be turned off.
+  it("flips a declared descending column instead of unsorting the table", async () => {
+    // The flip has to reach the URL: `name:asc` is not the declared sort,
+    // and an absent param reads back as `name:desc`.
+    const flipped = [{ key: "name", direction: "asc" }];
     const { result } = renderTable({
       queryKey: ["widgets"],
       queryFn,
@@ -471,9 +470,12 @@ describe("useServerTableState initial sort", () => {
 
     act(() => result.current.table.onSort("name"));
 
-    await waitFor(() => expect(result.current.table.sorts).toEqual([]));
+    await waitFor(() => expect(result.current.table.sorts).toEqual(flipped));
     expect(queryFn).toHaveBeenLastCalledWith(
-      expect.objectContaining({ sorts: [] }),
+      expect.objectContaining({ sorts: flipped }),
+    );
+    expect(new URLSearchParams(result.current.search).get("tx_sort")).toBe(
+      "name:asc",
     );
   });
 

@@ -227,7 +227,7 @@ describe("ServicesSoldPage — the sort", () => {
     );
   });
 
-  it("still cycles the declared column itself asc, desc, off", async () => {
+  it("makes the declared column a two-state header", async () => {
     renderPage();
     await screen.findByText("Guidance Fee");
 
@@ -241,8 +241,13 @@ describe("ServicesSoldPage — the sort", () => {
 
     clickSortHeader("Service");
 
-    // Off at the table, but `getServicesSold` still floors the wire.
-    await waitFor(() => expect(lastRequest().sorts).toEqual([]));
+    // Never off. The endpoint orders by `service_id` given no sort, which
+    // is neither alphabetical nor a column anyone can see.
+    await waitFor(() =>
+      expect(lastRequest().sorts).toEqual([
+        { key: "service_name", direction: "asc" },
+      ]),
+    );
   });
 });
 
