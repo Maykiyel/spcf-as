@@ -7,21 +7,20 @@ import type { ActivityLogListRow } from "../types";
  * a 400. */
 export const activityLogColumns: ColumnDef<ActivityLogListRow>[] = [
   {
-    key: "created_at",
+    field: "created_at",
     header: "When",
-    sortable: true,
     render: (row) => formatDateTime(row.created_at),
   },
   {
-    key: "type",
+    field: "type",
     header: "Type",
   },
   {
-    key: "context",
+    field: "context",
     header: "What happened",
   },
   {
-    key: "actor",
+    field: "actor",
     header: "Who",
     // Never null: a system-generated entry arrives named "System".
     render: (row) => row.actor.name,

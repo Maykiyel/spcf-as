@@ -20,11 +20,10 @@ const PAGE_SIZE = 5;
 // Both keys are the endpoint's own sort names, which is why header clicks
 // need no mapping. See `get-cashier-earnings.ts` for the row rename.
 const columns: ColumnDef<CashierEarnings>[] = [
-  { key: "cashier_name", header: "Cashier", sortable: true },
+  { field: "cashier_name", header: "Cashier" },
   {
-    key: "total_earnings",
+    field: "total_earnings",
     header: "Total Earnings",
-    sortable: true,
     render: (row) => formatCurrency(row.total_earnings),
   },
 ];

@@ -13,10 +13,9 @@ type ItemCodeTableProps = {
 
 export function ItemCodeTable({ onEdit }: ItemCodeTableProps) {
   const columns: ColumnDef<ItemCode>[] = [
-    { key: "name", header: "Item Code", sortable: true },
-    { key: "description", header: "Description" },
+    { field: "name", header: "Item Code" },
+    { field: "description", header: "Description" },
     {
-      key: "id",
       id: "actions",
       header: "Actions",
       render: (row) => <ItemCodeActionsCell itemCode={row} onEdit={onEdit} />,

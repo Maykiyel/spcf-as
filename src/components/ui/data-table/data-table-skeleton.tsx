@@ -1,5 +1,6 @@
 import { Table, Skeleton } from "@mantine/core";
 import type { ColumnDef } from "./types";
+import { columnId } from "./sort-plan";
 
 type DataTableSkeletonProps<T> = {
   columns: ColumnDef<T>[];
@@ -15,7 +16,7 @@ export function DataTableSkeleton<T extends Record<string, any>>({
       {Array.from({ length: rowCount }).map((_, rowIndex) => (
         <Table.Tr key={`skeleton-row-${rowIndex}`}>
           {columns.map((col) => (
-            <Table.Td key={col.id ?? col.key}>
+            <Table.Td key={columnId(col)}>
               <Skeleton height={16} width="70%" radius="lg" />
             </Table.Td>
           ))}

@@ -91,25 +91,29 @@ below).
 ```tsx
 import {
   DataTable,
-  useClientTableState,
+  useServerTableState,
   type ColumnDef,
 } from "@/components/ui/data-table";
 
 const columns: ColumnDef<Supplier>[] = [
-  { key: "id", header: "ID", sortable: true },
-  { key: "supplierName", header: "Supplier Name", sortable: true },
-  { key: "contactNo", header: "Contact No", sortable: true },
-  { key: "emailAddress", header: "Email Address", sortable: true },
+  { field: "id", header: "ID" },
+  { field: "supplierName", header: "Supplier Name" },
+  { field: "contactNo", header: "Contact No" },
+  { field: "emailAddress", header: "Email Address" },
   {
-    key: "id", // still required — used for cell value lookup on non-render columns
-    id: "actions", // REQUIRED whenever `key` collides with another column (e.g. actions cols)
+    id: "actions", // no field: this column renders a control, not a value
     header: "Actions",
     render: (row) => <SupplierActionsCell supplier={row} />,
   },
 ];
 
-function SupplierTable({ data }: { data: Supplier[] }) {
-  const tableState = useClientTableState({ data, columns });
+function SupplierTable() {
+  const tableState = useServerTableState({
+    queryKey: ["suppliers"],
+    queryFn: getSuppliers,
+    columns,
+    sortPlan: SUPPLIERS_SORT_PLAN, // which columns sort is decided here
+  });
 
   return (
     <DataTable.Root title="List of Supplier" state={tableState}>
@@ -132,7 +136,7 @@ function SupplierTable({ data }: { data: Supplier[] }) {
 | `DataTable.Toolbar`    | A row of controls, composed from the pieces below. Omit entirely for a table with no controls at all.    |
 | `DataTable.PageSize`   | The "Show N entries" select. Omit for a table that doesn't let the user change the page size.            |
 | `DataTable.Search`     | The search input. Right-aligns itself. **On a server-backed table, only compose this on an endpoint that accepts a search filter** — see below. Always safe on a client-side one. |
-| `DataTable.Grid`       | The actual `<table>` — headers (with sort toggle if `sortable: true`), rows, loading/error/empty states. Takes an optional `onRowClick`; see [Rows that navigate](#rows-that-navigate). |
+| `DataTable.Grid`       | The actual `<table>` — headers (with a sort toggle where the endpoint's plan allows one), rows, loading/error/empty states. Takes an optional `onRowClick`; see [Rows that navigate](#rows-that-navigate). |
 | `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging.       |
 
 ### Composing the toolbar
@@ -167,15 +171,14 @@ how this component already varies; a `showSearch` flag would be a second,
 contradictory way to say the same thing, and the variation after that would
 want a third.
 
-**That rule is about server-backed tables only.** A client-side table has
-no endpoint in the loop: `useClientTableState` filters rows already in the
-browser, so `DataTable.Search` always works there — and it is the honest
-control, because searching the loaded array *is* searching the whole
-dataset, with none of the page-scoping that made every server-backed page
-without a `search` filter drop the box. **There is no such table today.**
-Manage Accounts was the last one, and backend `4955f19` paginated `/users`
-underneath it, so it moved to `useServerTableState` and dropped its search
-box with everything else that had no `filter[search]` behind it.
+**Every table here is server-backed.** There was a `useClientTableState`
+for tables holding their rows in the browser, where `DataTable.Search`
+could always be shown because searching the loaded array *is* searching the
+whole dataset. Manage Accounts was its last consumer, and backend `4955f19`
+paginated `/users` underneath it. The hook was deleted once it had none:
+a whole parallel filter-sort-paginate implementation kept for nobody, and
+the only thing that still needed a column's field for search. Bring it back
+from git if a genuinely client-side table ever appears.
 
 The matching half of the rule lives on the list adapter: `createListAdapter`
 sends `filter[search]` only for endpoints that opt in with
@@ -426,18 +429,21 @@ stale link is the only way an unknown one arrives, and sending it is a 400.
 The 422 recovery below stays as a backstop for an allow-list that has
 drifted from the backend.
 
-**Sortability is still declared per column, not derived from the plan.** It
-looks derivable and is not, while `ColumnDef.key` doubles as identity: the
-Manage Accounts Actions column is keyed `full_name` because `key` must name
-a real field, and `/users` allow-lists `full_name`, so deriving would make
-an Actions header sortable. `reportTransactionColumns` is the exception and
-takes a plan, because it serves two endpoints with different allow-lists and
-none of its columns borrows a key.
+**Sortability is derived from the plan, not declared per column.** That was
+unsafe while `ColumnDef.key` doubled as identity — the Manage Accounts
+Actions column was keyed `full_name`, which `/users` allow-lists — and
+became safe once `field` and `id` split apart. A column sorts exactly when
+its `sortKey ?? field` is in `allowed`, and a rendered column has neither.
 
-**A test checks the two agree**, per endpoint, in
-`app/sort-plan-conformance.test.ts`. `sortPlanViolations(plan, columns)`
-returns the disagreements as readable lines, over static data: no rendering,
-no fetcher, no header click. It lives in `app/` because it spans features.
+**A test names what each table offers**, per endpoint, in
+`app/sort-plan-conformance.test.ts`. Derivation makes "a sortable column
+names an allow-listed key" true by construction, so the check is now the
+explicit set: `sortableColumnIds(plan, columns)` against a written list, and
+`unreachableSortKeys(plan, columns)` for keys the endpoint allows and the
+table shows no header for. A key wrongly added to `allowed` silently lights
+up a header, and this is what still fails when it does. Over static data:
+no rendering, no fetcher, no header click. It lives in `app/` because it
+spans features.
 
 **A declared sort behaves as a default, not as a starting value.** Like page
 1 and an unfiltered filter, it is omitted from the URL and restored on a
@@ -470,52 +476,47 @@ here does.
 ### `ColumnDef<T>`
 
 ```typescript
-type ColumnDef<T> = {
-  key: keyof T & string; // which field this column reads (and the default sort/search key)
-  id?: string; // set this if `key` collides with another column (e.g. two columns both keyed on 'id')
-  header: string; // column header label
-  sortable?: boolean; // enables the sort-toggle icons in the header
-  sortKey?: string; // the name the endpoint sorts this column by, when it isn't `key`
-  render?: (row: T) => ReactNode; // custom cell content — omit to just print the raw field value
-};
+type ColumnDef<T> =
+  // a column that reads a field off the row
+  | { field: keyof T & string; id?: string; header: string;
+      sortKey?: string; render?: (row: T) => ReactNode }
+  // a column that renders something no single field holds
+  | { id: string; header: string; render: (row: T) => ReactNode;
+      sortKey?: string };
 ```
 
-**A column's `key` also decides what `useClientTableState` searches.**
-Its search scans the raw value of every declared column, so a column
-keyed on a field the table never displays makes the search box match
-text nobody can see — an actions column keyed on `id` means typing `3`
-matches user 3. Key such a column on one already declared and give it
-an `id`. Server-backed tables are unaffected: their search is a query
-param — which is every table here today, so this rule is currently
-dormant rather than live.
+**Three names, three jobs.** `field` is what the cell reads, `id` is what
+identifies the column, `sortKey` is what the wire calls its sort. A single
+`key` used to do all three, and the collisions were real: an Actions column
+had to borrow an unrelated field because `key` was required, and three of
+them carried a comment apologising for it. The union is what makes the
+borrowing unnecessary — a rendered column has an `id` and no `field` at all.
 
-**Always set `id` on an "Actions" column** (or any column reusing another
-column's `key`) — `DataTable.Grid` uses `col.id ?? col.key` as the React list
-key internally. Without `id`, duplicate keys cause silent rendering bugs on
-sort/page changes.
+**There is no `sortable`.** A column sorts exactly when its `sortKey ??
+field` is in the endpoint's [sort plan](#the-sort-plan), which
+`useServerTableState` resolves before handing the columns to the grid. That
+is why the union matters beyond tidiness: while an Actions column was keyed
+`full_name`, and `/users` allow-lists `full_name`, deriving sortability
+would have lit a caret over the Actions header. A column with no field and
+no `sortKey` can never be sortable, whatever the plan allows.
 
-**Only mark a column `sortable: true` if the backend actually allow-lists it**
-(see `BACKEND_NOTES.md` — the sort allow-list doesn't necessarily cover every
-visible column, and changes over time). If it drifts out of sync,
-`useServerTableState` recovers automatically (see below) rather than leaving
-the table stuck — but it's still worth getting right at the source.
+**Set `sortKey` when the endpoint's name for a column's sort isn't the field
+the cell reads.** `/transactions` is the case it exists for: the response
+carries `date` and `customer_name`, and the same two columns sort as
+`created_at` and `customer`. `field` is constrained to `keyof T`, so without
+`sortKey` such a column could be read or sorted but not both, and the only
+way out would be renaming the row's own fields to the wire's sort names,
+forking `TransactionListRow` off the detail type it deliberately shares a
+base with.
 
-**Set `sortKey` when the endpoint's name for a column's sort isn't the name
-of the field the cell reads.** `/transactions` is the case it exists for:
-the response carries `date` and `customer_name`, and the same two columns
-sort as `created_at` and `customer`. `key` is constrained to `keyof T`, so
-without `sortKey` a column like that could be read or sorted but not both,
-and the only way out would be renaming the row's own fields to the wire's
-sort names — which forks `TransactionListRow` off the detail type it
-deliberately shares a base with.
+**Set `id` on a field column only when two columns read the same field.**
+The grid uses `columnId(col)` — `id ?? field` — as its React list key, so
+two columns on one field without an `id` cause silent rendering bugs on sort
+and page changes.
 
-It defaults to `key`, so every existing column is unaffected. Getting it
-wrong is a 422 on the first header click, exactly like getting `key` wrong
-was before it existed, and the same recovery applies.
-
-Note what this does **not** separate: display naming from field naming. A
-column's header is already free (`header: "Cashier"` over `key:
-"account"`); `sortKey` frees the sort name, not the field one.
+Note what none of this separates: display naming from field naming. A
+column's header has always been free (`header: "Cashier"` over `field:
+"cashier"`); `sortKey` frees the sort name, not the field one.
 
 ### Rows that navigate
 
@@ -527,8 +528,8 @@ renders exactly as before — no pointer cursor, no handler:
 ```
 
 It's a prop on the piece rather than part of the shared state because the
-state comes from `useClientTableState`/`useServerTableState`, and neither
-knows anything about navigation.
+state comes from `useServerTableState`, which knows nothing about
+navigation.
 
 **A click that landed on a control inside a row doesn't fire it.** Anchors,
 buttons and form controls in a cell are their own action. The case it was
@@ -563,12 +564,7 @@ columns (a `VoidActionsCell` with Restore/Delete buttons, for example) without
 `DataTable` ever needing to know what "void" or "restore" mean — it just calls
 whatever `render` function each feature provides, per row.
 
-### State: client-side vs. server-side
-
-`useClientTableState` filters, sorts, and paginates an in-memory array — use it
-for small, bounded datasets that arrive in one response. Nothing uses it
-today: every list endpoint in this API is paginated, `/users` included as
-of backend `4955f19`.
+### State
 
 `useServerTableState` wraps a `useQuery` call and sends `page`/`search`/`sort`
 as API query params instead of filtering in-browser — use it for large,
@@ -577,31 +573,25 @@ unbounded datasets (invoices, transactions, audit logs). Search is debounced
 previous page's rows visible while the next request is in flight
 (`keepPreviousData`) instead of flashing to empty.
 
-Both hooks return the same shape (`DataTableContextValue<T>`), so
-`DataTable.Toolbar` / `.PageSize` / `.Search` / `.Grid` / `.Pagination` never
-change regardless of which
-one a given table uses. This is the `state-context-interface` pattern — the UI
-is dependency-injected with state, not coupled to one implementation. Swapping
-a table from one to the other later (e.g. a client-side list outgrows itself)
-is a one-line change at the call site — nothing in `DataTable.*` needs to know.
+It returns `DataTableContextValue<T>`, and `DataTable.Toolbar` / `.PageSize`
+/ `.Search` / `.Grid` / `.Pagination` read only that. This is the
+`state-context-interface` pattern: the UI is dependency-injected with state
+rather than coupled to one implementation, which is what lets the pieces
+compose freely per page.
 
-**Under the hood**, both hooks are built on an internal `useTableControls`
-hook (not exported — implementation detail of this folder) that owns
-page/pageSize/search/sort state and their handlers. This isn't just for DRY:
-it's what keeps `useClientTableState` and `useServerTableState`
-_behaviorally_ identical, not just shape-identical. Before this existed, the
-two hooks separately reimplemented the same sort-cycling and page-reset
-logic, which meant they could type-check as interchangeable while quietly
-behaving differently — defeating the point of being able to swap them. If you
-ever need a third variant (e.g. something websocket-synced), build it on
-`useTableControls` too rather than hand-rolling that state again.
+**Under the hood** it is built on an internal `useTableControls` hook (not
+exported — an implementation detail of this folder) that owns
+page/pageSize/search/sort state and their handlers. If you ever need a
+second variant (a genuinely client-side table, something websocket-synced),
+build it on `useTableControls` rather than hand-rolling that state again:
+that is what keeps two such hooks behaviourally identical rather than merely
+shape-identical.
 
 ### URL-persisted state
 
-Both `useClientTableState` and `useServerTableState` accept an optional
-`urlKey` string. When provided, page/pageSize/search/sort state — and, on
-`useServerTableState`, the declared filters — is synced to the URL's search
-params instead of living in local `useState`, so the view survives a
+`useServerTableState` accepts an optional `urlKey` string. When provided,
+page/pageSize/search/sort state and the declared filters are synced to the
+URL's search params instead of living in local `useState`, so the view survives a
 refresh, comes back on a history entry, and is shareable as a link.
 
 ```tsx
@@ -692,20 +682,18 @@ not a filter-only one.
 | Paging/sorting/searching after data has loaded | Existing rows stay visible, dimmed to 60% opacity, instead of flashing empty |
 | Query succeeds with 0 results                  | "No entries found"                                                           |
 | Query fails before any data has loaded         | The error message in place of rows                                           |
-| Any state, `useClientTableState`               | `isError` is always `false` — there's no network call to fail                |
+
 
 **A client-side table whose data comes from a query still has both
 states** — they just belong to the page, not to the hook. No table does
 this today; the example below is the shape, not a pointer to live code.
-`useClientTableState` filters an array and has no request to report on,
-so it hardcodes `isLoading` and `isError` to `false`; the component that
-called `useQuery` is what knows. Spread the query's own flags over the
-state on the way in, and `DataTable.Grid` renders the skeleton and the
-error row exactly as it does for a server-backed table:
+A table whose rows arrive from a query the page owns has no request of its
+own to report on, so the component that called `useQuery` is what knows.
+Spread the query's own flags over the state on the way in, and
+`DataTable.Grid` renders the skeleton and the error row as usual:
 
 ```tsx
 const { data, isLoading, isError } = useQuery({ queryKey, queryFn });
-const tableState = useClientTableState({ data: data ?? NO_ROWS, columns });
 
 <DataTable.Root
   title="User Accounts"
@@ -714,15 +702,20 @@ const tableState = useClientTableState({ data: data ?? NO_ROWS, columns });
 ```
 
 Deliberately not passthrough options on the hook: the override is one
-line at the call site, it reads as exactly what it is, and the hook
-stays about filtering. Note `columns` at module scope: it feeds the memo
-deps of the hook's filter and sort passes, so rebuilding it per render
-re-filters and re-sorts the whole dataset every time.
+line at the call site and reads as exactly what it is.
 
-**`useClientTableState` has no consumers.** It is kept, not deprecated:
-it is half of the swap this folder is built around, `useTableControls`
-keeps the two behaviourally identical for free, and the next bounded
-in-memory list wants it. Delete it only when that stops being true.
+**`useClientTableState` was deleted.** It had no consumers and was kept
+anyway, on three stated grounds: it was half of the swap this folder is
+built around, `useTableControls` kept the two behaviourally identical for
+free, and the next bounded in-memory list would want it. That note said to
+delete it only when those stopped being true, and they did. The server hook
+grew a declared-filter surface, a date range descriptor and a sort plan, and
+now resolves each column's sortability before the grid sees it; the client
+hook had none of that, so the two were no longer interchangeable and
+`useTableControls` was no longer keeping them identical for free. It was
+also the last thing reading a column's field for search, which is what stood
+between `ColumnDef` and splitting `field` from `id`. Take it out of git if a
+genuinely client-side table appears; build it on `useTableControls`.
 
 If you need a custom error message instead of the default "Couldn't load
 data. Please try again.", that comes from `errorMessage` in
@@ -731,8 +724,8 @@ different wording; it isn't currently a per-table prop.
 
 ### Sort error recovery
 
-If a column is marked `sortable: true` but the backend rejects it (a 422 —
-see the allow-list warning under `ColumnDef<T>` above), `useServerTableState`
+If a sort reaches the wire and the backend rejects it (a 422 — the sort plan
+should prevent it, but an allow-list can drift), `useServerTableState`
 detects this automatically: it resets the sort to unsorted and shows a toast
 via `@mantine/notifications` ("That column can't be sorted.") instead of
 leaving the table stuck showing nothing. Any other error (500, network) is

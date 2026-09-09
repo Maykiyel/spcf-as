@@ -5,7 +5,7 @@ import { render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { theme } from "@/config/theme";
 import { DataTable } from "./index";
-import type { ColumnDef, DataTableContextValue } from "./types";
+import type { ResolvedColumn, DataTableContextValue } from "./types";
 
 // Seam: the toolbar composed under a real DataTable.Root, with the table
 // state hand-built as a test double. The state hooks have their own tests;
@@ -22,7 +22,9 @@ vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
 type Row = { id: string };
 
-const columns: ColumnDef<Row>[] = [{ key: "id", header: "ID" }];
+const columns: ResolvedColumn<Row>[] = [
+  { field: "id", header: "ID", sortable: false },
+];
 
 function stubState(
   overrides: Partial<DataTableContextValue<Row>> = {},

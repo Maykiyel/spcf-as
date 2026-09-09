@@ -35,14 +35,13 @@ export function transactionListColumns({
 }: TransactionListColumnsOptions): ColumnDef<TransactionListRow>[] {
   const columns: ColumnDef<TransactionListRow>[] = [
     {
-      key: "date",
+      field: "date",
       sortKey: "created_at",
       header: "Date",
-      sortable: true,
       render: (row) => formatDateTime(row.date),
     },
     {
-      key: "control_id",
+      field: "control_id",
       header: "Control ID",
       // A real link, not just a clickable row: it is what a keyboard
       // reaches, a screen reader announces, and middle-click opens.
@@ -53,24 +52,22 @@ export function transactionListColumns({
       ),
     },
     {
-      key: "series_number",
+      field: "series_number",
       header: "Series No.",
-      sortable: true,
       // `null` until saved, which the receipts list does show.
       render: (row) => row.series_number ?? "—",
     },
     {
-      key: "customer_name",
+      field: "customer_name",
       sortKey: "customer",
       header: "Payer",
-      sortable: true,
       render: (row) => row.customer_name ?? "—",
     },
   ];
 
   if (includeCashier) {
     columns.push({
-      key: "cashier",
+      field: "cashier",
       header: "Cashier",
       // Not sortable: the endpoint allow-lists no cashier sort.
       render: (row) => row.cashier?.full_name ?? "—",
@@ -79,12 +76,12 @@ export function transactionListColumns({
 
   columns.push(
     {
-      key: "items",
+      field: "items",
       header: "Items",
       render: (row) => <TransactionItemNamesCell items={row.items} />,
     },
     {
-      key: "total",
+      field: "total",
       header: "Total",
       render: (row) => (row.total === null ? "—" : formatCurrency(row.total)),
     },
@@ -92,18 +89,14 @@ export function transactionListColumns({
 
   if (includeStatus) {
     columns.push({
-      key: "status",
+      field: "status",
       header: "Status",
-      sortable: true,
       render: (row) => <TransactionStatusBadge status={row.status} />,
     });
   }
 
   if (actions) {
     columns.push({
-      // `key` must be a field of the row, so the identifying one stands in
-      // and `id` names the column. Same shape as the other action columns.
-      key: "control_id",
       id: "actions",
       header: "Actions",
       render: actions,
