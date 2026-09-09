@@ -242,6 +242,33 @@ empty state rather than an error or a permanent spinner. Omit `filtersUsable`
 and the table always requests, which is right for filters whose values stand
 alone.
 
+**One endpoint wants the stricter guard.**
+`GET /reports/services-sold/{service}` validates both ends as `required`
+rather than `nullable`, so an *absent* range is a 422 there too, not an
+unfiltered request. `dateRangeFiltersUsable` waves that case through, since
+neither end being set is a matched pair. Use `dateRangeFiltersRequired`
+wherever the endpoint demands a range.
+
+**A table can default to a real range rather than to none.** `initialFilters`
+values are defaults in the full sense — omitted from the URL, restored on a
+fresh visit — so seeding them from `currentMonthRange()` gives a report that
+says something on arrival:
+
+```tsx
+const PERIOD = currentMonthRange();
+
+useServerTableState({
+  ...,
+  initialFilters: { from_date: PERIOD.from, to_date: PERIOD.to },
+});
+```
+
+Note what follows. Clearing the range in the picker writes `null`, which
+differs from the default and so deletes the param, which reads back *as* the
+default: clearing snaps to the current month rather than to an unfiltered
+view. That is right where a range is required and wrong where it is
+optional, so default a range only on a table that needs one.
+
 Key the filters by the API's own filter name (`from_date`, not `dateFrom`)
 so that mapping stays a no-op. `TableFilters` values are `string | null` and
 nothing else: they round-trip through the URL, which has only strings, so
