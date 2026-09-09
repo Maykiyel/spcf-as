@@ -205,7 +205,6 @@ export const pages: TopLevelPage[] = [
     roles: ["admin"],
   },
   {
-    // One leaf until #65 lands; see the Reports entry in CONTEXT.md.
     key: "reports",
     label: "Reports",
     icon: IconReportAnalytics,
@@ -216,6 +215,15 @@ export const pages: TopLevelPage[] = [
         path: "/reports/transactions",
         lazyImport: () => import("@/app/routes/app/reports/transactions"),
         label: "Transactions Report",
+        icon: IconEye,
+      },
+      {
+        // The summary alone. Its drill-down is a route without a nav entry,
+        // wired in create-router.tsx.
+        key: "servicesSoldReport",
+        path: "/reports/services-sold",
+        lazyImport: () => import("@/app/routes/app/reports/services-sold"),
+        label: "Services Sold Report",
         icon: IconEye,
       },
     ],

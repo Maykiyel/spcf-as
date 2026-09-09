@@ -37,6 +37,11 @@ type UseServerTableStateOptions<T, TMeta> = {
    * caret over rows that are plainly ordered. Keys must be ones the
    * endpoint allow-lists: this reaches the wire on the first request. */
   initialSorts?: SortEntry[];
+  /** Whether `initialSorts` already orders the rows completely, which is
+   * true when it ends in a unique key. The first click on another column
+   * then replaces it instead of joining behind it, since nothing appended
+   * after a total order can reorder anything. */
+  initialSortsAreTotalOrder?: boolean;
   /** Whether the current filters are worth a request. For filters whose
    * ends must agree: half a date range is a 422, and a restored URL can
    * carry one even though the control never emits one. */
@@ -54,6 +59,7 @@ export function useServerTableState<
   urlKey,
   initialFilters,
   initialSorts,
+  initialSortsAreTotalOrder,
   filtersUsable,
 }: UseServerTableStateOptions<T, TMeta>) {
   const {
@@ -68,7 +74,13 @@ export function useServerTableState<
     onSort,
     resetSort,
     setFilters,
-  } = useTableControls(initialPageSize, urlKey, initialFilters, initialSorts);
+  } = useTableControls(
+    initialPageSize,
+    urlKey,
+    initialFilters,
+    initialSorts,
+    initialSortsAreTotalOrder,
+  );
 
   // Debounced before the network, independently of the URL-write debounce
   // in `useTableControls`, so URL sync isn't gated on request timing.

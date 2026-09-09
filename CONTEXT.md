@@ -58,7 +58,7 @@ The secondary, occasional-upkeep view for managing Item codes directly — creat
 _Avoid_: category list, item code manager
 
 **`src/api/` (shared API tier)**:
-A dedicated location for API calls genuinely needed by more than one feature, sitting outside `src/features/*` — per the project's reference architecture (bulletproof-react), which explicitly allows this as an alternative to duplicating a call across features. Distinct from `components/ui`: this tier is allowed to know about domain concepts, whereas `components/ui` must stay domain-agnostic. It holds `item-codes.ts` (the shared `ItemCode` type and `searchItemCodes`), `services.ts` (the `Service` shape alone — both features fetch it differently), `cashiers.ts` (the `Cashier` type and `getCashiers`, promoted out of Series Receipts when the Transactions list's cashier filter became a second consumer), and `transactions.ts` (`TransactionScalars` alone, the wire fields the Transactions list row and the Transactions Report row share). Only promote something here once a second real feature actually needs it — don't pre-build shared modules for hypothetical future consumers (e.g. the item-code combobox UI itself stayed feature-local to Services for exactly this reason; only the type + fetcher moved here). Promote as much as is genuinely shared and no more: `services.ts` is a type with no fetcher for exactly that reason.
+A dedicated location for API calls genuinely needed by more than one feature, sitting outside `src/features/*` — per the project's reference architecture (bulletproof-react), which explicitly allows this as an alternative to duplicating a call across features. Distinct from `components/ui`: this tier is allowed to know about domain concepts, whereas `components/ui` must stay domain-agnostic. It holds `item-codes.ts` (the shared `ItemCode` type and `searchItemCodes`), `services.ts` (the `Service` shape alone — both features fetch it differently), `cashiers.ts` (the `Cashier` type and `getCashiers`, promoted out of Series Receipts when the Transactions list's cashier filter became a second consumer), and `transactions.ts` (`TransactionScalars` alone, the wire fields the Transactions list row and the Transactions Report row share). Only promote something here once a second real feature actually needs it — don't pre-build shared modules for hypothetical future consumers (e.g. the item-code combobox UI itself stayed feature-local to Services for exactly this reason; only the type + fetcher moved here). Promote as much as is genuinely shared and no more: `services.ts` is a type with no fetcher for exactly that reason, and stayed one when the Service Breakdown became a third consumer needing a fetch of its own (`getService`, by id, for that page's heading) that neither of the other two wants.
 _Avoid_: treating this as a place for anything reusable in general — it's specifically for cross-feature API calls, not a catch-all
 
 **`src/components/filters/` (shared filter controls)**:
@@ -124,8 +124,12 @@ _Avoid_: returned (in user-facing copy — correct in code, where it is the API'
 The top-level, admin-only navigation group over `/reports/*`. It replaced a
 single `/reports` page holding one heading, because the two reports beneath it
 answer different questions and have different shapes. Holds the Transactions
-Report, and the Services Sold report (#65) once that page exists. Admin-only
-throughout: every `/reports/*` endpoint answers a cashier with a 403.
+Report and the Services Sold Report. Admin-only throughout: every `/reports/*`
+endpoint answers a cashier with a 403. The Service Breakdown sits under the
+same prefix and inherits the same rule, but is not a member of this group: a
+parameterised path is not a link a sidebar can render, so it is a route in
+`create-router.tsx` that spells its own `roles` rather than a `pages.ts` leaf
+that inherits them.
 _Avoid_: analytics, statistics; "the reports page" (there is no page at
 `/reports` itself, only leaves under it)
 
@@ -158,6 +162,66 @@ therefore disagree for a transaction that straddled a boundary. Neither is
 wrong; they answer slightly different questions.
 _Avoid_: Consolidated Item Reports (the old name, wrong on both words), earnings
 report (that is the Dashboard's charted figure), item report
+
+**Services Sold Report (page)**:
+The admin-only page at `/reports/services-sold`: one row per service for a
+chosen period, with the quantity sold and the revenue. It aggregates **per
+service**, which is why it is named for services. It was specified as the
+"Individual Item Report", which was wrong on the glossary, since an **Item
+code** here is a category and a **Service** is the priced, sellable thing.
+
+**Its period defaults to the current month, and that is load-bearing.** Every
+row links to a Service Breakdown, whose endpoint requires both dates, so an
+unfiltered summary would render rows the API rejects before the click became
+a UI problem. Clearing the range therefore returns to the current month
+rather than to an unfiltered view.
+
+**It opens sorted by service name ascending**, which the endpoint
+allow-lists and which is unique, so it orders the rows completely.
+Alphabetical is the right default here because there is no search box, so
+finding a service means scanning, and scanning by name beats scanning by
+revenue rank. Ranking by either number is one header click away.
+
+**Page stability is the endpoint's job, not this page's.** Revenue and
+quantity both tie freely, and for a while this page appended `service_name`
+to every request to keep paging deterministic. Backend `0428e2c` made the
+endpoint order by `service_id` unconditionally, so that append is gone. See
+`BACKEND_NOTES.md` for what it was working around.
+
+**A unique declared sort surfaced a table-tier bug.** A declared sort used
+to sit at priority 1 while a clicked column joined behind it, so a unique
+declared key made every other header inert: clicking Revenue reordered
+nothing. `sortsToExtend` now has the first click supersede a declared
+default instead. The Transactions Report had the same defect for the same
+reason, its `id` tiebreaker being unique, and is fixed by the same change.
+
+Its filter surface is a date range and nothing else; neither endpoint here
+allow-lists a search or any other filter.
+_Avoid_: Individual Item Report (the old name, wrong on the glossary), item
+report, sales report
+
+**Service Breakdown (page)**:
+The admin-only page at `/reports/services-sold/:serviceId`: every completed
+transaction in a period that included one service. Reached by clicking a
+service on the Services Sold Report, which carries its period across so the
+detail matches the figure it explains.
+
+**A route rather than a drawer or an expanding row.** It is a paginated table
+with its own sorting, which would fight the parent table's state inside it,
+and being a route makes one service for one period a shareable link. It is
+the only page in the app whose date range is mandatory rather than optional,
+which is what `dateRangeFiltersRequired` exists for.
+
+Its rows carry no items and no service. The heading's service name comes from
+a separate `GET /services/{id}`, because the route carries only an id and the
+breakdown envelope names no service at all; that request failing leaves the
+plain heading rather than blanking a table that loaded.
+
+Its sort allow-list is a third distinct one, neither the Transactions list's
+nor the Transactions Report's: it allows `series_number`, which the report
+does not, and neither of the two amount sorts, which the report does.
+_Avoid_: item breakdown, service detail (that is a Services catalog record),
+drill-down (fine in conversation, not as the page's name)
 
 **Activity entry**:
 One recorded event in the system's audit trail — a transaction initiated, an item removed, a series receipt exhausted, an account created. Seventeen kinds, written by the backend and never by this application. Its parts each have a fixed name: the **actor** who did it, the **subject** it acted on, its **type**, its **context**, and its **details**. It is the only place the admin who voided a transaction is recorded; the transaction itself does not carry them in any list.

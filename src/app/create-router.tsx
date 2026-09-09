@@ -30,6 +30,14 @@ export const createRouter = () =>
               path: "/transactions/:controlId",
               lazy: () => import("./routes/app/transactions/view"),
             },
+            // Also not a nav leaf: a parameterised path is not a link a
+            // sidebar can render. Its roles are spelled here rather than
+            // inherited, because nothing in pages.ts describes this route.
+            {
+              path: "/reports/services-sold/:serviceId",
+              lazy: () => import("./routes/app/reports/service-breakdown"),
+              handle: { roles: ["admin"] },
+            },
           ],
         },
         // Deliberately outside AppLayoutRoute: no sidebar or header in

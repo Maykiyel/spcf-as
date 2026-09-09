@@ -20,8 +20,12 @@ export type {
 } from "./types";
 export { MAX_SORT_COLUMNS } from "./types";
 export { encodeSortsForApi } from "./sort-params";
+export { tableParamName } from "./use-table-controls";
 export { createListAdapter } from "./create-list-adapter";
-export { dateRangeFiltersUsable } from "./date-range-filters";
+export {
+  dateRangeFiltersUsable,
+  dateRangeFiltersRequired,
+} from "./date-range-filters";
 
 import { DataTableRoot } from "./data-table-root";
 import {

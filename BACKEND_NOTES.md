@@ -370,6 +370,98 @@ or page order is undefined for rows sharing a `created_at`.
 `customer_name` here and `customer` there, `cashier_name` is allowed here
 and not there, and `series_number` is allowed there and not here.
 
+## `GET /reports/services-sold` and `/reports/services-sold/{service}`
+
+Both admin only, under `throttle:reports`. Read at backend `1165499`;
+neither endpoint has a backend test.
+
+### The summary
+
+Envelope is the usual one, rows under `services`:
+
+```json
+{ "services": [...], "pagination": {...} }
+```
+
+A row is `{ service: { id, name }, total_quantity, subtotal }`. It is a
+**grouped aggregate over `transaction_items`, not a service record**:
+`groupBy('service_id')` over items whose transaction is `completed`.
+`service` is `whenLoaded`, so the key is absent rather than null if the
+relation ever fails to load. Both figures are cast to float on the wire,
+though `quantity` is an unsigned integer column.
+
+**Revenue is `subtotal` on the wire.** That is the sort key and the field
+name, whatever a column calls it on screen.
+
+**A service with no sales in the period is absent, not zero.** The query
+groups `transaction_items`, so a service only produces a row by appearing
+on a completed transaction inside the range. The report is therefore
+"services that sold", not "every service, with its sales". #65 assumed
+otherwise in passing, arguing that "several services will sit at zero for
+any given period"; they do not appear at all. The conclusion that argument
+supported still holds, and more strongly: `service_name` being unique makes
+it a total order, and there are fewer ties than the issue expected.
+
+**The `service_name` sort works.** Verified against the real database on
+2026-09-09: rows came back strictly alphabetical. The `ONLY_FULL_GROUP_BY`
+risk recorded below did not materialise, so `strict` mode either permits
+the ordering or is not in force on this deployment. Left recorded rather
+than deleted, since it is unverified on any other MySQL configuration.
+
+Filters: `from_date`, `to_date`, both optional and both `Y-m-d`, with
+`to_date` carrying `after_or_equal:filter.from_date` as everywhere else. No
+`search`, no others.
+
+Sorts: `total_quantity`, `subtotal`, `service_name`. No `defaultSort`, but
+**`orderBy('service_id')` is applied unconditionally** after
+`allowedSorts()`, so every request ends in a unique key and pages are
+stable under any sort.
+
+That landed in `0428e2c`. Before it, the endpoint had no ordering of its
+own and both aggregate sorts tie freely, so paginating one could return a
+service on two pages and another on none while `pagination.total` stayed
+correct. Reproduced on June 2026 data at several page sizes, then verified
+fixed at all of them.
+
+**A `defaultSort` would not have fixed it**, and was tried first in
+`ab4c999`. `SortsQuery::defaultSorts()` returns early when the request
+carries any `sort`, so it is skipped for exactly the requests that tie.
+`orderBy` always applies, which is the difference.
+
+**`service_name` is a custom sort that may be a 500 under MySQL.**
+`ServiceNameSort` does `leftJoin('services', ...)` then
+`ORDER BY services.name`, while the query groups by
+`transaction_items.service_id`. The MySQL connection is configured
+`strict => true`, so `ONLY_FULL_GROUP_BY` is on, and MySQL does not deduce
+functional dependency through the nullable side of an outer join.
+**It did not fire** against the deployment this app talks to, checked on
+2026-09-09: the sort returns rows in name order. Recorded because the
+reasoning still applies to a stricter MySQL, so treat it as a thing to
+re-check if the sort ever 500s rather than as a live defect.
+
+### The drill-down
+
+Envelope holds `transactions`, rows being `TransactionResource` with
+**`cashier` eager-loaded and `items` not**, the same scalar-only shape
+`/reports/transactions` returns. Only `completed` transactions, restricted
+to those carrying an item for the bound service.
+
+`{service}` binds by **`id`**; `Service` overrides no route key. An id
+naming no service is a 404.
+
+**`from_date` and `to_date` are both `required` here**, the only endpoint
+in the API where that is true. An absent range is a 422, not an unfiltered
+request, so the looser "both ends agree" guard the other date-filtered
+tables use is not enough.
+
+Sorts: `created_at`, `id`, `series_number`, `customer_name`, `total`,
+`cashier_name`. Default `id`.
+
+**A third distinct allow-list.** It allows `series_number`, which
+`/reports/transactions` does not, and allows neither `amount_paid` nor
+`change_amount`, which that endpoint does. Its default is a single key and
+needs no tiebreaker, `id` being unique.
+
 ## Response shapes
 
 ### `TransactionResource`

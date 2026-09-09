@@ -31,9 +31,11 @@ const declaredOnly = (
     Object.entries(patch).filter(([key]) => key in initialFilters),
   );
 
-// A filter's URL param is `<urlKey>_<filterKey>`, sharing a namespace with
-// `page`, `size`, `q` and `sort`. None collide today; note for whoever
-// adds the first one that does.
+/** A table's URL params are `<urlKey>_<name>`, filters sharing a namespace
+ * with `page`, `size`, `q` and `sort`. None collide today. Exported so a
+ * link built outside a table can address one without restating the shape. */
+export const tableParamName = (urlKey: string | undefined, name: string) =>
+  urlKey ? `${urlKey}_${name}` : name;
 
 export function nextSorts(
   current: SortEntry[],
@@ -81,6 +83,23 @@ const sameSorts = (a: SortEntry[], b: SortEntry[]): boolean =>
       entry.key === b[index].key && entry.direction === b[index].direction,
   );
 
+/** What a click extends. An untouched declared sort that already orders the
+ * rows completely is dropped rather than joined, because nothing appended
+ * behind a total order can reorder anything. See `initialSortsAreTotalOrder`. */
+export function sortsToExtend(
+  current: SortEntry[],
+  key: string,
+  initialSorts: SortEntry[],
+  initialSortsAreTotalOrder = false,
+): SortEntry[] {
+  if (!initialSortsAreTotalOrder || initialSorts.length === 0) return current;
+
+  const isUntouchedDefault = sameSorts(current, initialSorts);
+  const alreadyActive = current.some((sort) => sort.key === key);
+
+  return isUntouchedDefault && !alreadyActive ? [] : current;
+}
+
 // `key:dir,key:dir` in one param, string order being priority order. The
 // declared sort is omitted, like page 1, so a shared link stays clean.
 const encodeSorts = (
@@ -116,11 +135,12 @@ function useUrlAdapter(
   urlKey: string | undefined,
   initialFilters: TableFilters,
   initialSorts: SortEntry[],
+  initialSortsAreTotalOrder: boolean,
 ): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const paramName = useCallback(
-    (name: string) => (urlKey ? `${urlKey}_${name}` : name),
+    (name: string) => tableParamName(urlKey, name),
     [urlKey],
   );
 
@@ -207,7 +227,13 @@ function useUrlAdapter(
 
   const onSort = (key: string) => {
     updateParams({
-      [paramName("sort")]: encodeSorts(nextSorts(sorts, key), initialSorts),
+      [paramName("sort")]: encodeSorts(
+        nextSorts(
+          sortsToExtend(sorts, key, initialSorts, initialSortsAreTotalOrder),
+          key,
+        ),
+        initialSorts,
+      ),
       [paramName("page")]: null,
     });
   };
@@ -257,6 +283,7 @@ function useLocalAdapter(
   initialPageSize: number,
   initialFilters: TableFilters,
   initialSorts: SortEntry[],
+  initialSortsAreTotalOrder: boolean,
 ): TableControlsAdapter {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -277,7 +304,12 @@ function useLocalAdapter(
   };
 
   const onSort = (key: string) => {
-    setSorts((prev) => nextSorts(prev, key));
+    setSorts((prev) =>
+      nextSorts(
+        sortsToExtend(prev, key, initialSorts, initialSortsAreTotalOrder),
+        key,
+      ),
+    );
     setPage(1);
   };
 
@@ -313,17 +345,20 @@ export function useTableControls(
   urlKey?: string,
   initialFilters: TableFilters = {},
   initialSorts: SortEntry[] = NO_SORTS,
+  initialSortsAreTotalOrder = false,
 ): TableControls {
   const urlAdapter = useUrlAdapter(
     initialPageSize,
     urlKey,
     initialFilters,
     initialSorts,
+    initialSortsAreTotalOrder,
   );
   const localAdapter = useLocalAdapter(
     initialPageSize,
     initialFilters,
     initialSorts,
+    initialSortsAreTotalOrder,
   );
 
   return urlKey ? urlAdapter : localAdapter;

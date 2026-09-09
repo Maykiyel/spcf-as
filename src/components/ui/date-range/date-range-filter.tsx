@@ -46,7 +46,11 @@ export function DateRangeFilter({
       value={draft}
       onChange={handleChange}
       clearable
-      w={{ base: "100%", xs: 260 }}
+      // Short month, like `formatDateTime` renders every other date here.
+      // Mantine's default spells it out, which wrapped a full range onto a
+      // second line and shifted everything under it. Width to match.
+      valueFormat="MMM D, YYYY"
+      w={{ base: "100%", xs: 300 }}
     />
   );
 }

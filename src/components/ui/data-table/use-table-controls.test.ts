@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextSorts } from "./use-table-controls";
+import { nextSorts, sortsToExtend } from "./use-table-controls";
 
 describe("nextSorts", () => {
   it("adds a new column as ascending", () => {
@@ -43,5 +43,71 @@ describe("nextSorts", () => {
       sorts = nextSorts(sorts, key);
     }
     expect(sorts.length).toBeLessThanOrEqual(2);
+  });
+});
+
+const asc = (key: string) => ({ key, direction: "asc" as const });
+const desc = (key: string) => ({ key, direction: "desc" as const });
+
+describe("sortsToExtend", () => {
+  it("drops an untouched total-order declared sort when another column is clicked", () => {
+    // The reason it exists: `service_name` is unique, so a key appended
+    // behind it is inert and clicking Revenue would reorder nothing.
+    const declared = [asc("service_name")];
+    expect(sortsToExtend(declared, "subtotal", declared, true)).toEqual([]);
+    expect(
+      nextSorts(sortsToExtend(declared, "subtotal", declared, true), "subtotal"),
+    ).toEqual([asc("subtotal")]);
+  });
+
+  it("drops both halves of a two-key declared sort", () => {
+    const declared = [desc("created_at"), asc("id")];
+    expect(sortsToExtend(declared, "cashier_name", declared, true)).toEqual([]);
+  });
+
+  it("joins a declared sort that is not a total order", () => {
+    // The Dashboard's earnings table: `total_earnings` ties freely, so a
+    // name click genuinely breaks those ties rather than being inert.
+    const declared = [desc("total_earnings")];
+    expect(sortsToExtend(declared, "cashier_name", declared)).toEqual(declared);
+    expect(nextSorts(declared, "cashier_name")).toEqual([
+      desc("total_earnings"),
+      asc("cashier_name"),
+    ]);
+  });
+
+  it("keeps the declared sort when the clicked column is the declared one", () => {
+    // Its own cycle is unaffected: asc -> desc -> off still works.
+    const declared = [asc("service_name")];
+    expect(sortsToExtend(declared, "service_name", declared, true)).toEqual(
+      declared,
+    );
+    expect(nextSorts(declared, "service_name")).toEqual([desc("service_name")]);
+  });
+
+  it("keeps a selection the user has already changed, so a second column joins", () => {
+    const declared = [asc("service_name")];
+    const chosen = [asc("subtotal")];
+    expect(sortsToExtend(chosen, "total_quantity", declared, true)).toEqual(
+      chosen,
+    );
+    expect(nextSorts(chosen, "total_quantity")).toEqual([
+      asc("subtotal"),
+      asc("total_quantity"),
+    ]);
+  });
+
+  it("leaves a table that declares no sort alone", () => {
+    expect(sortsToExtend([], "name", [], true)).toEqual([]);
+    expect(sortsToExtend([asc("name")], "price", [], true)).toEqual([
+      asc("name"),
+    ]);
+  });
+
+  it("keeps an unsorted table unsorted rather than treating it as the default", () => {
+    // `sort=none` is a user choice, not the declared state, so a click
+    // from there behaves normally.
+    const declared = [asc("service_name")];
+    expect(sortsToExtend([], "subtotal", declared, true)).toEqual([]);
   });
 });

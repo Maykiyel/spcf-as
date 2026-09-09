@@ -9,6 +9,20 @@ export type DateRangeValue = {
 
 export const EMPTY_DATE_RANGE: DateRangeValue = { from: null, to: null };
 
+/** The calendar month `now` falls in, in the wire format. Local
+ * components, like every picked date here, so the month a user is shown is
+ * the one their own calendar says. */
+export function currentMonthRange(now: Date = new Date()): DateRangeValue {
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  return {
+    from: toApiDate(new Date(year, month, 1)),
+    // Day zero of the next month is the last day of this one.
+    to: toApiDate(new Date(year, month + 1, 0)),
+  };
+}
+
 /**
  * The control's emit rule: the range to publish, or `null` for "not a
  * filter yet".

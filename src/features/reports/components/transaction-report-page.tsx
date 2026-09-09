@@ -35,6 +35,9 @@ export function TransactionReportPage() {
     columns: transactionReportColumns,
     urlKey: URL_KEY,
     initialSorts: TRANSACTION_REPORT_DEFAULT_SORTS,
+    // The `id` half is unique, so every other header would be inert behind
+    // the declared pair.
+    initialSortsAreTotalOrder: true,
     initialFilters: REPORT_FILTERS,
     filtersUsable: dateRangeFiltersUsable,
   });

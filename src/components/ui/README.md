@@ -242,6 +242,37 @@ empty state rather than an error or a permanent spinner. Omit `filtersUsable`
 and the table always requests, which is right for filters whose values stand
 alone.
 
+**Some tables want the stricter guard.**
+`GET /reports/services-sold/{service}` validates both ends as `required`
+rather than `nullable`, so an *absent* range is a 422 there, not an
+unfiltered request. `dateRangeFiltersUsable` waves that case through, since
+neither end being set is a matched pair. Use `dateRangeFiltersRequired`
+where the endpoint demands a range, and also where the page's own rows link
+somewhere that does: the Services Sold summary takes optional dates itself,
+but every row on it opens a breakdown that will not.
+
+**A table can default to a real range rather than to none.** `initialFilters`
+values are defaults in the full sense, omitted from the URL and restored on
+a fresh visit, so seeding them from `currentMonthRange()` gives a report
+that says something on arrival:
+
+```tsx
+// Once per mount, not at import: module scope would pin the month to
+// whenever the bundle first loaded, and freeze it under a test clock.
+const period = useMemo(() => currentMonthRange(), []);
+
+useServerTableState({
+  ...,
+  initialFilters: { from_date: period.from, to_date: period.to },
+});
+```
+
+Note what follows. Clearing the range in the picker writes `null`, which
+differs from the default and so deletes the param, which reads back *as* the
+default: clearing snaps to the current month rather than to an unfiltered
+view. That is right where a range is required and wrong where it is
+optional, so default a range only on a table that needs one.
+
 Key the filters by the API's own filter name (`from_date`, not `dateFrom`)
 so that mapping stays a no-op. `TableFilters` values are `string | null` and
 nothing else: they round-trip through the URL, which has only strings, so
@@ -371,7 +402,30 @@ at its last step. The click after that starts it again at ascending.
 
 **A second column joins it rather than replacing it**, up to
 `MAX_SORT_COLUMNS`, exactly as it would if the first sort had been
-clicked rather than declared.
+clicked rather than declared. That is right whenever the declared sort
+ties: the Dashboard's earnings table declares `-total_earnings`, and a
+click on Cashier genuinely breaks the ties among equal earners.
+
+**Unless the declared sort is already a total order, in which case say
+so.** A declared sort ending in a unique key orders the rows completely,
+and nothing appended behind it can reorder anything, so the click lights a
+caret and changes nothing on screen, which reads as broken. Set
+`initialSortsAreTotalOrder` and the first click on another column replaces
+the declared sort instead of joining it:
+
+```tsx
+useServerTableState({
+  ...,
+  initialSorts: TRANSACTION_REPORT_DEFAULT_SORTS, // -created_at, id
+  initialSortsAreTotalOrder: true, // `id` is unique
+});
+```
+
+The three report tables set it; the four tables declaring a sort on a
+non-unique column (`full_name`, `created_at`, `total_earnings`) do not.
+Once the user has chosen a sort of their own it is off the default, so the
+next click joins as normal either way, and clicking the declared column
+itself still cycles asc, desc, off. `sortsToExtend` is where this lives.
 
 Omit `initialSorts` and the table starts unsorted, sends no `sort` param,
 and behaves as it always has.
