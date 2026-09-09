@@ -4,7 +4,7 @@ Reference for the API this frontend talks to. Describes **what the backend
 actually returns and enforces** — not why it was built that way.
 
 Source: `spcf-as-backend` (Laravel 12 + Sanctum + spatie/laravel-permission
-+ spatie/laravel-query-builder), read at commit `0d81988` (2026-09-03).
++ spatie/laravel-query-builder), read at commit `1165499` (2026-09-09).
 That repo belongs to the backend developer and is read-only from here; this
 file is a transcription of it. When it changes, re-read and update this.
 
@@ -326,26 +326,6 @@ instants of 31 December fall outside it.
 - **No `search` filter** on `/activity-logs`, `/reports/*`, `/users` or
   `/cashiers`. Activity logs remain date-only with `created_at` as the
   sole sort.
-- **`/reports/transactions` returns `total_earnings: 0` from page 2
-  onward.** Confirmed by reading the controller and the vendored
-  framework at `0d81988`, not yet against a running server. `paginate()`
-  and `sum('total')` run on the same builder: Spatie's `__call` forwards
-  without cloning, `Eloquent\Builder::paginate()` applies `forPage()`
-  which mutates `offset`/`limit` in place, and `Query\Builder::aggregate()`
-  clones without `columns` only, so both survive. Page 2 emits
-  `select sum(total) ... limit 25 offset 25`; `SUM` is one row, the offset
-  skips it, and `(float) null` is `0.0`. Page 1 is correct.
-
-  The cursor branch is wrong differently: no offset, but the cursor's
-  `where` narrows the sum to the rows from the cursor onward. Nothing uses
-  cursor mode.
-
-  Fix is to take the sum **before** the `match` that paginates.
-  `aggregate()` already works on a clone, so the builder survives for
-  `paginate()`. Reported to the backend team; the Transactions Report
-  displays whatever the endpoint sends rather than working around it
-  client-side (#64).
-
 ## `GET /reports/transactions`
 
 Admin only, under `throttle:reports`. Envelope is the usual one plus a
@@ -361,12 +341,30 @@ not**, so the `items` key is absent from the payload rather than empty:
 key. Only `completed` transactions, enforced server-side, windowed on
 `created_at`.
 
+`total_earnings` **covers the whole filtered set, not the page**, and is
+correct on every page as of `1165499`. It was zero from page 2 onward until
+then: `paginate()` and `sum('total')` shared a builder, so the aggregate
+inherited the pagination `offset` and skipped its own single row. The fix
+takes `(clone $transactionsQuery)->sum('total')` before the pagination.
+
+The clone is sound because Spatie applies filters and sorts **eagerly**:
+`allowedFilters()` calls `addFiltersToQuery()` and `allowedSorts()` calls
+`addRequestedSortsToQuery()` before returning, so a clone taken afterwards
+carries them and the total is the filtered one. `QueryBuilder::__clone`
+deep-clones the subject, and Eloquent's own `__clone` clones the underlying
+query, so the two are independent.
+
 Filters: `cashier_id` (exact, validated against the cashier role, so an
 identifier that is not a cashier is a 422), `from_date`, `to_date`. All
 optional. No `search`.
 
 Sorts: `created_at`, `id`, `customer_name`, `total`, `amount_paid`,
 `change_amount`, `cashier_name`. Default `-created_at, id`.
+
+**Any `sort` param suppresses that default outright** rather than adding to
+it: `defaultSorts()` returns early when the request carries sorts. A client
+declaring an initial sort therefore has to declare the `id` tiebreaker too,
+or page order is undefined for rows sharing a `created_at`.
 
 **Not the same allow-list as `/transactions`**: the payer sort is
 `customer_name` here and `customer` there, `cashier_name` is allowed here
