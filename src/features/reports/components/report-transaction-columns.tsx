@@ -1,37 +1,43 @@
 import { Anchor } from "@mantine/core";
 import { Link } from "react-router";
-import type { ColumnDef } from "@/components/ui/data-table";
+import {
+  columnSortKey,
+  type ColumnDef,
+  type SortPlan,
+} from "@/components/ui/data-table";
 import type { TransactionScalars } from "@/api/transactions";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/date-time";
 
 type ReportTransactionColumnsOptions = {
-  /** Allow-listed on the breakdown and not on `/reports/transactions`. */
-  includeSeriesNumber: boolean;
-  /** `amount_paid` and `change_amount`, which are the other way round. */
+  /** The endpoint these columns are for. Sortability is read off its plan
+   * rather than declared per column, because the two endpoints sharing this
+   * builder allow-list different keys. Safe to derive here, unlike
+   * generally: every column below names a real wire field, so none borrows
+   * an identity key that derivation would mistake for a sortable one. */
+  plan: SortPlan;
+  /** `amount_paid` and `change_amount`, which the breakdown doesn't show at
+   * all. A column difference, unlike the sorts. */
   includeAmounts: boolean;
 };
 
 /** The columns of a report over `TransactionScalars`, shared by the
- * Transactions Report and the Service Breakdown. The five columns both show
- * sort under identical keys; the options are where the allow-lists differ. */
+ * Transactions Report and the Service Breakdown. */
 export function reportTransactionColumns({
-  includeSeriesNumber,
+  plan,
   includeAmounts,
 }: ReportTransactionColumnsOptions): ColumnDef<TransactionScalars>[] {
-  return [
+  const columns: ColumnDef<TransactionScalars>[] = [
     {
       key: "date",
       sortKey: "created_at",
       header: "Date",
-      sortable: true,
       render: (row) => formatDateTime(row.date),
     },
     {
       key: "control_id",
       sortKey: "id",
       header: "Control ID",
-      sortable: true,
       // A real link, not just a clickable row: it is what a keyboard
       // reaches, a screen reader announces, and middle-click opens.
       render: (row) => (
@@ -40,51 +46,49 @@ export function reportTransactionColumns({
         </Anchor>
       ),
     },
-    ...(includeSeriesNumber
-      ? [
-          {
-            key: "series_number" as const,
-            header: "Series No.",
-            sortable: true,
-            render: (row: TransactionScalars) => row.series_number ?? "—",
-          },
-        ]
-      : []),
+    {
+      // Shown on both reports, sortable on only one. The two were the same
+      // decision while sortability was declared here, which is why
+      // `/reports/transactions` used to withhold a number it returns.
+      key: "series_number",
+      header: "Series No.",
+      render: (row) => row.series_number ?? "—",
+    },
     {
       key: "customer_name",
       header: "Payer",
-      sortable: true,
       render: (row) => row.customer_name ?? "—",
     },
     {
       key: "cashier",
       sortKey: "cashier_name",
       header: "Cashier",
-      sortable: true,
       render: (row) => row.cashier?.full_name ?? "—",
     },
     {
       key: "total",
       header: "Total",
-      sortable: true,
       render: (row) => (row.total === null ? "—" : formatCurrency(row.total)),
     },
-    ...(includeAmounts
-      ? [
-          {
-            key: "amount_paid" as const,
-            header: "Amount Paid",
-            sortable: true,
-            render: (row: TransactionScalars) => formatCurrency(row.amount_paid),
-          },
-          {
-            key: "change_amount" as const,
-            header: "Change",
-            sortable: true,
-            render: (row: TransactionScalars) =>
-              formatCurrency(row.change_amount),
-          },
-        ]
-      : []),
   ];
+
+  if (includeAmounts) {
+    columns.push(
+      {
+        key: "amount_paid",
+        header: "Amount Paid",
+        render: (row) => formatCurrency(row.amount_paid),
+      },
+      {
+        key: "change_amount",
+        header: "Change",
+        render: (row) => formatCurrency(row.change_amount),
+      },
+    );
+  }
+
+  return columns.map((column) => ({
+    ...column,
+    sortable: plan.allowed.includes(columnSortKey(column)),
+  }));
 }

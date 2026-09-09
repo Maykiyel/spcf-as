@@ -12,7 +12,12 @@ import { TransactionReportPage } from "./transaction-report-page";
 // Seam: the page component, with the report fetcher and the cashier fetcher
 // mocked at the module boundary.
 
-vi.mock("../api/get-transaction-report");
+vi.mock("../api/get-transaction-report", async () => {
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // this module's sort plan would silently become a table with no sort.
+  const actual = await vi.importActual<typeof import("../api/get-transaction-report")>("../api/get-transaction-report");
+  return { ...actual, getTransactionReport: vi.fn() };
+});
 const mockGetReport = vi.mocked(getTransactionReport);
 
 // A factory, not a bare `vi.mock`: automock would empty `cashiersQueryKey`'s

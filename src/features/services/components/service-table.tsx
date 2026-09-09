@@ -4,7 +4,7 @@ import {
   useServerTableState,
   type ColumnDef,
 } from "@/components/ui/data-table";
-import { getServices } from "../api/get-services";
+import { getServices, SERVICES_SORT_PLAN } from "../api/get-services";
 import { ServiceActiveToggle } from "./service-active-toggle";
 import { ServiceActionsCell } from "./service-actions-cell";
 import { ServiceStatusFilter } from "./service-status-filter";
@@ -65,6 +65,7 @@ export function ServiceTable({ onEdit }: ServiceTableProps) {
     queryFn: getServices,
     columns,
     urlKey: URL_KEY,
+    sortPlan: SERVICES_SORT_PLAN,
     initialFilters: INITIAL_FILTERS,
   });
 

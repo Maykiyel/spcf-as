@@ -360,96 +360,112 @@ table context" paragraph only makes sense if filters were going onto that
 context, so the shipped design answered a question that spec thought it had
 settled. Naming that here is the point of this note.
 
-### Declaring the default sort
+### The sort plan
 
-Several endpoints here carry a `defaultSort` of their own —
-`/reports/cashier-earnings` sorts by `-total_earnings`, for instance. A
-table that sends no sort still gets those rows in that order, so it is
-tempting to leave the default to the server and write nothing.
-
-Don't. The rows arrive sorted and the header says they aren't: no caret is
-lit, and the first click on that column runs `nextSorts` from the top,
-which sends `asc` and reads as reversing a sort the table never admitted
-to. Declare it instead:
-
-**An endpoint with no default of its own is the second case for this, and
-it is the stronger one.** `/users` declares no `defaultSort`, so an
-unsorted request returns rows in whatever order the database gives — which
-is not stable across pages, so the same row can appear twice and another
-never. There is no server default to match, so the table names the
-column's obvious order itself. `manage-accounts-page.tsx` sends
-`full_name` ascending for this reason. Inventing a sort is right here and
-wrong wherever the endpoint already has one.
+An endpoint's sort surface is one fact: which keys it allow-lists, which of
+those are unique, and what it sorts by when asked for nothing. A table
+declares it once, beside the fetcher that owns the endpoint:
 
 ```tsx
-// Module scope, like `columns` — it seeds state and is compared on read.
-const INITIAL_SORTS: SortEntry[] = [
-  { key: "total_earnings", direction: "desc" },
-];
+export const TRANSACTION_REPORT_SORT_PLAN: SortPlan = {
+  allowed: ["created_at", "id", "customer_name", "total", "amount_paid",
+            "change_amount", "cashier_name"],
+  unique: ["id"],
+  default: [
+    { key: "created_at", direction: "desc" },
+    { key: "id", direction: "asc" },
+  ],
+};
 
-useServerTableState({
-  ...,
-  initialSorts: INITIAL_SORTS,
-});
+useServerTableState({ ..., sortPlan: TRANSACTION_REPORT_SORT_PLAN });
 ```
 
-**Match the endpoint's own default** rather than inventing one. This
-value reaches the wire on the first request, before the user touches
-anything, so a key the endpoint doesn't allow-list is a 422 on load
-rather than on a click.
+That replaced three declarations a table had to keep in agreement: the
+`sortKey` on each column, a `*_DEFAULT_SORTS` constant restating the same
+wire strings, and an `initialSortsAreTotalOrder` boolean asserting a
+property of the data. Two columns files carried a "must stay equal to"
+comment in place of an invariant; those are gone.
 
-**Match all of it, including a tiebreaker.** Sending any `sort` suppresses
-the server's `defaultSort` outright rather than adding to it, so declaring
-half of a two-key default silently drops the other half. `/reports/transactions`
-defaults to `-created_at, id`, and the `id` half is what keeps page order
-defined when two rows share a `created_at`; without it the same row can
-appear on two pages and another on none. Both fit, since a declared second
-column counts against `MAX_SORT_COLUMNS` like any other.
+**`allowed` is the allow-list, and it is per endpoint.** `BACKEND_NOTES.md`
+records these, and no two here are alike: `/transactions` names the payer
+sort `customer` where both reports name it `customer_name`;
+`/reports/transactions` allows the two amount sorts and no `series_number`,
+while `/reports/services-sold/{service}` is the exact reverse. A key outside
+the list is a 400 or a 422 on the first header click.
 
-**It behaves as a default, not as a starting value.** Like page 1 and an
-unfiltered filter, it is omitted from the URL and restored on a fresh
-visit. An unsorted table has to be representable separately, since an
-absent param means "use the declared sort" — so that state writes
+**Match the endpoint's own default rather than inventing one**, and match
+all of it, including a tiebreaker. Sending any `sort` suppresses the
+server's `defaultSort` outright rather than adding to it, so declaring half
+of a two-key default silently drops the other half. The `id` half of
+`-created_at, id` is what keeps page order defined when two rows share a
+`created_at`; without it the same row can appear on two pages and another on
+none. Both fit, since a declared second column counts against
+`MAX_SORT_COLUMNS` like any other.
+
+**An endpoint with no default of its own is the second case, and the
+stronger one.** `/users` declares none, so an unsorted request returns rows
+in whatever order the database gives, which is not stable across pages. The
+plan names the column's obvious order itself. Inventing a sort is right here
+and wrong wherever the endpoint already has one. Leave `default` out
+entirely and the table starts unsorted, which is what the three catalog
+tables do.
+
+**`unique` replaced the total-order boolean.** A default ending in a unique
+key orders the rows completely, so nothing appended behind it can reorder
+anything: the click lights a caret and changes nothing on screen, which
+reads as broken. Naming which keys are unique lets that be derived rather
+than asserted, and the first click on another column then replaces the
+default instead of joining it. `sortsToExtend` is where this lives. Order
+matters: a unique key that is not last does not make the default a total
+order.
+
+**The plan narrows what a URL may carry.** `parseSorts` drops any key
+outside `allowed`, for the same reason `declaredOnly` drops an undeclared
+filter: a header only ever offers an allow-listed key, so a hand-edited or
+stale link is the only way an unknown one arrives, and sending it is a 400.
+The 422 recovery below stays as a backstop for an allow-list that has
+drifted from the backend.
+
+**Sortability is still declared per column, not derived from the plan.** It
+looks derivable and is not, while `ColumnDef.key` doubles as identity: the
+Manage Accounts Actions column is keyed `full_name` because `key` must name
+a real field, and `/users` allow-lists `full_name`, so deriving would make
+an Actions header sortable. `reportTransactionColumns` is the exception and
+takes a plan, because it serves two endpoints with different allow-lists and
+none of its columns borrows a key.
+
+**A test checks the two agree**, per endpoint, in
+`app/sort-plan-conformance.test.ts`. `sortPlanViolations(plan, columns)`
+returns the disagreements as readable lines, over static data: no rendering,
+no fetcher, no header click. It lives in `app/` because it spans features.
+
+**A declared sort behaves as a default, not as a starting value.** Like page
+1 and an unfiltered filter, it is omitted from the URL and restored on a
+fresh visit. An unsorted table has to be representable separately, since an
+absent param means "use the declared sort", so that state writes
 `<urlKey>_sort=none`. Nothing else uses that word: a real entry is always
-`key:dir`. No click produces it, per the next rule; it is what the 422
-recovery falls back to, and what a shared link can carry.
+`key:dir`. No click produces it; it is what the 422 recovery falls back to,
+and what a shared link can carry.
 
 **Clicking a declared column flips it**, ascending to descending and back,
-so a declared column is a two-state header. It never cycles off, because
-off sends no `sort` at all and the endpoint then answers in its own
-fallback order, under headers that all read as unsorted. Any other
-column's third click lands on the declared sort for the same reason,
-rather than on nothing. `sortsAfterClick` is where this lives.
+so a declared column is a two-state header. It never cycles off, because off
+sends no `sort` at all and the endpoint then answers in its own fallback
+order, under headers that all read as unsorted. Any other column's third
+click lands on the declared sort for the same reason, rather than on
+nothing. `sortsAfterClick` is where this lives.
 
 **A second column joins it rather than replacing it**, up to
-`MAX_SORT_COLUMNS`, exactly as it would if the first sort had been
-clicked rather than declared. That is right whenever the declared sort
-ties: the Dashboard's earnings table declares `-total_earnings`, and a
-click on Cashier genuinely breaks the ties among equal earners.
+`MAX_SORT_COLUMNS`, exactly as it would if the first sort had been clicked
+rather than declared. That is right whenever the declared sort ties: the
+Dashboard's earnings table declares `-total_earnings`, and a click on
+Cashier genuinely breaks the ties among equal earners. A plan naming
+`unique` is what turns this off where it would be wrong.
 
-**Unless the declared sort is already a total order, in which case say
-so.** A declared sort ending in a unique key orders the rows completely,
-and nothing appended behind it can reorder anything, so the click lights a
-caret and changes nothing on screen, which reads as broken. Set
-`initialSortsAreTotalOrder` and the first click on another column replaces
-the declared sort instead of joining it:
-
-```tsx
-useServerTableState({
-  ...,
-  initialSorts: TRANSACTION_REPORT_DEFAULT_SORTS, // -created_at, id
-  initialSortsAreTotalOrder: true, // `id` is unique
-});
-```
-
-The three report tables set it; the four tables declaring a sort on a
-non-unique column (`full_name`, `created_at`, `total_earnings`) do not.
-Once the user has chosen a sort of their own it is off the default, so the
-next click joins as normal either way, and clicking the declared column
-itself flips it either way. `sortsToExtend` is where this lives.
-
-Omit `initialSorts` and the table starts unsorted, sends no `sort` param,
-and behaves as it always has.
+**A note on mocking.** A plan lives in the same module as its fetcher, and a
+bare `vi.mock` on that module automocks every export, so the plan becomes
+`undefined` and the table silently requests no sort. Use a factory that
+spreads `importActual` and replaces only the fetcher, as every page test
+here does.
 
 ### `ColumnDef<T>`
 
@@ -645,11 +661,11 @@ gated on request timing (or vice versa).
 
 **Defaults are omitted from the URL**, not written explicitly — page 1,
 the default page size, the declared sort (an unsorted state, unless
-`initialSorts` says otherwise), and any filter sitting at the value it was
+`sortPlan` says otherwise), and any filter sitting at the value it was
 declared with all collapse to "no param" rather than `?page=1` or
 `?status=all`. Keeps shareable URLs clean instead of noisy, and stops an
 unfiltered table from looking filtered. The one marker written rather than
-omitted is `sort=none`, which a table with an `initialSorts` needs to say
+omitted is `sort=none`, which a table with a declared sort needs to say
 "unsorted", a state no header click reaches. See [Declaring the default
 sort](#declaring-the-default-sort).
 

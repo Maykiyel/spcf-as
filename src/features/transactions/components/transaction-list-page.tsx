@@ -6,14 +6,14 @@ import {
   type TableFilters,
 } from "@/components/ui/data-table";
 import { useAuthStore } from "@/stores/auth-store";
-import { getTransactions } from "../api/get-transactions";
+import {
+  getTransactions,
+  TRANSACTIONS_SORT_PLAN,
+} from "../api/get-transactions";
 import { TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
 import type { TransactionListRow } from "../types";
 import { TransactionListFilters } from "./transaction-list-filters";
-import {
-  transactionListColumns,
-  TRANSACTIONS_DEFAULT_SORTS,
-} from "./transaction-list-columns";
+import { transactionListColumns } from "./transaction-list-columns";
 
 const URL_KEY = "receipts";
 
@@ -56,7 +56,7 @@ export function TransactionListPage() {
     queryFn: getTransactions,
     columns,
     urlKey: URL_KEY,
-    initialSorts: TRANSACTIONS_DEFAULT_SORTS,
+    sortPlan: TRANSACTIONS_SORT_PLAN,
     initialFilters: isAdmin ? ADMIN_FILTERS : BASE_FILTERS,
     dateRange: {},
   });

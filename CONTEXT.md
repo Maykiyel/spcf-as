@@ -75,6 +75,32 @@ _Avoid_: a home for every filter control (a filter used by one feature stays
 in that feature); confusing it with `components/ui/table-filter`, which holds
 the domain-agnostic input primitives these are built from
 
+**Sort plan**:
+One endpoint's sort surface, declared once beside the fetcher that owns it
+and passed to `useServerTableState` as `sortPlan`. Three parts: `allowed`
+(the keys the endpoint allow-lists, a 400 or 422 otherwise), `unique` (which
+of those order rows completely on their own), and `default` (what it sorts
+by when asked for nothing, tiebreaker included, because any `sort` param
+suppresses the server's own default outright). No two allow-lists in this
+app are alike, which is why the plan is per endpoint rather than shared: see
+the Transactions Report and Service Breakdown entries.
+
+It replaced three declarations that restated each other, two of them
+enforced only by a "must stay equal to" comment, and it turned the
+total-order claim from a hand-maintained boolean into something derived from
+`unique`. It also narrows what a URL may carry, the way `declaredOnly` does
+for filters.
+
+**Sortability is still declared per column, not derived from the plan**, for
+as long as `ColumnDef.key` doubles as identity: an Actions column keyed
+`full_name` would otherwise become sortable because `/users` allow-lists
+that key. `reportTransactionColumns` is the one exception and takes a plan
+directly, because it serves two endpoints with different allow-lists and
+borrows no keys. `app/sort-plan-conformance.test.ts` checks the two agree
+per endpoint, over static data.
+_Avoid_: sort config, allow-list on its own (that is one of the three
+parts), default sorts (the old `*_DEFAULT_SORTS` constants, now gone)
+
 **Date range filter descriptor**:
 The single `dateRange` option a table declares on `useServerTableState` when
 it filters by a period. It is one declaration because the parts are useless
@@ -176,6 +202,13 @@ alone, as the endpoint validates the identifier against the cashier role.
 Its sort allow-list is not the Transactions list's: it names the payer sort
 `customer_name` rather than `customer`, allows `cashier_name` where the list
 does not, and allows no `series_number` sort at all.
+
+**It shows a Series No. column all the same.** The endpoint returns the
+number; it just will not order by it. Those were one decision for as long as
+sortability was declared on the column, so the report withheld a figure it
+had. A [[sort-plan]] separates them, and the column is back, unsortable —
+which matters for reconciling a report against the physical receipt
+books.
 
 Windows on the transaction's creation time, while the Dashboard's cashier
 earnings window on completion time. Two figures over "the same" month can

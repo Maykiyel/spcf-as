@@ -14,7 +14,12 @@ import type { Service } from "@/api/services";
 // not the query key is answered from the previous filter's cache, and
 // nothing on screen says the rows are wrong.
 
-vi.mock("../api/get-services");
+vi.mock("../api/get-services", async () => {
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // this module's sort plan would silently become a table with no sort.
+  const actual = await vi.importActual<typeof import("../api/get-services")>("../api/get-services");
+  return { ...actual, getServices: vi.fn() };
+});
 const mockGetServices = vi.mocked(getServices);
 
 // jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes

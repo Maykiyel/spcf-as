@@ -19,7 +19,12 @@ import { DashboardPage } from "./dashboard-page";
 vi.mock("../api/get-dashboard-today");
 const mockGetDashboardToday = vi.mocked(getDashboardToday);
 
-vi.mock("../api/get-cashier-earnings");
+vi.mock("../api/get-cashier-earnings", async () => {
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // this module's sort plan would silently become a table with no sort.
+  const actual = await vi.importActual<typeof import("../api/get-cashier-earnings")>("../api/get-cashier-earnings");
+  return { ...actual, getCashierEarnings: vi.fn() };
+});
 const mockGetCashierEarnings = vi.mocked(getCashierEarnings);
 
 vi.mock("../api/get-monthly-earnings");

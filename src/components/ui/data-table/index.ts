@@ -20,6 +20,8 @@ export type {
 } from "./types";
 export { MAX_SORT_COLUMNS } from "./types";
 export { encodeSortsForApi } from "./sort-params";
+export { columnSortKey, sortPlanViolations } from "./sort-plan";
+export type { SortPlan } from "./sort-plan";
 export { tableParamName } from "./use-table-controls";
 export { createListAdapter } from "./create-list-adapter";
 export { dateRangeUsable, dateRangePeriod } from "./date-range-filter";

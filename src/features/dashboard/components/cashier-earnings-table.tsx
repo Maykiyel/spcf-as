@@ -2,10 +2,12 @@ import {
   DataTable,
   useServerTableState,
   type ColumnDef,
-  type SortEntry,
 } from "@/components/ui/data-table";
 import { formatCurrency } from "@/utils/currency";
-import { getCashierEarnings } from "../api/get-cashier-earnings";
+import {
+  getCashierEarnings,
+  CASHIER_EARNINGS_SORT_PLAN,
+} from "../api/get-cashier-earnings";
 import type { CashierEarnings } from "../types";
 
 const URL_KEY = "cashiers";
@@ -15,16 +17,8 @@ const URL_KEY = "cashiers";
  * to 25, which is the app's number rather than this endpoint's. */
 const PAGE_SIZE = 5;
 
-// Module scope: the state hook memoises on this array's identity. Both
-// keys are the endpoint's own sort names, which is why header clicks need
-// no mapping. See `get-cashier-earnings.ts` for the row rename.
-/** The endpoint's own default order, sent explicitly so the header carries
- * its caret rather than leaving the first click on Total Earnings looking
- * like it reversed a sort nobody declared. Module scope, like `columns`. */
-const INITIAL_SORTS: SortEntry[] = [
-  { key: "total_earnings", direction: "desc" },
-];
-
+// Both keys are the endpoint's own sort names, which is why header clicks
+// need no mapping. See `get-cashier-earnings.ts` for the row rename.
 const columns: ColumnDef<CashierEarnings>[] = [
   { key: "cashier_name", header: "Cashier", sortable: true },
   {
@@ -52,7 +46,7 @@ export function CashierEarningsTable() {
     queryFn: getCashierEarnings,
     columns,
     initialPageSize: PAGE_SIZE,
-    initialSorts: INITIAL_SORTS,
+    sortPlan: CASHIER_EARNINGS_SORT_PLAN,
     urlKey: URL_KEY,
   });
 

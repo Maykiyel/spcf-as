@@ -4,6 +4,7 @@ import {
   type ServerTableResponse,
 } from "@/components/ui/data-table";
 import type { CashierEarnings } from "../types";
+import type { SortPlan } from "@/components/ui/data-table";
 
 /** The row as `/reports/cashier-earnings` sends it. */
 type CashierEarningsWireRow = {
@@ -40,4 +41,13 @@ export const getCashierEarnings = async (
       total_earnings: row.total_earnings,
     })),
   };
+};
+
+/** `BACKEND_NOTES.md`: sorts are `total_earnings` and `cashier_name`,
+ * default `-total_earnings`. Declared rather than left implicit, so the
+ * first click on Total Earnings doesn't look like it reversed a sort nobody
+ * declared. `cashier_name` is why the fetcher renames `full_name`. */
+export const CASHIER_EARNINGS_SORT_PLAN: SortPlan = {
+  allowed: ["total_earnings", "cashier_name"],
+  default: [{ key: "total_earnings", direction: "desc" }],
 };

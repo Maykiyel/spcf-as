@@ -12,7 +12,12 @@ import { ServicesSoldPage } from "./services-sold-page";
 // boundary. The sort the fetcher itself appends is pinned separately, in
 // `get-services-sold.test.ts`, since it is applied past this mock.
 
-vi.mock("../api/get-services-sold");
+vi.mock("../api/get-services-sold", async () => {
+  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
+  // this module's sort plan would silently become a table with no sort.
+  const actual = await vi.importActual<typeof import("../api/get-services-sold")>("../api/get-services-sold");
+  return { ...actual, getServicesSold: vi.fn() };
+});
 const mockGetSummary = vi.mocked(getServicesSold);
 
 // A factory, not a bare `vi.mock`: automock would empty `toApiDate` and

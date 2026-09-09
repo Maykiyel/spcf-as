@@ -5,13 +5,13 @@ import {
   DataTable,
   useServerTableState,
   type ColumnDef,
-  type SortEntry,
 } from "@/components/ui/data-table";
 import { PrimaryButton } from "@/components/ui/button";
 import type { Role } from "@/features/auth/types";
 import {
   getUserAccounts,
   USER_ACCOUNTS_QUERY_KEY,
+  USER_ACCOUNTS_SORT_PLAN,
 } from "../api/get-user-accounts";
 import type { UserAccount } from "../types";
 import {
@@ -28,12 +28,6 @@ const ROLE_LABEL: Record<Role, string> = {
   cashier: "Cashier",
 };
 
-/** `/users` declares no `defaultSort`, so unsorted rows arrive in whatever
- * order the database gives — which is not stable across pages. Naming the
- * directory's obvious order fixes that and puts a caret on the header
- * saying so. Module scope, like `columns`. */
-const INITIAL_SORTS: SortEntry[] = [{ key: "full_name", direction: "asc" }];
-
 /** `role` and `is_active` are the only two filters `/users` allows, and
  * `null` is what each sends when unfiltered. Module scope for the same
  * reason: `useServerTableState` keys its query on this object. */
@@ -41,10 +35,9 @@ const INITIAL_FILTERS = { role: null, is_active: null };
 // Module scope, not rebuilt per render: `useServerTableState` memoises on
 // this array's identity.
 //
-// Every sortable key here is one `/users` allow-lists — `first_name`,
-// `last_name`, `full_name`, `username`. A key it doesn't know is a 400 on
-// the first header click, which is why `username` is renamed at the fetcher
-// rather than carrying the wire's `user_name`.
+// Every sortable key here is one `USER_ACCOUNTS_SORT_PLAN` allow-lists. A
+// key it doesn't know is a 400 on the first header click, which is why
+// `username` is renamed at the fetcher rather than carrying `user_name`.
 const columns: ColumnDef<UserAccount>[] = [
   { key: "full_name", header: "Name", sortable: true },
   { key: "username", header: "Username", sortable: true },
@@ -90,7 +83,7 @@ export function ManageAccountsPage() {
     queryFn: getUserAccounts,
     columns,
     urlKey: URL_KEY,
-    initialSorts: INITIAL_SORTS,
+    sortPlan: USER_ACCOUNTS_SORT_PLAN,
     initialFilters: INITIAL_FILTERS,
   });
 

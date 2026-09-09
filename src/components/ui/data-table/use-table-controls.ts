@@ -1,7 +1,13 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { MAX_SORT_COLUMNS, type SortEntry, type TableFilters } from "./types";
+import {
+  allowedSorts,
+  sortPlanDefault,
+  sortPlanDefaultIsTotalOrder,
+  type SortPlan,
+} from "./sort-plan";
 
 export type TableControls = {
   page: number;
@@ -148,23 +154,29 @@ const encodeSorts = (
   return sorts.map((s) => `${s.key}:${s.direction}`).join(",");
 };
 
-// Re-capped on parse, in case a pasted URL was hand-edited past the limit.
+// Re-capped on parse, in case a pasted URL was hand-edited past the limit,
+// and narrowed to what the endpoint allow-lists, so a hand-edited key can't
+// reach the wire at all.
 const parseSorts = (
   raw: string | null,
   initialSorts: SortEntry[],
+  plan: SortPlan | undefined,
 ): SortEntry[] => {
   if (raw === null) return initialSorts;
   if (raw === NO_SORT) return [];
   if (!raw) return [];
-  return raw
-    .split(",")
-    .map((pair): SortEntry | null => {
-      const [key, dir] = pair.split(":");
-      if (!key || (dir !== "asc" && dir !== "desc")) return null;
-      return { key, direction: dir };
-    })
-    .filter((s): s is SortEntry => s !== null)
-    .slice(0, MAX_SORT_COLUMNS);
+  return allowedSorts(
+    raw
+      .split(",")
+      .map((pair): SortEntry | null => {
+        const [key, dir] = pair.split(":");
+        if (!key || (dir !== "asc" && dir !== "desc")) return null;
+        return { key, direction: dir };
+      })
+      .filter((s): s is SortEntry => s !== null)
+      .slice(0, MAX_SORT_COLUMNS),
+    plan,
+  );
 };
 
 function useUrlAdapter(
@@ -173,6 +185,7 @@ function useUrlAdapter(
   initialFilters: TableFilters,
   initialSorts: SortEntry[],
   initialSortsAreTotalOrder: boolean,
+  sortPlan: SortPlan | undefined,
 ): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -235,7 +248,11 @@ function useUrlAdapter(
     searchParams.get(paramName("size")),
     initialPageSize,
   );
-  const sorts = parseSorts(searchParams.get(paramName("sort")), initialSorts);
+  const sorts = parseSorts(
+    searchParams.get(paramName("sort")),
+    initialSorts,
+    sortPlan,
+  );
 
   // Derived from the URL every render, like page and sort, so a refresh and
   // a pasted link restore the same view. Only declared keys are read, so a
@@ -375,15 +392,25 @@ export function useTableControls(
   initialPageSize = 25,
   urlKey?: string,
   initialFilters: TableFilters = {},
-  initialSorts: SortEntry[] = NO_SORTS,
-  initialSortsAreTotalOrder = false,
+  sortPlan?: SortPlan,
 ): TableControls {
+  // Both derived from the plan rather than declared beside it, so a table
+  // cannot state a default the endpoint rejects or claim a total order its
+  // default doesn't have. Memoised on the plan, which is module scope at
+  // every call site.
+  const initialSorts = useMemo(
+    () => (sortPlan ? sortPlanDefault(sortPlan) : NO_SORTS),
+    [sortPlan],
+  );
+  const initialSortsAreTotalOrder = sortPlanDefaultIsTotalOrder(sortPlan);
+
   const urlAdapter = useUrlAdapter(
     initialPageSize,
     urlKey,
     initialFilters,
     initialSorts,
     initialSortsAreTotalOrder,
+    sortPlan,
   );
   const localAdapter = useLocalAdapter(
     initialPageSize,

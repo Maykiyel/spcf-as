@@ -4,14 +4,14 @@ import {
   useServerTableState,
   type TableFilters,
 } from "@/components/ui/data-table";
-import { getTransactionReport } from "../api/get-transaction-report";
+import {
+  getTransactionReport,
+  TRANSACTION_REPORT_SORT_PLAN,
+} from "../api/get-transaction-report";
 import { TRANSACTION_REPORT_QUERY_KEY } from "../api/reports-query-keys";
 import { TransactionReportFilters } from "./transaction-report-filters";
 import { TransactionReportTotal } from "./transaction-report-total";
-import {
-  transactionReportColumns,
-  TRANSACTION_REPORT_DEFAULT_SORTS,
-} from "./transaction-report-columns";
+import { transactionReportColumns } from "./transaction-report-columns";
 
 const URL_KEY = "transactions_report";
 
@@ -29,10 +29,7 @@ export function TransactionReportPage() {
     queryFn: getTransactionReport,
     columns: transactionReportColumns,
     urlKey: URL_KEY,
-    initialSorts: TRANSACTION_REPORT_DEFAULT_SORTS,
-    // The `id` half is unique, so every other header would be inert behind
-    // the declared pair.
-    initialSortsAreTotalOrder: true,
+    sortPlan: TRANSACTION_REPORT_SORT_PLAN,
     initialFilters: REPORT_FILTERS,
     dateRange: {},
   });

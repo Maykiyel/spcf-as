@@ -3,7 +3,10 @@ import {
   useServerTableState,
   type ColumnDef,
 } from "@/components/ui/data-table";
-import { getSeriesReceipts } from "../api/get-series-receipts";
+import {
+  getSeriesReceipts,
+  SERIES_RECEIPTS_SORT_PLAN,
+} from "../api/get-series-receipts";
 import type { SeriesReceipt } from "../types";
 
 export function SeriesReceiptTable() {
@@ -29,6 +32,7 @@ export function SeriesReceiptTable() {
     queryFn: getSeriesReceipts,
     columns,
     urlKey: "series-receipts",
+    sortPlan: SERIES_RECEIPTS_SORT_PLAN,
   });
 
   return (

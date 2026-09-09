@@ -12,6 +12,7 @@ import {
   type DateRangePeriod,
   type DateRangeSpec,
 } from "./date-range-filter";
+import type { SortPlan } from "./sort-plan";
 import { useTableControls } from "./use-table-controls";
 
 export type ServerTableParams = {
@@ -45,16 +46,11 @@ type UseServerTableStateOptions<T, TMeta> = {
    * once here; caching, page reset and (given a `urlKey`) URL persistence
    * follow from it. */
   initialFilters?: TableFilters;
-  /** The sort this table starts on and treats as its default. Declare it
-   * when the endpoint has its own `defaultSort`, or the header shows no
-   * caret over rows that are plainly ordered. Keys must be ones the
-   * endpoint allow-lists: this reaches the wire on the first request. */
-  initialSorts?: SortEntry[];
-  /** Whether `initialSorts` already orders the rows completely, which is
-   * true when it ends in a unique key. The first click on another column
-   * then replaces it instead of joining behind it, since nothing appended
-   * after a total order can reorder anything. */
-  initialSortsAreTotalOrder?: boolean;
+  /** This endpoint's sort surface: the keys it allow-lists, which of them
+   * are unique, and the sort it applies when asked for none. The declared
+   * default, the total-order rule and what a restored URL may carry all
+   * follow from it, so none of the three can drift from the others. */
+  sortPlan?: SortPlan;
   /** This table's date range, if it has one. Declaring it is what supplies
    * the `from_date`/`to_date` pair, the guard keeping half a range off the
    * wire, and the period a link out of this table carries — none of which
@@ -72,8 +68,7 @@ export function useServerTableState<
   initialPageSize = 25,
   urlKey,
   initialFilters,
-  initialSorts,
-  initialSortsAreTotalOrder,
+  sortPlan,
   dateRange,
 }: UseServerTableStateOptions<T, TMeta>) {
   // Resolved on first render and never again: a filter equal to its declared
@@ -109,13 +104,7 @@ export function useServerTableState<
     onSort,
     resetSort,
     setFilters,
-  } = useTableControls(
-    initialPageSize,
-    urlKey,
-    declaredFilters,
-    initialSorts,
-    initialSortsAreTotalOrder,
-  );
+  } = useTableControls(initialPageSize, urlKey, declaredFilters, sortPlan);
 
   const period = dateRangePeriod(filters);
 

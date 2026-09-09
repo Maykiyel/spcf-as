@@ -1,15 +1,10 @@
-import type { ColumnDef, SortEntry } from "@/components/ui/data-table";
+import type { ColumnDef } from "@/components/ui/data-table";
 import { formatDateTime } from "@/utils/date-time";
 import type { ActivityLogListRow } from "../types";
 
-/** Declared so the When header shows a caret over rows the endpoint was
- * already ordering. Must stay equal to that column's key. */
-export const ACTIVITY_LOG_DEFAULT_SORTS: SortEntry[] = [
-  { key: "created_at", direction: "desc" },
-];
-
-/** Only When is `sortable`: `created_at` is the endpoint's sole
- * allow-listed sort, so any other header click would be a 422. */
+/** Only When is `sortable`: `created_at` is the sole key
+ * `ACTIVITY_LOGS_SORT_PLAN` allow-lists, so any other header click would be
+ * a 400. */
 export const activityLogColumns: ColumnDef<ActivityLogListRow>[] = [
   {
     key: "created_at",
