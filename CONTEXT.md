@@ -75,6 +75,27 @@ _Avoid_: a home for every filter control (a filter used by one feature stays
 in that feature); confusing it with `components/ui/table-filter`, which holds
 the domain-agnostic input primitives these are built from
 
+**Date range filter descriptor**:
+The single `dateRange` option a table declares on `useServerTableState` when
+it filters by a period. It is one declaration because the parts are useless
+apart: it expands into the `from_date`/`to_date` filter pair, the guard that
+keeps half a range off the wire (a 422 everywhere in this API, and a restored
+URL is how one arrives), the range the table opens on, and the `period` a
+link built out of that table carries. `required: true` is the stricter guard,
+for an endpoint that validates both ends as `required` rather than
+`nullable` — and for a page whose own rows link to one, which is why the
+Services Sold Report uses it despite taking optional dates itself. `default`
+is called once per mount, deliberately: a filter equal to its declared value
+is the one dropped from the URL, so a default that moved would erase the
+period a user had just picked. It replaced four separate statements a page
+had to keep in agreement, one of which (`useReportPeriod`) re-read the URL by
+hand because the Services Sold columns need the period before the table
+resolves it; `columns` taking a function is what removed that second read
+path.
+_Avoid_: date filter (ambiguous with the control), `DateRangeTableFilter`
+(that is the control the page still renders), date range guard (that is one
+of the parts, not the declaration)
+
 **`src/utils/` (shared helpers)**:
 The same idea as `src/api/`, one tier over: pure functions with no API call and no React in them, needed by more than one feature. It holds `currency.ts` (`formatCurrency`, `roundToCents`), which lived in `features/transactions/lib/` until the Dashboard needed to format money too — a feature importing from another feature is the thing this tier exists to avoid. Same promotion rule as `src/api/`: move something here when a second feature actually needs it, not before.
 _Avoid_: a dumping ground for anything that isn't a component — a helper used by one feature stays in that feature's `lib/`
@@ -210,7 +231,7 @@ detail matches the figure it explains.
 with its own sorting, which would fight the parent table's state inside it,
 and being a route makes one service for one period a shareable link. It is
 the only page in the app whose date range is mandatory rather than optional,
-which is what `dateRangeFiltersRequired` exists for.
+which is what `dateRange: { required: true }` exists for.
 
 Its rows carry no items and no service. The heading's service name comes from
 a separate `GET /services/{id}`, because the route carries only an id and the

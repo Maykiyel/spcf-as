@@ -1,9 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { notifications } from "@mantine/notifications";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { ColumnDef, SortEntry, TableFilters } from "./types";
+import {
+  dateRangeInitialFilters,
+  dateRangePeriod,
+  dateRangeUsable,
+  resolveDateRangeDefault,
+  type DateRangePeriod,
+  type DateRangeSpec,
+} from "./date-range-filter";
 import { useTableControls } from "./use-table-controls";
 
 export type ServerTableParams = {
@@ -25,7 +33,12 @@ export type ServerTableResponse<T, TMeta = undefined> = {
 type UseServerTableStateOptions<T, TMeta> = {
   queryKey: unknown[];
   queryFn: (params: ServerTableParams) => Promise<ServerTableResponse<T, TMeta>>;
-  columns: ColumnDef<T>[];
+  /** A function when a cell needs the period the table is on, which is
+   * resolved after this hook is called: the Services Sold row link carries
+   * it to the breakdown. */
+  columns:
+    | ColumnDef<T>[]
+    | ((context: { period: DateRangePeriod }) => ColumnDef<T>[]);
   initialPageSize?: number;
   urlKey?: string;
   /** The filters this table has, with their unfiltered values. Declared
@@ -42,10 +55,11 @@ type UseServerTableStateOptions<T, TMeta> = {
    * then replaces it instead of joining behind it, since nothing appended
    * after a total order can reorder anything. */
   initialSortsAreTotalOrder?: boolean;
-  /** Whether the current filters are worth a request. For filters whose
-   * ends must agree: half a date range is a 422, and a restored URL can
-   * carry one even though the control never emits one. */
-  filtersUsable?: (filters: TableFilters) => boolean;
+  /** This table's date range, if it has one. Declaring it is what supplies
+   * the `from_date`/`to_date` pair, the guard keeping half a range off the
+   * wire, and the period a link out of this table carries — none of which
+   * a page can now state without the others. */
+  dateRange?: DateRangeSpec;
 };
 
 export function useServerTableState<
@@ -60,8 +74,29 @@ export function useServerTableState<
   initialFilters,
   initialSorts,
   initialSortsAreTotalOrder,
-  filtersUsable,
+  dateRange,
 }: UseServerTableStateOptions<T, TMeta>) {
+  // Resolved on first render and never again: a filter equal to its declared
+  // value is the one dropped from the URL, so a default that moved mid-mount
+  // would erase the period a user had just picked.
+  const defaultPeriodRef = useRef<DateRangePeriod | null | undefined>(
+    undefined,
+  );
+  if (defaultPeriodRef.current === undefined) {
+    defaultPeriodRef.current = dateRange
+      ? resolveDateRangeDefault(dateRange)
+      : null;
+  }
+  const defaultPeriod = defaultPeriodRef.current;
+
+  const declaredFilters = useMemo(
+    () =>
+      defaultPeriod
+        ? { ...initialFilters, ...dateRangeInitialFilters(defaultPeriod) }
+        : initialFilters,
+    [initialFilters, defaultPeriod],
+  );
+
   const {
     page,
     pageSize,
@@ -77,10 +112,12 @@ export function useServerTableState<
   } = useTableControls(
     initialPageSize,
     urlKey,
-    initialFilters,
+    declaredFilters,
     initialSorts,
     initialSortsAreTotalOrder,
   );
+
+  const period = dateRangePeriod(filters);
 
   // Debounced before the network, independently of the URL-write debounce
   // in `useTableControls`, so URL sync isn't gated on request timing.
@@ -101,7 +138,7 @@ export function useServerTableState<
     placeholderData: keepPreviousData, // keeps old rows visible while the next page loads, instead of a flash to empty
     // Disabled means `isLoading` stays false, so the table shows its empty
     // state rather than spinning on a range that can't be completed.
-    enabled: filtersUsable ? filtersUsable(filters) : true,
+    enabled: dateRange ? dateRangeUsable(filters, dateRange.required) : true,
   });
 
   useEffect(() => {
@@ -118,7 +155,7 @@ export function useServerTableState<
   }, [isError, error, sorts, resetSort]);
 
   return {
-    columns,
+    columns: typeof columns === "function" ? columns({ period }) : columns,
     rows: data?.data ?? [],
     totalCount: data?.total ?? 0,
     meta: data?.meta,
@@ -135,5 +172,8 @@ export function useServerTableState<
     onSort,
     filters,
     setFilters,
+    /** The declared range's current value, for a link out of this table.
+     * `{from: null, to: null}` on a table that declares none. */
+    period,
   };
 }

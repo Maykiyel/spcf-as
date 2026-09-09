@@ -2,7 +2,6 @@ import { Divider } from "@mantine/core";
 import {
   DataTable,
   useServerTableState,
-  dateRangeFiltersUsable,
   type TableFilters,
 } from "@/components/ui/data-table";
 import { getTransactionReport } from "../api/get-transaction-report";
@@ -17,11 +16,7 @@ import {
 const URL_KEY = "transactions_report";
 
 /** Module scope, not rebuilt per render: the query key includes it. */
-const REPORT_FILTERS: TableFilters = {
-  from_date: null,
-  to_date: null,
-  cashier_id: null,
-};
+const REPORT_FILTERS: TableFilters = { cashier_id: null };
 
 /**
  * The Transactions Report. Page pagination rather than the cursor mode the
@@ -39,7 +34,7 @@ export function TransactionReportPage() {
     // the declared pair.
     initialSortsAreTotalOrder: true,
     initialFilters: REPORT_FILTERS,
-    filtersUsable: dateRangeFiltersUsable,
+    dateRange: {},
   });
 
   return (

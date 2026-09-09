@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { Divider } from "@mantine/core";
-import {
-  DataTable,
-  useServerTableState,
-  dateRangeFiltersUsable,
-  type TableFilters,
-} from "@/components/ui/data-table";
+import { DataTable, useServerTableState } from "@/components/ui/data-table";
 import { getActivityLogs } from "../api/get-activity-logs";
 import { ACTIVITY_LOGS_QUERY_KEY } from "../api/activity-log-query-keys";
 import type { ActivityLogListRow } from "../types";
@@ -17,9 +12,6 @@ import {
 } from "./activity-log-columns";
 
 const URL_KEY = "activity";
-
-/** Module scope, not rebuilt per render: the query key includes it. */
-const DATE_RANGE_FILTERS: TableFilters = { from_date: null, to_date: null };
 
 /**
  * The Activity Log. Page pagination rather than the cursor mode the
@@ -35,8 +27,7 @@ export function ActivityLogPage() {
     columns: activityLogColumns,
     urlKey: URL_KEY,
     initialSorts: ACTIVITY_LOG_DEFAULT_SORTS,
-    initialFilters: DATE_RANGE_FILTERS,
-    filtersUsable: dateRangeFiltersUsable,
+    dateRange: {},
   });
 
   return (

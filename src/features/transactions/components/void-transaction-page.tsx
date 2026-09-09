@@ -4,7 +4,6 @@ import {
   DataTable,
   useServerTableState,
   type TableFilters,
-  dateRangeFiltersUsable,
 } from "@/components/ui/data-table";
 import { getVoidableTransactions } from "../api/get-voidable-transactions";
 import { VOIDABLE_TRANSACTIONS_QUERY_KEY } from "../api/transaction-query-keys";
@@ -28,8 +27,6 @@ const VOIDABLE_FILTERS: TableFilters = {
   customer: null,
   series_number: null,
   item_name: null,
-  from_date: null,
-  to_date: null,
   cashier_id: null,
 };
 
@@ -59,7 +56,7 @@ export function VoidTransactionPage() {
     urlKey: URL_KEY,
     initialSorts: TRANSACTIONS_DEFAULT_SORTS,
     initialFilters: VOIDABLE_FILTERS,
-    filtersUsable: dateRangeFiltersUsable,
+    dateRange: {},
   });
 
   return (
