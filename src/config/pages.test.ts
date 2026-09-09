@@ -145,4 +145,14 @@ describe("the app's own registry", () => {
   it("still hides the whole Accounts group from a cashier", () => {
     expect(keysOf(getVisiblePages("cashier", pages))).not.toContain("accounts");
   });
+
+  it("keeps a cashier out of Reports, by route as well as by sidebar", () => {
+    // `/reports/*` is admin-only server-side and 403s a cashier, so a hidden
+    // link is not enough: the leaf has to inherit the group's role too.
+    expect(keysOf(getVisiblePages("cashier", pages))).not.toContain("reports");
+    expect(
+      getLeafRoutes().find((route) => route.path === "/reports/transactions")
+        ?.roles,
+    ).toEqual(["admin"]);
+  });
 });

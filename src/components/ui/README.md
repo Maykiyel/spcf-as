@@ -350,6 +350,14 @@ value reaches the wire on the first request, before the user touches
 anything, so a key the endpoint doesn't allow-list is a 422 on load
 rather than on a click.
 
+**Match all of it, including a tiebreaker.** Sending any `sort` suppresses
+the server's `defaultSort` outright rather than adding to it, so declaring
+half of a two-key default silently drops the other half. `/reports/transactions`
+defaults to `-created_at, id`, and the `id` half is what keeps page order
+defined when two rows share a `created_at`; without it the same row can
+appear on two pages and another on none. Both fit, since a declared second
+column counts against `MAX_SORT_COLUMNS` like any other.
+
 **It behaves as a default, not as a starting value.** Like page 1 and an
 unfiltered filter, it is omitted from the URL and restored on a fresh
 visit. Turning the sort off has to be representable separately, since an

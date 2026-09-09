@@ -205,12 +205,20 @@ export const pages: TopLevelPage[] = [
     roles: ["admin"],
   },
   {
+    // One leaf until #65 lands; see the Reports entry in CONTEXT.md.
     key: "reports",
-    path: "/reports",
-    lazyImport: () => import("@/app/routes/app/reports"),
     label: "Reports",
     icon: IconReportAnalytics,
     roles: ["admin"],
+    children: [
+      {
+        key: "transactionsReport",
+        path: "/reports/transactions",
+        lazyImport: () => import("@/app/routes/app/reports/transactions"),
+        label: "Transactions Report",
+        icon: IconEye,
+      },
+    ],
   },
   {
     key: "activityLog",

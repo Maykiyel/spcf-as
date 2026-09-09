@@ -1,16 +1,14 @@
 import { Group, Select } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
 import type { TableFilters } from "@/components/ui/data-table";
-import { DateRangeFilter, toApiDate } from "@/components/ui/date-range";
 import { TableFilterText } from "@/components/ui/table-filter";
-import { getCashiers, cashiersQueryKey } from "@/api/cashiers";
+import { CashierFilter, DateRangeTableFilter } from "@/components/filters";
 import { TRANSACTION_STATUS_LABEL } from "../lib/transaction-status";
 import { TRANSACTION_STATUSES } from "../types";
 
 /** Each control takes a value and reports a change, knowing nothing about
- * the URL; `useServerTableState` owns the values. The controls are private
- * and the panel is exported, which is what lets a second page reuse the
- * whole set rather than re-wiring six `setFilters` calls.
+ * the URL; `useServerTableState` owns the values. The panel is exported and
+ * the transaction-specific controls are private, which is what lets a second
+ * page reuse the whole set rather than re-wiring six `setFilters` calls.
  */
 
 type FilterProps = {
@@ -65,47 +63,15 @@ function TransactionStatusFilter({ value, onChange }: FilterProps) {
   );
 }
 
-/**
- * Admin-only, and must be *unmounted* for a cashier rather than hidden:
- * `filter[cashier_id]` is a 400 for them and `GET /cashiers` a 403. Holding
- * the query inside the control is what makes "not rendered" mean "never
- * requested".
- *
- * Asks for every cashier, not the active-only list: a deactivated
- * cashier's past transactions are the likeliest reason to use this.
- */
-function TransactionCashierFilter({ value, onChange }: FilterProps) {
-  const cashiers = useQuery({
-    queryKey: cashiersQueryKey(),
-    queryFn: () => getCashiers(),
-  });
-
-  return (
-    <Select
-      label="Cashier"
-      placeholder="All cashiers"
-      data={(cashiers.data ?? []).map((cashier) => ({
-        value: String(cashier.id),
-        label: cashier.full_name,
-      }))}
-      disabled={cashiers.isLoading}
-      value={value}
-      onChange={onChange}
-      clearable
-      searchable
-      w={{ base: "100%", xs: 200 }}
-    />
-  );
-}
-
 type TransactionListFiltersProps = {
   /** The table's current filter values, straight off `useServerTableState`. */
   filters: TableFilters;
   /** `setFilters`. A patch, because the date range moves both ends at once
    * and two writes would mean two refetches for one action. */
   onChange: (patch: TableFilters) => void;
-  /** Whether the cashier filter belongs here. The caller decides, since the
-   * reason differs by page. `false` must mean never mounted, not hidden. */
+  /** Whether the cashier filter belongs here. Admin-only: `filter[cashier_id]`
+   * is a 400 for a cashier on `/transactions`, so `false` must mean never
+   * mounted, not hidden. */
   includeCashier: boolean;
   /** Whether the status filter belongs here. `false` on the Void page,
    * where a status control would build a list of rows that can only 409.
@@ -147,20 +113,9 @@ export function TransactionListFilters({
           onChange={(status) => onChange({ status })}
         />
       )}
-      {/* `toApiDate`, not a cast: the values are strings off the URL, and
-          this is what decides whether one is a date the API takes. */}
-      <DateRangeFilter
-        label="Date Range"
-        value={{
-          from: toApiDate(filters.from_date),
-          to: toApiDate(filters.to_date),
-        }}
-        onChange={(range) =>
-          onChange({ from_date: range.from, to_date: range.to })
-        }
-      />
+      <DateRangeTableFilter filters={filters} onChange={onChange} />
       {includeCashier && (
-        <TransactionCashierFilter
+        <CashierFilter
           value={filters.cashier_id}
           onChange={(cashier_id) => onChange({ cashier_id })}
         />
