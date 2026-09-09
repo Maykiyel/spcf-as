@@ -150,9 +150,16 @@ describe("the app's own registry", () => {
     // `/reports/*` is admin-only server-side and 403s a cashier, so a hidden
     // link is not enough: the leaf has to inherit the group's role too.
     expect(keysOf(getVisiblePages("cashier", pages))).not.toContain("reports");
-    expect(
-      getLeafRoutes().find((route) => route.path === "/reports/transactions")
-        ?.roles,
-    ).toEqual(["admin"]);
+
+    const reportRoutes = getLeafRoutes().filter((route) =>
+      route.path.startsWith("/reports/"),
+    );
+    expect(reportRoutes.map((route) => route.path)).toEqual([
+      "/reports/transactions",
+      "/reports/services-sold",
+    ]);
+    for (const route of reportRoutes) {
+      expect(route.roles).toEqual(["admin"]);
+    }
   });
 });
