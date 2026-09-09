@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { nextSorts, sortsToExtend } from "./use-table-controls";
+import {
+  nextSorts,
+  sortsAfterClick,
+  sortsToExtend,
+} from "./use-table-controls";
 
 describe("nextSorts", () => {
   it("adds a new column as ascending", () => {
@@ -77,7 +81,7 @@ describe("sortsToExtend", () => {
   });
 
   it("keeps the declared sort when the clicked column is the declared one", () => {
-    // Its own cycle is unaffected: asc -> desc -> off still works.
+    // Only what a click extends; where it lands is `sortsAfterClick`'s.
     const declared = [asc("service_name")];
     expect(sortsToExtend(declared, "service_name", declared, true)).toEqual(
       declared,
@@ -109,5 +113,67 @@ describe("sortsToExtend", () => {
     // from there behaves normally.
     const declared = [asc("service_name")];
     expect(sortsToExtend([], "subtotal", declared, true)).toEqual([]);
+  });
+});
+
+describe("sortsAfterClick", () => {
+  it("makes the declared column a two-state header", () => {
+    // The defect this exists for: a third click sent no sort at all, and
+    // the endpoint answered in `service_id` order under a lit-up nothing.
+    const declared = [asc("service_name")];
+    const flipped = sortsAfterClick(declared, "service_name", declared, true);
+    expect(flipped).toEqual([desc("service_name")]);
+    expect(sortsAfterClick(flipped, "service_name", declared, true)).toEqual(
+      declared,
+    );
+  });
+
+  it("flips a declared descending column to ascending rather than off", () => {
+    const declared = [desc("total_earnings")];
+    expect(sortsAfterClick(declared, "total_earnings", declared)).toEqual([
+      asc("total_earnings"),
+    ]);
+  });
+
+  it("keeps a declared tiebreaker when the column ahead of it flips", () => {
+    // Dropping `id` here would page a tied `created_at` unstably.
+    const declared = [desc("created_at"), asc("id")];
+    expect(sortsAfterClick(declared, "created_at", declared, true)).toEqual([
+      asc("created_at"),
+      asc("id"),
+    ]);
+  });
+
+  it("lands any other column's third click on the declared sort", () => {
+    const declared = [asc("service_name")];
+    expect(
+      sortsAfterClick([desc("subtotal")], "subtotal", declared, true),
+    ).toEqual(declared);
+  });
+
+  it("restores a declared tiebreaker the removal would have stranded", () => {
+    // Leaving `id` behind on its own is the unstable paging the declared
+    // pair exists to prevent, and no header shows a caret for it.
+    const declared = [desc("created_at"), asc("id")];
+    expect(
+      sortsAfterClick(
+        [desc("subtotal"), asc("created_at")],
+        "subtotal",
+        declared,
+        true,
+      ),
+    ).toEqual(declared);
+  });
+
+  it("still reaches unsorted on a table that declares no sort", () => {
+    // There it is the order the table opened in, so a caret is not owed.
+    expect(sortsAfterClick([desc("name")], "name", [])).toEqual([]);
+  });
+
+  it("adds a declared column back from unsorted like any other", () => {
+    const declared = [asc("service_name")];
+    expect(sortsAfterClick([], "service_name", declared, true)).toEqual(
+      declared,
+    );
   });
 });

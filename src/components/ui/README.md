@@ -391,14 +391,18 @@ column counts against `MAX_SORT_COLUMNS` like any other.
 
 **It behaves as a default, not as a starting value.** Like page 1 and an
 unfiltered filter, it is omitted from the URL and restored on a fresh
-visit. Turning the sort off has to be representable separately, since an
+visit. An unsorted table has to be representable separately, since an
 absent param means "use the declared sort" — so that state writes
 `<urlKey>_sort=none`. Nothing else uses that word: a real entry is always
-`key:dir`.
+`key:dir`. No click produces it, per the next rule; it is what the 422
+recovery falls back to, and what a shared link can carry.
 
-**Clicking a declared descending column takes it straight off**, because
-`nextSorts` cycles asc, desc, gone and the column is entering that cycle
-at its last step. The click after that starts it again at ascending.
+**Clicking a declared column flips it**, ascending to descending and back,
+so a declared column is a two-state header. It never cycles off, because
+off sends no `sort` at all and the endpoint then answers in its own
+fallback order, under headers that all read as unsorted. Any other
+column's third click lands on the declared sort for the same reason,
+rather than on nothing. `sortsAfterClick` is where this lives.
 
 **A second column joins it rather than replacing it**, up to
 `MAX_SORT_COLUMNS`, exactly as it would if the first sort had been
@@ -425,7 +429,7 @@ The three report tables set it; the four tables declaring a sort on a
 non-unique column (`full_name`, `created_at`, `total_earnings`) do not.
 Once the user has chosen a sort of their own it is off the default, so the
 next click joins as normal either way, and clicking the declared column
-itself still cycles asc, desc, off. `sortsToExtend` is where this lives.
+itself flips it either way. `sortsToExtend` is where this lives.
 
 Omit `initialSorts` and the table starts unsorted, sends no `sort` param,
 and behaves as it always has.
@@ -629,7 +633,7 @@ declared with all collapse to "no param" rather than `?page=1` or
 `?status=all`. Keeps shareable URLs clean instead of noisy, and stops an
 unfiltered table from looking filtered. The one marker written rather than
 omitted is `sort=none`, which a table with an `initialSorts` needs to say
-"the user turned this off" — see [Declaring the default
+"unsorted", a state no header click reaches. See [Declaring the default
 sort](#declaring-the-default-sort).
 
 **Search, sort and filter changes reset the page param.** Narrowing or

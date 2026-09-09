@@ -34,7 +34,7 @@ describe("getServicesSold", () => {
     expect(sentParams().sort).toBe("-subtotal");
   });
 
-  it("sends no sort at all when the user has turned sorting off", async () => {
+  it("sends no sort at all when the table is unsorted", async () => {
     await getServicesSold(params([]));
 
     expect(sentParams().sort).toBeUndefined();

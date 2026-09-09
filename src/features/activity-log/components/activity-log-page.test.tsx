@@ -222,6 +222,26 @@ describe("ActivityLogPage — the list", () => {
       screen.getByRole("columnheader", { name: "Type" }),
     ).not.toHaveAttribute("aria-sort");
   });
+
+  it("reverses the only sortable column rather than turning sorting off", async () => {
+    renderPage();
+    await screen.findByText(rows[0].context);
+
+    const when = screen.getByRole("columnheader", { name: /When/ });
+    fireEvent.click(within(when).getByText("When"));
+
+    // With no second sortable column, cycling this one off would leave the
+    // page in the endpoint's own order with no way back to a lit caret.
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        sorts: [{ key: "created_at", direction: "asc" }],
+      }),
+    );
+    expect(screen.getByRole("columnheader", { name: /When/ })).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+  });
 });
 
 describe("ActivityLogPage — the detail drawer", () => {

@@ -68,9 +68,9 @@ const clampPageSize = (value: string | null, fallback: number): number => {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : fallback;
 };
 
-/** "The user turned the sort off", as distinct from "no param, so use the
- * declared sort". Without it a table declaring `initialSorts` could never
- * be unsorted, since no param reads back as the declared sort. */
+/** "This table is unsorted", as distinct from "no param, so use the
+ * declared sort". Reached by `resetSort` and a shared link, not by a click:
+ * see `sortsAfterClick`. */
 const NO_SORT = "none";
 
 /** Module scope: it seeds `useState` and is compared on every read. */
@@ -98,6 +98,43 @@ export function sortsToExtend(
   const alreadyActive = current.some((sort) => sort.key === key);
 
   return isUntouchedDefault && !alreadyActive ? [] : current;
+}
+
+/** One header click, start to finish. A click never leaves the table in an
+ * order no header shows a caret for: sending no sort at all means the rows
+ * arrive in whatever key the endpoint falls back to. */
+export function sortsAfterClick(
+  current: SortEntry[],
+  key: string,
+  initialSorts: SortEntry[],
+  initialSortsAreTotalOrder = false,
+): SortEntry[] {
+  const base = sortsToExtend(
+    current,
+    key,
+    initialSorts,
+    initialSortsAreTotalOrder,
+  );
+  const activeIdx = base.findIndex((sort) => sort.key === key);
+  const isDeclared = initialSorts.some((sort) => sort.key === key);
+
+  // Removing a declared column would leave no caret lit anywhere.
+  if (isDeclared && activeIdx !== -1) {
+    const next = [...base];
+    next[activeIdx] = {
+      key,
+      direction: base[activeIdx].direction === "asc" ? "desc" : "asc",
+    };
+    return next;
+  }
+
+  const next = nextSorts(base, key);
+  // Off means the declared order, not none. Measured on what the user
+  // chose: a declared tiebreaker left on its own is no order a header shows.
+  const chosen = next.filter(
+    (sort) => !initialSorts.some((declared) => declared.key === sort.key),
+  );
+  return chosen.length === 0 ? initialSorts : next;
 }
 
 // `key:dir,key:dir` in one param, string order being priority order. The
@@ -228,10 +265,7 @@ function useUrlAdapter(
   const onSort = (key: string) => {
     updateParams({
       [paramName("sort")]: encodeSorts(
-        nextSorts(
-          sortsToExtend(sorts, key, initialSorts, initialSortsAreTotalOrder),
-          key,
-        ),
+        sortsAfterClick(sorts, key, initialSorts, initialSortsAreTotalOrder),
         initialSorts,
       ),
       [paramName("page")]: null,
@@ -305,10 +339,7 @@ function useLocalAdapter(
 
   const onSort = (key: string) => {
     setSorts((prev) =>
-      nextSorts(
-        sortsToExtend(prev, key, initialSorts, initialSortsAreTotalOrder),
-        key,
-      ),
+      sortsAfterClick(prev, key, initialSorts, initialSortsAreTotalOrder),
     );
     setPage(1);
   };

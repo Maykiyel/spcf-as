@@ -243,20 +243,24 @@ describe("DashboardPage", () => {
       );
     });
 
-    it("cycles the earnings sort off and back round", async () => {
+    it("toggles the earnings sort rather than cycling it off", async () => {
       signIn(admin);
       renderPage();
 
-      // The column starts descending, so the first click takes it off
-      // rather than reversing it — that is `nextSorts`' asc, desc, gone
-      // cycle entered at its last step.
+      // It is the declared sort, so a click reverses it and never sends
+      // nothing — the rows would come back in the endpoint's own order
+      // with no header admitting to it.
       fireEvent.click(await screen.findByText("Total Earnings"));
-      await waitFor(() => expect(lastEarningsParams().sorts).toEqual([]));
+      await waitFor(() =>
+        expect(lastEarningsParams().sorts).toEqual([
+          { key: "total_earnings", direction: "asc" },
+        ]),
+      );
 
       fireEvent.click(screen.getByText("Total Earnings"));
       await waitFor(() =>
         expect(lastEarningsParams().sorts).toEqual([
-          { key: "total_earnings", direction: "asc" },
+          { key: "total_earnings", direction: "desc" },
         ]),
       );
     });
