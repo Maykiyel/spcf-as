@@ -164,13 +164,6 @@ export const pages: TopLevelPage[] = [
         label: "View Transactions (Per Receipt)",
         icon: IconEye,
       },
-      {
-        key: "transactionsItemized",
-        path: "/transactions/itemized",
-        lazyImport: () => import("@/app/routes/app/transactions/itemized"),
-        label: "View Transactions (Itemized List)",
-        icon: IconEye,
-      },
     ],
   },
   {

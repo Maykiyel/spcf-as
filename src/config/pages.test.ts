@@ -139,7 +139,6 @@ describe("the app's own registry", () => {
 
     expect(byPath("/transactions/new")?.roles).toEqual(["cashier"]);
     expect(byPath("/transactions/receipts")?.roles).toBeUndefined();
-    expect(byPath("/transactions/itemized")?.roles).toBeUndefined();
   });
 
   it("still hides the whole Accounts group from a cashier", () => {
