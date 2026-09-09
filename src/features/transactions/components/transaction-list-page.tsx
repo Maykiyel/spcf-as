@@ -4,7 +4,6 @@ import {
   DataTable,
   useServerTableState,
   type TableFilters,
-  dateRangeFiltersUsable,
 } from "@/components/ui/data-table";
 import { useAuthStore } from "@/stores/auth-store";
 import { getTransactions } from "../api/get-transactions";
@@ -18,15 +17,14 @@ import {
 
 const URL_KEY = "receipts";
 
-/** The six filters everyone gets, keyed by the API's own filter names.
- * Module scope, not rebuilt per render: the query key includes it. */
+/** The four everyone gets that aren't the date range, keyed by the API's
+ * own filter names. Module scope, not rebuilt per render: the query key
+ * includes it. */
 const BASE_FILTERS: TableFilters = {
   customer: null,
   series_number: null,
   status: null,
   item_name: null,
-  from_date: null,
-  to_date: null,
 };
 
 /** The seventh, allow-listed only for an admin: a cashier sending it gets
@@ -60,7 +58,7 @@ export function TransactionListPage() {
     urlKey: URL_KEY,
     initialSorts: TRANSACTIONS_DEFAULT_SORTS,
     initialFilters: isAdmin ? ADMIN_FILTERS : BASE_FILTERS,
-    filtersUsable: dateRangeFiltersUsable,
+    dateRange: {},
   });
 
   return (

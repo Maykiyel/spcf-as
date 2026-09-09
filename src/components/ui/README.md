@@ -220,58 +220,75 @@ merges a patch into them. Everything else follows from the declaration:
   URL can't inject one and a typo in a `setFilters` patch can't write a param
   nothing will ever read back.
 
-### Filters that aren't usable yet
+### The date range is one declaration
 
 Some filters only mean something complete. A date range with one end set is
 not a filter, and the API answers it with a 422 because `to_date` carries
 `after_or_equal:from_date`.
 
 `DateRangeFilter` never emits a half-picked range, so the control can't
-produce one. A restored URL still can, so the hook takes a guard too:
+produce one. A restored URL still can — which is why a table declares the
+range itself rather than assembling it out of parts:
 
 ```tsx
 useServerTableState({
   ...,
-  initialFilters: { from_date: null, to_date: null },
-  filtersUsable: (f) => Boolean(f.from_date) === Boolean(f.to_date),
+  dateRange: {},
 });
 ```
 
-While the predicate is false the query doesn't run, and the table shows its
-empty state rather than an error or a permanent spinner. Omit `filtersUsable`
-and the table always requests, which is right for filters whose values stand
-alone.
+That one option is what supplies the `from_date`/`to_date` pair, the guard
+that keeps half a range off the wire, and `tableState.period` for a link
+built out of this table. Declaring the keys without the guard used to be a
+thing a page could do, and it compiled.
 
-**Some tables want the stricter guard.**
+While the range is unusable the query doesn't run, and the table shows its
+empty state rather than an error or a permanent spinner. Omit `dateRange`
+and the table always requests, which is right for a table that has none.
+
+**`required` is the stricter guard.**
 `GET /reports/services-sold/{service}` validates both ends as `required`
 rather than `nullable`, so an *absent* range is a 422 there, not an
-unfiltered request. `dateRangeFiltersUsable` waves that case through, since
-neither end being set is a matched pair. Use `dateRangeFiltersRequired`
-where the endpoint demands a range, and also where the page's own rows link
-somewhere that does: the Services Sold summary takes optional dates itself,
-but every row on it opens a breakdown that will not.
+unfiltered request. The default guard waves that case through, since neither
+end being set is a matched pair. Set `required: true` where the endpoint
+demands a range, and also where the page's own rows link somewhere that
+does: the Services Sold summary takes optional dates itself, but every row
+on it opens a breakdown that will not.
 
-**A table can default to a real range rather than to none.** `initialFilters`
-values are defaults in the full sense, omitted from the URL and restored on
-a fresh visit, so seeding them from `currentMonthRange()` gives a report
-that says something on arrival:
+**A table can open on a real range rather than on none.** `default` is
+called once per mount, and its value is a default in the full sense —
+omitted from the URL and restored on a fresh visit — so a report says
+something on arrival:
 
 ```tsx
-// Once per mount, not at import: module scope would pin the month to
-// whenever the bundle first loaded, and freeze it under a test clock.
-const period = useMemo(() => currentMonthRange(), []);
-
 useServerTableState({
   ...,
-  initialFilters: { from_date: period.from, to_date: period.to },
+  dateRange: { required: true, default: currentMonthRange },
 });
 ```
+
+Once per mount is load-bearing, and the hook owns it so a page cannot get it
+wrong. Module scope would pin the month to whenever the bundle first loaded
+and freeze it under a test clock; recomputing it per render is worse, because
+a filter equal to its declared value is the one dropped from the URL, so a
+moving default would erase the period a user had just picked.
 
 Note what follows. Clearing the range in the picker writes `null`, which
 differs from the default and so deletes the param, which reads back *as* the
 default: clearing snaps to the current month rather than to an unfiltered
 view. That is right where a range is required and wrong where it is
-optional, so default a range only on a table that needs one.
+optional, so give a `default` only to a table that needs one.
+
+**When a cell needs the period, `columns` takes a function.** The range
+resolves inside the hook, so a column built before the call can't see it:
+
+```tsx
+columns: ({ period }) => servicesSoldColumns(period),
+```
+
+That is the Services Sold row link, which carries the period to the
+breakdown so the detail matches the figure it explains. An array stays an
+array everywhere else.
 
 Key the filters by the API's own filter name (`from_date`, not `dateFrom`)
 so that mapping stays a no-op. `TableFilters` values are `string | null` and

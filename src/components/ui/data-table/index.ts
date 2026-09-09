@@ -22,10 +22,8 @@ export { MAX_SORT_COLUMNS } from "./types";
 export { encodeSortsForApi } from "./sort-params";
 export { tableParamName } from "./use-table-controls";
 export { createListAdapter } from "./create-list-adapter";
-export {
-  dateRangeFiltersUsable,
-  dateRangeFiltersRequired,
-} from "./date-range-filters";
+export { dateRangeUsable, dateRangePeriod } from "./date-range-filter";
+export type { DateRangePeriod, DateRangeSpec } from "./date-range-filter";
 
 import { DataTableRoot } from "./data-table-root";
 import {

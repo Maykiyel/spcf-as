@@ -3,12 +3,8 @@ import { Anchor, Divider, Group, Stack } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Link, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  DataTable,
-  useServerTableState,
-  dateRangeFiltersRequired,
-  type TableFilters,
-} from "@/components/ui/data-table";
+import { DataTable, useServerTableState } from "@/components/ui/data-table";
+import { currentMonthRange } from "@/components/ui/date-range";
 import { DateRangeTableFilter } from "@/components/filters";
 import { getServiceBreakdown } from "../api/get-service-breakdown";
 import { getService } from "../api/get-service";
@@ -20,7 +16,6 @@ import {
   SERVICE_BREAKDOWN_URL_KEY,
   servicesSoldPath,
 } from "../lib/services-sold-routes";
-import { useReportPeriod } from "../lib/use-report-period";
 import {
   serviceBreakdownColumns,
   SERVICE_BREAKDOWN_DEFAULT_SORTS,
@@ -34,15 +29,9 @@ import {
  */
 export function ServiceBreakdownPage() {
   const serviceId = Number(useParams().serviceId);
-  const { defaults } = useReportPeriod(SERVICE_BREAKDOWN_URL_KEY);
 
   // Named per service, since the identifier is in the path.
   const queryFn = useMemo(() => getServiceBreakdown(serviceId), [serviceId]);
-
-  const initialFilters: TableFilters = {
-    from_date: defaults.from,
-    to_date: defaults.to,
-  };
 
   const tableState = useServerTableState({
     queryKey: [...SERVICE_BREAKDOWN_QUERY_KEY, serviceId],
@@ -52,10 +41,9 @@ export function ServiceBreakdownPage() {
     initialSorts: SERVICE_BREAKDOWN_DEFAULT_SORTS,
     // `id` is unique, so every other header would be inert behind it.
     initialSortsAreTotalOrder: true,
-    initialFilters,
     // Both dates are `required` here, so an absent range is a 422 rather
     // than an unfiltered request.
-    filtersUsable: dateRangeFiltersRequired,
+    dateRange: { required: true, default: currentMonthRange },
   });
 
   // The heading's only source: the route carries an id and the rows carry
@@ -73,13 +61,7 @@ export function ServiceBreakdownPage() {
   return (
     <Stack gap="md">
       <Group>
-        <Anchor
-          component={Link}
-          to={servicesSoldPath({
-            from: tableState.filters.from_date,
-            to: tableState.filters.to_date,
-          })}
-        >
+        <Anchor component={Link} to={servicesSoldPath(tableState.period)}>
           <Group gap={4} wrap="nowrap">
             <IconArrowLeft size={16} />
             Back to Services Sold

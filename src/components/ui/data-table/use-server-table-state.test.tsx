@@ -6,6 +6,7 @@ import { MemoryRouter, useLocation } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useServerTableState } from "./use-server-table-state";
 import type { ColumnDef, SortEntry, TableFilters } from "./types";
+import type { DateRangePeriod } from "./date-range-filter";
 
 type Row = { id: string; name: string };
 
@@ -309,19 +310,12 @@ describe("useServerTableState filter guards", () => {
       typeof useServerTableState<Row>
     >[0];
 
-  // A date range needs both ends to agree. `DateRangeFilter` never emits a
-  // half-picked one, but a restored URL can still carry one, so the guard has
-  // to exist here as well as in the control.
-  const bothEndsOrNeither = (filters: TableFilters) =>
-    Boolean(filters.from_date) === Boolean(filters.to_date);
-
-  it("fires no request while the filters aren't usable", async () => {
+  // Declaring `dateRange` is what supplies the guard. `DateRangeFilter` never
+  // emits a half-picked range, but a restored URL can still carry one, so the
+  // guard has to exist here as well as in the control.
+  it("fires no request while the range is half-restored", async () => {
     const { result } = renderTable(
-      options({
-        urlKey: "tx",
-        initialFilters: { from_date: null, to_date: null },
-        filtersUsable: bothEndsOrNeither,
-      }),
+      options({ urlKey: "tx", dateRange: {} }),
       ["/?tx_from_date=2026-08-01"],
     );
 
@@ -332,11 +326,7 @@ describe("useServerTableState filter guards", () => {
 
   it("fires once the range is completed", async () => {
     const { result } = renderTable(
-      options({
-        urlKey: "tx",
-        initialFilters: { from_date: null, to_date: null },
-        filtersUsable: bothEndsOrNeither,
-      }),
+      options({ urlKey: "tx", dateRange: {} }),
       ["/?tx_from_date=2026-08-01"],
     );
 
@@ -353,7 +343,59 @@ describe("useServerTableState filter guards", () => {
     );
   });
 
-  it("requests as normal when no predicate is given", async () => {
+  it("declares the range's two keys without the page naming them", async () => {
+    renderTable(options({ urlKey: "tx", dateRange: {} }), [
+      "/?tx_from_date=2026-08-01&tx_to_date=2026-08-31",
+    ]);
+
+    await waitFor(() =>
+      expect(queryFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: { from_date: "2026-08-01", to_date: "2026-08-31" },
+        }),
+      ),
+    );
+  });
+
+  it("opens on the declared default, and keeps it off the URL", async () => {
+    const { result } = renderTable(
+      options({
+        urlKey: "tx",
+        dateRange: {
+          required: true,
+          default: () => ({ from: "2026-09-01", to: "2026-09-30" }),
+        },
+      }),
+    );
+
+    await waitFor(() =>
+      expect(queryFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filters: { from_date: "2026-09-01", to_date: "2026-09-30" },
+        }),
+      ),
+    );
+    expect(result.current.table.period).toEqual({
+      from: "2026-09-01",
+      to: "2026-09-30",
+    });
+    // A filter at its declared value is absent from the URL.
+    expect(result.current.search).not.toContain("tx_from_date");
+  });
+
+  it("blocks an absent range only when the endpoint requires both ends", async () => {
+    // `GET /reports/services-sold/{service}` validates both as `required`,
+    // where the looser guard would send an unfiltered request.
+    renderTable(options({ urlKey: "tx", dateRange: { required: true } }));
+
+    await waitFor(() => expect(queryFn).not.toHaveBeenCalled());
+
+    renderTable(options({ urlKey: "opt", dateRange: {} }));
+
+    await waitFor(() => expect(queryFn).toHaveBeenCalled());
+  });
+
+  it("requests as normal when the table declares no range", async () => {
     renderTable(
       options({ urlKey: "tx", initialFilters: { from_date: null } }),
       ["/?tx_from_date=2026-08-01"],
@@ -378,6 +420,37 @@ describe("useServerTableState filter guards", () => {
     );
     expect(result.current.search).not.toContain("nonsense");
     expect(result.current.table.filters).toEqual({ status: "completed" });
+  });
+});
+
+describe("useServerTableState columns", () => {
+  it("hands a columns function the period the table resolved to", async () => {
+    // The Services Sold row link needs the period, which isn't known until
+    // after this hook runs — the reason `columns` accepts a function.
+    const queryFn = createFetcher();
+    const build = vi.fn(({ period }: { period: DateRangePeriod }) => [
+      { key: "name" as const, header: `Rows for ${period.from}` },
+    ]);
+
+    const { result } = renderTable(
+      {
+        queryKey: ["widgets"],
+        queryFn,
+        columns: build,
+        urlKey: "tx",
+        dateRange: { required: true },
+      } as Parameters<typeof useServerTableState<Row>>[0],
+      ["/?tx_from_date=2026-08-01&tx_to_date=2026-08-31"],
+    );
+
+    await waitFor(() =>
+      expect(result.current.table.columns[0].header).toBe(
+        "Rows for 2026-08-01",
+      ),
+    );
+    expect(build).toHaveBeenCalledWith({
+      period: { from: "2026-08-01", to: "2026-08-31" },
+    });
   });
 });
 
