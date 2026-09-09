@@ -370,6 +370,72 @@ or page order is undefined for rows sharing a `created_at`.
 `customer_name` here and `customer` there, `cashier_name` is allowed here
 and not there, and `series_number` is allowed there and not here.
 
+## `GET /reports/services-sold` and `/reports/services-sold/{service}`
+
+Both admin only, under `throttle:reports`. Read at backend `1165499`;
+neither endpoint has a backend test.
+
+### The summary
+
+Envelope is the usual one, rows under `services`:
+
+```json
+{ "services": [...], "pagination": {...} }
+```
+
+A row is `{ service: { id, name }, total_quantity, subtotal }`. It is a
+**grouped aggregate over `transaction_items`, not a service record**:
+`groupBy('service_id')` over items whose transaction is `completed`.
+`service` is `whenLoaded`, so the key is absent rather than null if the
+relation ever fails to load. Both figures are cast to float on the wire,
+though `quantity` is an unsigned integer column.
+
+**Revenue is `subtotal` on the wire.** That is the sort key and the field
+name, whatever a column calls it on screen.
+
+Filters: `from_date`, `to_date`, both optional and both `Y-m-d`. No
+`search`, no others.
+
+Sorts: `total_quantity`, `subtotal`, `service_name`. **There is no
+`defaultSort`.** An unsorted request returns rows in whatever order the
+database produces, and paginating that repeats rows on one page and skips
+them on another. `service_name` is the only allow-listed key that is
+unique, so it is the only one that is a total order; the client sends it as
+a tiebreaker under every sort. Asked for server-side and not landed as of
+`1165499`.
+
+**`service_name` is a custom sort that may be a 500 under MySQL.**
+`ServiceNameSort` does `leftJoin('services', ...)` then
+`ORDER BY services.name`, while the query groups by
+`transaction_items.service_id`. The MySQL connection is configured
+`strict => true`, so `ONLY_FULL_GROUP_BY` is on, and MySQL does not deduce
+functional dependency through the nullable side of an outer join.
+**Unverified**: it has not been run against a MySQL database from this
+application. Check it before trusting the sort.
+
+### The drill-down
+
+Envelope holds `transactions`, rows being `TransactionResource` with
+**`cashier` eager-loaded and `items` not**, the same scalar-only shape
+`/reports/transactions` returns. Only `completed` transactions, restricted
+to those carrying an item for the bound service.
+
+`{service}` binds by **`id`**; `Service` overrides no route key. An id
+naming no service is a 404.
+
+**`from_date` and `to_date` are both `required` here**, the only endpoint
+in the API where that is true. An absent range is a 422, not an unfiltered
+request, so the looser "both ends agree" guard the other date-filtered
+tables use is not enough.
+
+Sorts: `created_at`, `id`, `series_number`, `customer_name`, `total`,
+`cashier_name`. Default `id`.
+
+**A third distinct allow-list.** It allows `series_number`, which
+`/reports/transactions` does not, and allows neither `amount_paid` nor
+`change_amount`, which that endpoint does. Its default is a single key and
+needs no tiebreaker, `id` being unique.
+
 ## Response shapes
 
 ### `TransactionResource`
