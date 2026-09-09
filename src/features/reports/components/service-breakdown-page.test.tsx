@@ -275,31 +275,31 @@ describe("ServiceBreakdownPage — the sort", () => {
     expect(lastRequest().sorts).toContainEqual({ key: "id", direction: "asc" });
   });
 
-  it("sorts the series column, which this endpoint allows and the transactions report does not", async () => {
+  it("orders by the series column, which this endpoint allows and the report does not", async () => {
     renderPage();
     await screen.findByText("Anna Reyes");
 
     clickSortHeader("Series No.");
 
+    // Position, not membership. `id` is unique, so leaving the declared
+    // sort at priority 1 would make this click reorder nothing.
     await waitFor(() =>
-      expect(lastRequest().sorts).toContainEqual({
-        key: "series_number",
-        direction: "asc",
-      }),
+      expect(lastRequest().sorts).toEqual([
+        { key: "series_number", direction: "asc" },
+      ]),
     );
   });
 
-  it("sorts the cashier column as cashier_name", async () => {
+  it("orders by the cashier column, under the wire's own name", async () => {
     renderPage();
     await screen.findByText("Anna Reyes");
 
     clickSortHeader("Cashier");
 
     await waitFor(() =>
-      expect(lastRequest().sorts).toContainEqual({
-        key: "cashier_name",
-        direction: "asc",
-      }),
+      expect(lastRequest().sorts).toEqual([
+        { key: "cashier_name", direction: "asc" },
+      ]),
     );
   });
 });

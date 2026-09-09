@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
+import { tableParamName } from "@/components/ui/data-table";
 import { currentMonthRange } from "@/components/ui/date-range";
 import type { ReportPeriod } from "./services-sold-routes";
 
@@ -22,8 +23,8 @@ export function useReportPeriod(urlKey: string): ReportPeriodState {
   return {
     defaults,
     current: {
-      from: searchParams.get(`${urlKey}_from_date`) ?? defaults.from,
-      to: searchParams.get(`${urlKey}_to_date`) ?? defaults.to,
+      from: searchParams.get(tableParamName(urlKey, "from_date")) ?? defaults.from,
+      to: searchParams.get(tableParamName(urlKey, "to_date")) ?? defaults.to,
     },
   };
 }

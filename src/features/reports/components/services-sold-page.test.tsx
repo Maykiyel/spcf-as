@@ -139,8 +139,10 @@ describe("ServicesSoldPage — the rows", () => {
   });
 
   it("shows a dash rather than a dead link when a row carries no service", async () => {
+    // `whenLoaded` drops the key rather than sending null, so the fixture
+    // omits it.
     mockGetSummary.mockResolvedValue(
-      page([{ service: null, total_quantity: 4, subtotal: 200 }]),
+      page([{ total_quantity: 4, subtotal: 200 }]),
     );
     renderPage();
 
@@ -179,32 +181,68 @@ describe("ServicesSoldPage — the sort", () => {
     });
   });
 
-  it("sorts the revenue column as subtotal, which is the wire's name", async () => {
+  it("ranks by revenue on one click, rather than behind the declared sort", async () => {
     renderPage();
     await screen.findByText("Guidance Fee");
 
     clickSortHeader("Revenue");
 
+    // Position, not membership. `service_name` is unique, so leaving it at
+    // priority 1 would make this click reorder nothing at all.
     await waitFor(() =>
-      expect(lastRequest().sorts).toContainEqual({
-        key: "subtotal",
-        direction: "asc",
-      }),
+      expect(lastRequest().sorts).toEqual([
+        { key: "subtotal", direction: "asc" },
+      ]),
     );
   });
 
-  it("sorts the quantity column as total_quantity", async () => {
+  it("ranks by quantity on one click, under the wire's own name", async () => {
     renderPage();
     await screen.findByText("Guidance Fee");
 
     clickSortHeader("Quantity Sold");
 
     await waitFor(() =>
-      expect(lastRequest().sorts).toContainEqual({
-        key: "total_quantity",
-        direction: "asc",
-      }),
+      expect(lastRequest().sorts).toEqual([
+        { key: "total_quantity", direction: "asc" },
+      ]),
     );
+  });
+
+  it("still adds a second column once the user has chosen the first", async () => {
+    // The declared sort is superseded, not the ordinary two-column
+    // behaviour: a click after the first still joins.
+    renderPage();
+    await screen.findByText("Guidance Fee");
+
+    clickSortHeader("Revenue");
+    await waitFor(() => expect(lastRequest().sorts).toHaveLength(1));
+    clickSortHeader("Quantity Sold");
+
+    await waitFor(() =>
+      expect(lastRequest().sorts).toEqual([
+        { key: "subtotal", direction: "asc" },
+        { key: "total_quantity", direction: "asc" },
+      ]),
+    );
+  });
+
+  it("still cycles the declared column itself asc, desc, off", async () => {
+    renderPage();
+    await screen.findByText("Guidance Fee");
+
+    clickSortHeader("Service");
+
+    await waitFor(() =>
+      expect(lastRequest().sorts).toEqual([
+        { key: "service_name", direction: "desc" },
+      ]),
+    );
+
+    clickSortHeader("Service");
+
+    // Off at the table, but `getServicesSold` still floors the wire.
+    await waitFor(() => expect(lastRequest().sorts).toEqual([]));
   });
 });
 

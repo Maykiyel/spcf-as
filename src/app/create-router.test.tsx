@@ -20,9 +20,8 @@ const routeAt = (path: string) =>
 
 describe("createRouter — routes with no sidebar entry", () => {
   it("gates the services-sold breakdown on admin, as its own leaf does", () => {
-    // `/reports/*` is admin-only server-side and 403s a cashier. This route
-    // is not in pages.ts, so it cannot inherit the group's roles and
-    // `ProtectedRoute` has nothing to read unless they are spelled here.
+    // Not in pages.ts, so it inherits no group roles: unless they are
+    // spelled here, `ProtectedRoute` has nothing to read.
     expect(
       (routeAt("/reports/services-sold/:serviceId")?.handle as RouteHandle)
         ?.roles,
@@ -30,9 +29,7 @@ describe("createRouter — routes with no sidebar entry", () => {
   });
 
   it("leaves the transaction detail open to both roles", () => {
-    // The counter-case, so the assertion above is read as a choice rather
-    // than as how every sibling here happens to be configured: a cashier
-    // looking up a receipt they issued is routine.
+    // The counter-case, so the assertion above reads as a choice.
     expect(routeAt("/transactions/:controlId")?.handle).toBeUndefined();
   });
 });

@@ -35,6 +35,9 @@ export function ServicesSoldPage() {
     columns: servicesSoldColumns(current),
     urlKey: SERVICES_SOLD_URL_KEY,
     initialSorts: SERVICES_SOLD_DEFAULT_SORTS,
+    // `service_name` is unique, so a revenue click joining behind it would
+    // reorder nothing.
+    initialSortsAreTotalOrder: true,
     initialFilters,
     // The stricter guard, because every row here links somewhere that
     // requires both dates.

@@ -202,14 +202,14 @@ describe("TransactionReportPage — the rows", () => {
 
     // `cashier_name` is allow-listed here and not on `/transactions`, and
     // the response field is `cashier`; a wrong name is a 422 on first click.
-    // `toContainEqual`, since the declared default sort is still in the list.
+    // Position, not membership: `id` in the declared sort is unique, so a
+    // click that joined behind it would reorder nothing.
     clickSortHeader("Cashier");
 
     await waitFor(() =>
-      expect(lastRequest().sorts).toContainEqual({
-        key: "cashier_name",
-        direction: "asc",
-      }),
+      expect(lastRequest().sorts).toEqual([
+        { key: "cashier_name", direction: "asc" },
+      ]),
     );
   });
 
@@ -221,10 +221,9 @@ describe("TransactionReportPage — the rows", () => {
     clickSortHeader("Payer");
 
     await waitFor(() =>
-      expect(lastRequest().sorts).toContainEqual({
-        key: "customer_name",
-        direction: "asc",
-      }),
+      expect(lastRequest().sorts).toEqual([
+        { key: "customer_name", direction: "asc" },
+      ]),
     );
   });
 });

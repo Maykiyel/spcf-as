@@ -1,3 +1,5 @@
+import { tableParamName } from "@/components/ui/data-table";
+
 /** Each view's table namespace, and so the names of the period params in
  * its URL. Both pages link to each other, so neither spells the other's. */
 export const SERVICES_SOLD_URL_KEY = "services_sold";
@@ -12,8 +14,8 @@ export type ReportPeriod = { from: string | null; to: string | null };
 
 const withPeriod = (path: string, urlKey: string, period: ReportPeriod) => {
   const params = new URLSearchParams();
-  if (period.from) params.set(`${urlKey}_from_date`, period.from);
-  if (period.to) params.set(`${urlKey}_to_date`, period.to);
+  if (period.from) params.set(tableParamName(urlKey, "from_date"), period.from);
+  if (period.to) params.set(tableParamName(urlKey, "to_date"), period.to);
 
   const query = params.toString();
   return query ? `${path}?${query}` : path;

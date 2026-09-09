@@ -393,7 +393,8 @@ though `quantity` is an unsigned integer column.
 **Revenue is `subtotal` on the wire.** That is the sort key and the field
 name, whatever a column calls it on screen.
 
-Filters: `from_date`, `to_date`, both optional and both `Y-m-d`. No
+Filters: `from_date`, `to_date`, both optional and both `Y-m-d`, with
+`to_date` carrying `after_or_equal:filter.from_date` as everywhere else. No
 `search`, no others.
 
 Sorts: `total_quantity`, `subtotal`, `service_name`. **There is no

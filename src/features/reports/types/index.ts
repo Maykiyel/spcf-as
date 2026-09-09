@@ -9,7 +9,7 @@ export type TransactionReportRow = TransactionScalars;
  * service, not a service record. `service` is `whenLoaded`, so the key is
  * absent rather than null if the relation ever fails to load. */
 export type ServiceSoldRow = {
-  service: { id: number; name: string } | null;
+  service?: { id: number; name: string };
   total_quantity: number;
   /** Revenue. `subtotal` is the wire's name for it, and its sort key. */
   subtotal: number;

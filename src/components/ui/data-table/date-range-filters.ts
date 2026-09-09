@@ -5,9 +5,8 @@ import type { TableFilters } from "./types";
 export const dateRangeFiltersUsable = (filters: TableFilters) =>
   Boolean(filters.from_date) === Boolean(filters.to_date);
 
-/** The stricter guard, for the one endpoint that validates both ends as
- * `required` rather than `nullable`: `GET /reports/services-sold/{service}`.
- * An absent range there is a 422 too, not an unfiltered request, so
- * `dateRangeFiltersUsable` would wave through the case that fails. */
+/** The stricter guard: an absent range is a 422 too, which the pair check
+ * above passes. `GET /reports/services-sold/{service}` validates both ends
+ * as `required`. */
 export const dateRangeFiltersRequired = (filters: TableFilters) =>
   Boolean(filters.from_date) && Boolean(filters.to_date);

@@ -30,11 +30,11 @@ import {
  * The transactions behind one service's figure.
  *
  * A route rather than a drawer, so a service and a period together are a
- * link. An id naming no service 404s into the table's own error state.
+ * link. An id that resolves to no service fails into the table's error state.
  */
 export function ServiceBreakdownPage() {
   const serviceId = Number(useParams().serviceId);
-  const { defaults, current } = useReportPeriod(SERVICE_BREAKDOWN_URL_KEY);
+  const { defaults } = useReportPeriod(SERVICE_BREAKDOWN_URL_KEY);
 
   // Named per service, since the identifier is in the path.
   const queryFn = useMemo(() => getServiceBreakdown(serviceId), [serviceId]);
@@ -50,6 +50,8 @@ export function ServiceBreakdownPage() {
     columns: serviceBreakdownColumns,
     urlKey: SERVICE_BREAKDOWN_URL_KEY,
     initialSorts: SERVICE_BREAKDOWN_DEFAULT_SORTS,
+    // `id` is unique, so every other header would be inert behind it.
+    initialSortsAreTotalOrder: true,
     initialFilters,
     // Both dates are `required` here, so an absent range is a 422 rather
     // than an unfiltered request.
@@ -71,7 +73,13 @@ export function ServiceBreakdownPage() {
   return (
     <Stack gap="md">
       <Group>
-        <Anchor component={Link} to={servicesSoldPath(current)}>
+        <Anchor
+          component={Link}
+          to={servicesSoldPath({
+            from: tableState.filters.from_date,
+            to: tableState.filters.to_date,
+          })}
+        >
           <Group gap={4} wrap="nowrap">
             <IconArrowLeft size={16} />
             Back to Services Sold

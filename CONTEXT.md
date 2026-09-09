@@ -186,6 +186,14 @@ still holds under a revenue sort and under the unsorted state the header can
 reach. Alphabetical is also the better default to arrive on, there being no
 search box to find a service with.
 
+**Declaring it alone was not enough, and that surfaced a table-tier bug.**
+A declared sort used to sit at priority 1 while a clicked column joined
+behind it, so a unique declared key made every other header inert: clicking
+Revenue reordered nothing. `sortsToExtend` now has the first click supersede
+a declared default instead. The Transactions Report had the same defect for
+the same reason, its `id` tiebreaker being unique, and is fixed by the same
+change.
+
 Its filter surface is a date range and nothing else; neither endpoint here
 allow-lists a search or any other filter.
 _Avoid_: Individual Item Report (the old name, wrong on the glossary), item
