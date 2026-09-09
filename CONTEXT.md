@@ -176,23 +176,24 @@ unfiltered summary would render rows the API rejects before the click became
 a UI problem. Clearing the range therefore returns to the current month
 rather than to an unfiltered view.
 
-**It always sends a sort, and always includes `service_name`.** The endpoint
-is a grouped aggregate with no `defaultSort`, so an unsorted request
-paginates unstably. `service_name` is the only allow-listed key that is
-unique, so it is the only one that orders the rows completely; revenue and
-quantity both tie freely and several services sit at zero in any period.
-`getServicesSold` appends it rather than the page merely declaring it, so it
-still holds under a revenue sort and under the unsorted state the header can
-reach. Alphabetical is also the better default to arrive on, there being no
-search box to find a service with.
+**It opens sorted by service name ascending**, which the endpoint
+allow-lists and which is unique, so it orders the rows completely.
+Alphabetical is the right default here because there is no search box, so
+finding a service means scanning, and scanning by name beats scanning by
+revenue rank. Ranking by either number is one header click away.
 
-**Declaring it alone was not enough, and that surfaced a table-tier bug.**
-A declared sort used to sit at priority 1 while a clicked column joined
-behind it, so a unique declared key made every other header inert: clicking
-Revenue reordered nothing. `sortsToExtend` now has the first click supersede
-a declared default instead. The Transactions Report had the same defect for
-the same reason, its `id` tiebreaker being unique, and is fixed by the same
-change.
+**Page stability is the endpoint's job, not this page's.** Revenue and
+quantity both tie freely, and for a while this page appended `service_name`
+to every request to keep paging deterministic. Backend `0428e2c` made the
+endpoint order by `service_id` unconditionally, so that append is gone. See
+`BACKEND_NOTES.md` for what it was working around.
+
+**A unique declared sort surfaced a table-tier bug.** A declared sort used
+to sit at priority 1 while a clicked column joined behind it, so a unique
+declared key made every other header inert: clicking Revenue reordered
+nothing. `sortsToExtend` now has the first click supersede a declared
+default instead. The Transactions Report had the same defect for the same
+reason, its `id` tiebreaker being unique, and is fixed by the same change.
 
 Its filter surface is a date range and nothing else; neither endpoint here
 allow-lists a search or any other filter.

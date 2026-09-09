@@ -21,27 +21,22 @@ Any second consumer of sort behavior that isn't gated by `nextSorts` (a
 future direct API integration, a bulk export tool, etc.) needs its own cap
 — this one doesn't travel with the request.
 
-## Amendment (#65): a list adapter may now exceed the cap deliberately
+## Amendment (#65): a client tiebreaker was added, then removed again
 
-`getServicesSold` appends `service_name` to whatever sorts it is handed,
-so a table already holding two of them sends three keys on the wire. That
-is the "second consumer not gated by `nextSorts`" the paragraph above
-predicted, arriving from inside this frontend rather than outside it.
+`/reports/services-sold` groups transaction items and had no ordering of
+its own, so paginating a sort that ties repeated rows on one page and
+skipped them on another. `getServicesSold` briefly appended `service_name`
+to every request to stabilise it, which put three sort keys on the wire
+whenever the user already held two, and so broke the claim above that a
+request exceeding the cap never reaches the backend.
 
-It is allowed, and the cap is not raised to cover it. The two are
-different limits that happened to share a number. `MAX_SORT_COLUMNS` is a
-UX limit on how many sorts a user can hold in their head and manage from
-the headers, and appending a key no header shows costs the user nothing.
-The wire has no such limit: spatie/laravel-query-builder takes any number
-of allow-listed keys.
+Backend `0428e2c` fixed it at the source with an unconditional
+`orderBy('service_id')` after `allowedSorts()`, so the client append is
+gone and this ADR stands unamended in practice.
 
-`/reports/services-sold` is a grouped aggregate with **no `defaultSort`**,
-so an unsorted or tie-heavy request paginates unstably, repeating rows on
-one page and skipping them on another. `service_name` is the only
-allow-listed key on it that is unique. Stabilising that endpoint therefore
-needs a key on every request that the header budget cannot be relied on to
-carry.
-
-The rule this sets for whoever comes next: a sort key appended by an
-adapter for **correctness** does not count against the UI cap. A sort key
-a user can see and cycle does.
+Recorded because the question will come back. If a client ever has to
+append a sort key for correctness again, the answer that held here was
+that it is allowed and the cap is not raised to cover it. They are two
+different limits sharing a number: `MAX_SORT_COLUMNS` bounds what a user
+can juggle from the headers, and a key no header shows costs the user
+nothing. Prefer fixing the endpoint, as happened here.

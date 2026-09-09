@@ -14,7 +14,6 @@ const params = (sorts: SortEntry[]): ServerTableParams => ({
 });
 
 const sentParams = () => mockGet.mock.calls.at(-1)![1]!.params;
-const sentSort = () => sentParams().sort;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -26,61 +25,29 @@ beforeEach(() => {
   });
 });
 
-describe("getServicesSold — the sort that reaches the wire", () => {
-  it("sends the name sort alone when the user has turned sorting off", async () => {
-    // `sort=none` in the URL reaches the adapter as an empty array, and an
-    // unsorted grouped aggregate is the instability #65 exists to fix.
-    await getServicesSold(params([]));
-
-    expect(sentSort()).toBe("service_name");
-  });
-
-  it("appends the name tiebreaker under a revenue sort", async () => {
-    // `subtotal` ties freely and several services sit at zero in any
-    // period, so revenue alone does not order the rows.
+describe("getServicesSold", () => {
+  it("sends the sort the table asked for, and nothing else", async () => {
+    // The endpoint appends its own `service_id` tiebreaker as of backend
+    // `0428e2c`, so the client no longer adds one.
     await getServicesSold(params([{ key: "subtotal", direction: "desc" }]));
 
-    expect(sentSort()).toBe("-subtotal,service_name");
+    expect(sentParams().sort).toBe("-subtotal");
   });
 
-  it("appends the name tiebreaker under a quantity sort", async () => {
-    await getServicesSold(
-      params([{ key: "total_quantity", direction: "desc" }]),
-    );
-
-    expect(sentSort()).toBe("-total_quantity,service_name");
-  });
-
-  it("does not duplicate a name sort the user already chose", async () => {
-    await getServicesSold(
-      params([{ key: "service_name", direction: "desc" }]),
-    );
-
-    expect(sentSort()).toBe("-service_name");
-  });
-
-  it("keeps the user's name sort first when they added a second column", async () => {
-    // The tiebreaker is a floor, not a reordering: what the header shows as
-    // priority 1 has to stay priority 1 on the wire.
-    await getServicesSold(
-      params([
-        { key: "service_name", direction: "asc" },
-        { key: "subtotal", direction: "desc" },
-      ]),
-    );
-
-    expect(sentSort()).toBe("service_name,-subtotal");
-  });
-});
-
-describe("getServicesSold — the rest of the request", () => {
-  it("sends the period as filter params and asks for the services key", async () => {
+  it("sends no sort at all when the user has turned sorting off", async () => {
     await getServicesSold(params([]));
+
+    expect(sentParams().sort).toBeUndefined();
+  });
+
+  it("sends the period as filter params and asks for the services key", async () => {
+    await getServicesSold(params([{ key: "service_name", direction: "asc" }]));
 
     expect(mockGet).toHaveBeenCalledWith("/reports/services-sold", {
       params: expect.objectContaining({
         page: 1,
         per_page: 25,
+        sort: "service_name",
         "filter[from_date]": "2026-09-01",
         "filter[to_date]": "2026-09-30",
       }),

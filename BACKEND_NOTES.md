@@ -412,13 +412,21 @@ Filters: `from_date`, `to_date`, both optional and both `Y-m-d`, with
 `to_date` carrying `after_or_equal:filter.from_date` as everywhere else. No
 `search`, no others.
 
-Sorts: `total_quantity`, `subtotal`, `service_name`. **There is no
-`defaultSort`.** An unsorted request returns rows in whatever order the
-database produces, and paginating that repeats rows on one page and skips
-them on another. `service_name` is the only allow-listed key that is
-unique, so it is the only one that is a total order; the client sends it as
-a tiebreaker under every sort. Asked for server-side and not landed as of
-`1165499`.
+Sorts: `total_quantity`, `subtotal`, `service_name`. No `defaultSort`, but
+**`orderBy('service_id')` is applied unconditionally** after
+`allowedSorts()`, so every request ends in a unique key and pages are
+stable under any sort.
+
+That landed in `0428e2c`. Before it, the endpoint had no ordering of its
+own and both aggregate sorts tie freely, so paginating one could return a
+service on two pages and another on none while `pagination.total` stayed
+correct. Reproduced on June 2026 data at several page sizes, then verified
+fixed at all of them.
+
+**A `defaultSort` would not have fixed it**, and was tried first in
+`ab4c999`. `SortsQuery::defaultSorts()` returns early when the request
+carries any `sort`, so it is skipped for exactly the requests that tie.
+`orderBy` always applies, which is the difference.
 
 **`service_name` is a custom sort that may be a 500 under MySQL.**
 `ServiceNameSort` does `leftJoin('services', ...)` then
