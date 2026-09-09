@@ -393,6 +393,21 @@ though `quantity` is an unsigned integer column.
 **Revenue is `subtotal` on the wire.** That is the sort key and the field
 name, whatever a column calls it on screen.
 
+**A service with no sales in the period is absent, not zero.** The query
+groups `transaction_items`, so a service only produces a row by appearing
+on a completed transaction inside the range. The report is therefore
+"services that sold", not "every service, with its sales". #65 assumed
+otherwise in passing, arguing that "several services will sit at zero for
+any given period"; they do not appear at all. The conclusion that argument
+supported still holds, and more strongly: `service_name` being unique makes
+it a total order, and there are fewer ties than the issue expected.
+
+**The `service_name` sort works.** Verified against the real database on
+2026-09-09: rows came back strictly alphabetical. The `ONLY_FULL_GROUP_BY`
+risk recorded below did not materialise, so `strict` mode either permits
+the ordering or is not in force on this deployment. Left recorded rather
+than deleted, since it is unverified on any other MySQL configuration.
+
 Filters: `from_date`, `to_date`, both optional and both `Y-m-d`, with
 `to_date` carrying `after_or_equal:filter.from_date` as everywhere else. No
 `search`, no others.
@@ -411,8 +426,10 @@ a tiebreaker under every sort. Asked for server-side and not landed as of
 `transaction_items.service_id`. The MySQL connection is configured
 `strict => true`, so `ONLY_FULL_GROUP_BY` is on, and MySQL does not deduce
 functional dependency through the nullable side of an outer join.
-**Unverified**: it has not been run against a MySQL database from this
-application. Check it before trusting the sort.
+**It did not fire** against the deployment this app talks to, checked on
+2026-09-09: the sort returns rows in name order. Recorded because the
+reasoning still applies to a stricter MySQL, so treat it as a thing to
+re-check if the sort ever 500s rather than as a live defect.
 
 ### The drill-down
 
