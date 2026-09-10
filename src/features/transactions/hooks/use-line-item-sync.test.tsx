@@ -490,13 +490,22 @@ describe("useLineItemSync — isSyncing", () => {
   });
 
   it("is true while a quantity PATCH is scheduled or in flight", async () => {
-    mockUpdateTransactionItemQuantity.mockResolvedValue(resolvedItem({ quantity: 5, subtotal: 1000 }));
+    const quantityUpdate = deferred<TransactionItemDTO>();
+    mockUpdateTransactionItemQuantity.mockReturnValue(quantityUpdate.promise);
 
     const { result } = await renderWithSettledLine();
     act(() => result.current.setLineItemQuantity("501", 5));
     expect(result.current.isSyncing).toBe(true);
 
-    await advance(400);
+    await advance(400); // fires the PATCH — now in flight, still unresolved
+
+    // A pending key that cleared when the debounce fired would leave
+    // Confirm enabled over an outstanding PATCH. #113 changed that.
+    expect(mockUpdateTransactionItemQuantity).toHaveBeenCalled();
+    expect(result.current.isSyncing).toBe(true);
+
+    quantityUpdate.resolve(resolvedItem({ quantity: 5, subtotal: 1000 }));
+    await flush();
 
     expect(result.current.isSyncing).toBe(false);
   });
