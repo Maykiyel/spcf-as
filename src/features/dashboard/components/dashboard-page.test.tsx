@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { MemoryRouter } from "react-router";
-import { fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router";
+import { fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { useAuthStore } from "@/stores/auth-store";
@@ -9,6 +9,8 @@ import type { AuthUser } from "@/features/auth/types";
 import { getDashboardToday } from "../api/get-dashboard-today";
 import { getCashierEarnings } from "../api/get-cashier-earnings";
 import { getMonthlyEarnings } from "../api/get-monthly-earnings";
+import { getTransactions } from "@/features/transactions/api/get-transactions";
+import type { TransactionListRow } from "@/features/transactions/types";
 import { DashboardPage } from "./dashboard-page";
 
 // Seam: the page component, fetchers mocked and the auth store stubbed to
@@ -29,6 +31,16 @@ const mockGetCashierEarnings = vi.mocked(getCashierEarnings);
 
 vi.mock("../api/get-monthly-earnings");
 const mockGetMonthlyEarnings = vi.mocked(getMonthlyEarnings);
+
+vi.mock("@/features/transactions/api/get-transactions", async () => {
+  // Factory again, for the same reason: this module's sort plan is what
+  // makes Date the declared sort.
+  const actual = await vi.importActual<
+    typeof import("@/features/transactions/api/get-transactions")
+  >("@/features/transactions/api/get-transactions");
+  return { ...actual, getTransactions: vi.fn() };
+});
+const mockGetTransactions = vi.mocked(getTransactions);
 
 // recharts measures its container, and jsdom reports every element as
 // zero by zero, so the real chart renders empty whatever it is handed.
@@ -81,10 +93,25 @@ function signIn(user: AuthUser) {
   useAuthStore.setState({ user, status: "authenticated" });
 }
 
+/** `MemoryRouter` keeps its history off `window.location`, so a navigation
+ * has to be read through the router — `state` included. */
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <span
+      data-testid="location"
+      data-from={(location.state as { from?: string } | null)?.from ?? ""}
+    >
+      {location.pathname}
+    </span>
+  );
+}
+
 function renderPage(url = "/dashboard") {
   return renderWithQueryClient(
     <MemoryRouter initialEntries={[url]}>
       <DashboardPage />
+      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -106,6 +133,34 @@ const monthlyEarnings = Array.from({ length: 12 }, (_, index) => ({
   month: `${CURRENT_YEAR}-${String(index + 1).padStart(2, "0")}`,
   total_earnings: index === 0 ? 4500 : index === 7 ? 1200 : 0,
 }));
+
+/** The second row is cancelled deliberately: the section shows those. */
+const recentTransactions: TransactionListRow[] = [
+  {
+    control_id: 1201,
+    cashier: { id: 7, full_name: "Jaypee Pahayahay" },
+    series_number: 4501,
+    customer_name: "Juan Dela Cruz",
+    total: 1500,
+    amount_paid: 2000,
+    change_amount: 500,
+    status: "completed",
+    date: "2026-08-24T06:30:00.000000Z",
+    items: [{ id: 11, name: "SHS GRADUATION FEE" }],
+  },
+  {
+    control_id: 1202,
+    cashier: { id: 7, full_name: "Jaypee Pahayahay" },
+    series_number: null,
+    customer_name: "Maria Santos",
+    total: 300,
+    amount_paid: 0,
+    change_amount: 0,
+    status: "cancelled",
+    date: "2026-08-23T01:05:00.000000Z",
+    items: [{ id: 12, name: "ID REPLACEMENT" }],
+  },
+];
 
 /** The last params the table's fetcher was called with. `keepPreviousData`
  * means the previous call's rows stay on screen while the next request is
@@ -136,6 +191,10 @@ describe("DashboardPage", () => {
     });
     mockGetCashierEarnings.mockResolvedValue(cashierEarnings);
     mockGetMonthlyEarnings.mockResolvedValue(monthlyEarnings);
+    mockGetTransactions.mockResolvedValue({
+      data: recentTransactions,
+      total: 2,
+    });
   });
 
   describe("today's figures", () => {
@@ -409,6 +468,104 @@ describe("DashboardPage", () => {
       ).toBeInTheDocument();
       expect(screen.getByText("₱1,250.00")).toBeInTheDocument();
       expect(screen.getByText("Jaypee Pahayahay")).toBeInTheDocument();
+    });
+  });
+
+  describe("recent transactions", () => {
+    it("shows a cashier their own most recent transactions", async () => {
+      signIn(cashier);
+      renderPage();
+
+      expect(await screen.findByText("Juan Dela Cruz")).toBeInTheDocument();
+      expect(screen.getByText("Recent Transactions")).toBeInTheDocument();
+      expect(screen.getByText("Maria Santos")).toBeInTheDocument();
+    });
+
+    it("asks once for five rows, newest first, and filters nothing", async () => {
+      signIn(cashier);
+      renderPage();
+
+      await screen.findByText("Juan Dela Cruz");
+      expect(mockGetTransactions).toHaveBeenCalledTimes(1);
+      // The whole object: a stray filter would not change a row on screen.
+      expect(mockGetTransactions).toHaveBeenCalledWith({
+        page: 1,
+        per_page: 5,
+        search: undefined,
+        sorts: [{ key: "created_at", direction: "desc" }],
+        filters: {},
+      });
+    });
+
+    it("trims the columns to what a cashier's own row needs", async () => {
+      signIn(cashier);
+      renderPage();
+
+      await screen.findByText("Juan Dela Cruz");
+      // No Cashier (every row is the viewer) and no Items (the widest).
+      expect(
+        within(screen.getByRole("table"))
+          .getAllByRole("columnheader")
+          .map((header) => header.textContent),
+      ).toEqual([
+        "Date",
+        "Control ID",
+        "Series No.",
+        "Payer",
+        "Total",
+        "Status",
+      ]);
+    });
+
+    it("opens the transaction whose row was clicked", async () => {
+      signIn(cashier);
+      renderPage();
+
+      fireEvent.click(await screen.findByText("Juan Dela Cruz"));
+
+      const location = screen.getByTestId("location");
+      expect(location).toHaveTextContent("/transactions/1201");
+      // `dashboard`, so the detail page's Back names where it lands. #129.
+      expect(location).toHaveAttribute("data-from", "dashboard");
+    });
+
+    it("shows its own error message without blanking the tiles above it", async () => {
+      mockGetTransactions.mockRejectedValue(new Error("boom"));
+      signIn(cashier);
+      renderPage();
+
+      expect(
+        await screen.findByText("Couldn't load data. Please try again."),
+      ).toBeInTheDocument();
+      expect(screen.getByText("₱1,250.00")).toBeInTheDocument();
+      expect(screen.getByText("8")).toBeInTheDocument();
+    });
+
+    it("links out to the full list", async () => {
+      signIn(cashier);
+      renderPage();
+
+      await screen.findByText("Juan Dela Cruz");
+      expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute(
+        "href",
+        "/transactions/receipts",
+      );
+    });
+
+    it("does not show an admin a section about their own rows", async () => {
+      signIn(admin);
+      renderPage();
+
+      await screen.findByText("Jaypee Pahayahay");
+      expect(screen.queryByText("Recent Transactions")).not.toBeInTheDocument();
+    });
+
+    it("does not request transactions for an admin", async () => {
+      signIn(admin);
+      renderPage();
+
+      await screen.findByText("Jaypee Pahayahay");
+      expect(mockGetTransactions).not.toHaveBeenCalled();
     });
   });
 });

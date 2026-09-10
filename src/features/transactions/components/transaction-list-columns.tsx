@@ -15,14 +15,18 @@ type TransactionListColumnsOptions = {
   /** `false` where the page has pinned the status, since a column showing
    * one word on every row carries no information. */
   includeStatus: boolean;
+  /** `false` on a table too narrow to spend the widest column on a summary
+   * the detail page carries in full. */
+  includeItems: boolean;
   /** A trailing Actions column's cell. Omitted rather than passed empty:
    * an "Actions" header over blank cells reads as a render failure. */
   actions?: (row: TransactionListRow) => ReactNode;
 };
 
 /**
- * The columns of a `/transactions` list, shared by the receipts list and
- * the Void page, which differ only in the three options above.
+ * The columns of a `/transactions` list, shared by the receipts list, the
+ * Void page and the dashboard's Recent Transactions section, which differ
+ * only in the options above.
  *
  * Only the four keys `TRANSACTIONS_SORT_PLAN` allow-lists are `sortable`;
  * anything else is a 422 on the first header click. Two are named through
@@ -31,6 +35,7 @@ type TransactionListColumnsOptions = {
 export function transactionListColumns({
   includeCashier,
   includeStatus,
+  includeItems,
   actions,
 }: TransactionListColumnsOptions): ColumnDef<TransactionListRow>[] {
   const columns: ColumnDef<TransactionListRow>[] = [
@@ -74,18 +79,19 @@ export function transactionListColumns({
     });
   }
 
-  columns.push(
-    {
+  if (includeItems) {
+    columns.push({
       field: "items",
       header: "Items",
       render: (row) => <TransactionItemNamesCell items={row.items} />,
-    },
-    {
-      field: "total",
-      header: "Total",
-      render: (row) => (row.total === null ? "—" : formatCurrency(row.total)),
-    },
-  );
+    });
+  }
+
+  columns.push({
+    field: "total",
+    header: "Total",
+    render: (row) => (row.total === null ? "—" : formatCurrency(row.total)),
+  });
 
   if (includeStatus) {
     columns.push({

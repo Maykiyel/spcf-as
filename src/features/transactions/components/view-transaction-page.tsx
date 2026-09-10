@@ -17,7 +17,15 @@ const TRANSACTIONS_LIST_PATH = "/transactions/receipts";
 /** Where this page was opened from, if the caller said. Absent for a
  * bookmark, a pasted link, or a refresh — `location.state` does not
  * survive one. */
-type ViewTransactionFrom = { from?: "list" | "new" };
+type ViewTransactionFrom = { from?: "list" | "new" | "dashboard" };
+
+/** Two origins pop history; only the label differs, and it has to, since
+ * it names where the click actually lands. */
+const BACK_LABEL: Record<string, string> = {
+  dashboard: "Back to Dashboard",
+  list: "Back to Transactions",
+  unknown: "Back to Transactions",
+};
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
@@ -41,7 +49,9 @@ export function ViewTransactionPage() {
             // -1 for a real history entry, so the list comes back on the
             // page and filters the user left it on. A bookmark has no such
             // entry, so it gets the list's own path instead.
-            backTo === "list" ? navigate(-1) : navigate(TRANSACTIONS_LIST_PATH)
+            backTo === "unknown"
+              ? navigate(TRANSACTIONS_LIST_PATH)
+              : navigate(-1)
           }
           mb="xs"
         >
@@ -50,7 +60,7 @@ export function ViewTransactionPage() {
             c="dimmed"
             style={{ display: "flex", alignItems: "center", gap: 4 }}
           >
-            <IconArrowLeft size={14} /> Back to Transactions
+            <IconArrowLeft size={14} /> {BACK_LABEL[backTo]}
           </Text>
         </UnstyledButton>
       )}
