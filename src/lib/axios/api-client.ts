@@ -67,9 +67,6 @@ export const getCsrfCookie = () =>
 
 let csrfRefreshPromise: Promise<unknown> | null = null;
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => config);
-
-// Response interceptor
 api.interceptors.response.use(handleResponseSuccess, handleResponseError);
 
 /** Latched so a page with several requests in flight reports the
@@ -126,7 +123,6 @@ export async function handleResponseError(error: AxiosError) {
   return Promise.reject(error);
 }
 
-// Wrapper functions
 export const apiClient = {
   get: <TResponse>(
     url: string,

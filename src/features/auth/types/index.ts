@@ -1,10 +1,5 @@
 export type Role = "admin" | "cashier";
 
-export type LoginCredentials = {
-  username: string;
-  password: string;
-};
-
 /** The signed-in user, as `GET /users/me` and `POST /login` send them.
  *
  * No `email`: backend `4955f19` dropped the column and the resource field.
@@ -16,5 +11,5 @@ export type AuthUser = {
   last_name: string;
   full_name: string;
   user_name: string;
-  role: Role; // was: string
+  role: Role;
 };

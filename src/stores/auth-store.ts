@@ -11,7 +11,6 @@ type AuthState = {
   setUnauthenticated: () => void;
 };
 
-
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   status: "idle",
