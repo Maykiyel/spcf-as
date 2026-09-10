@@ -78,6 +78,52 @@ consumer — tables and widgets alike — picks it up automatically.
 
 ---
 
+## ConfirmModal
+
+A confirmation over an action that goes to the server. Owns the whole dialog —
+the `Modal`, the footer, and both buttons — so a caller supplies only the body.
+
+```tsx
+<ConfirmModal
+  opened={confirmOpen}
+  onClose={closeConfirm}
+  title="Delete item code"
+  confirmLabel="Delete"
+  onConfirm={() => deleteMutation.mutate()}
+  loading={deleteMutation.isPending}
+>
+  <Text size="sm">Delete <strong>{itemCode.name}</strong>? This can't be undone.</Text>
+</ConfirmModal>
+```
+
+| Prop | Does |
+| --- | --- |
+| `loading` | The mutation is out. Disables both buttons and **blocks every route out of the dialog** — overlay click, Escape, and the close button. |
+| `confirmLabel` | Names the action, not "OK". It is the last thing read before something irreversible. |
+| `onConfirm` | Fires the mutation. The component does not close on confirm; the caller closes from its own `onSuccess`/`onError`, which is what keeps the dialog up while the request is out. |
+
+**Why it owns the `Modal` rather than just the footer.** A footer-only component
+would cover more call sites — including the form modals — but `closeOnClickOutside`
+is a prop on `Modal`, so only something owning the `Modal` can guarantee a dialog
+is not dismissable mid-request. Before this existed, three of six confirmation
+dialogs guarded the overlay and three did not, none guarded Escape or the close
+button, and nothing had decided any of it. The guarantee is the reason the seam
+is here.
+
+**Two dialogs deliberately stay on the base `Modal`**, and both already behave
+correctly, so neither is a compromise:
+
+- **Delete account** is not purely a confirm. When the server refuses, it swaps
+  the body for an `Alert`, relabels cancel to "Close", and drops the confirm
+  button entirely. Forcing it through this interface would mean an escape hatch
+  for one caller.
+- **Create account** is a form modal: its buttons are `type="submit"` inside a
+  `<form>`, so confirming means submitting rather than calling a handler.
+
+Revisit the first if the refusal pattern turns up a second time.
+
+---
+
 ## DataTable
 
 A compound component for tabular data: card wrapper, toolbar (composed from
