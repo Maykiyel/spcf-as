@@ -27,9 +27,9 @@ export const getSeriesReceipts = createListAdapter<
   selectRow: ({ account, ...row }) => ({ ...row, cashier: account }),
 });
 
-/** Read from `SeriesReceiptController::index` at backend `0428e2c`: `from`,
+/** Read from `SeriesReceiptController::index` at backend `bfe249f`: `from`,
  * `to`, `remaining_sheets`, and `account` as an `AllowedSort::custom` over
- * the assigned cashier's name. No `defaultSort`. `account` is the wire's
+ * the assigned cashier's name. Default `from`. `account` is the wire's
  * word for the cashier and stays the sort key; the column reaches it
  * through `sortKey` rather than by being named for it. */
 export const SERIES_RECEIPTS_SORT_PLAN: SortPlan = {
