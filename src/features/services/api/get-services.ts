@@ -8,9 +8,10 @@ export const getServices = createListAdapter<Service>("/services", "services", {
   supportsSearch: true,
 });
 
-/** Read from `ServiceController::index` at backend `0428e2c`: `name`,
+/** Read from `ServiceController::index` at backend `bfe249f`: `name`,
  * `price`, and `item_code` as an `AllowedSort::custom` over the parent's
- * name. No `defaultSort`. */
+ * name. Default `name`, with `orderBy('id')` behind it since backend
+ * `7fb5fc1`, so paging is stable without this plan declaring anything. */
 export const SERVICES_SORT_PLAN: SortPlan = {
   allowed: ["item_code", "name", "price"],
 };

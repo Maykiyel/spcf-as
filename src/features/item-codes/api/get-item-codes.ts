@@ -9,8 +9,8 @@ export const getItemCodes = createListAdapter<ItemCode>(
   { supportsSearch: true },
 );
 
-/** Read from `ItemCodeController::index` at backend `0428e2c`:
- * `allowedSorts('name', 'description')`, no `defaultSort`. `description`
+/** Read from `ItemCodeController::index` at backend `bfe249f`:
+ * `allowedSorts('name', 'description')`, default `name`. `description`
  * was missing here until the allow-list was checked against the source, so
  * the Description column offered no sort the endpoint would have served. */
 export const ITEM_CODES_SORT_PLAN: SortPlan = {

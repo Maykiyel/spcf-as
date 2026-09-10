@@ -4,7 +4,7 @@ Reference for the API this frontend talks to. Describes **what the backend
 actually returns and enforces** — not why it was built that way.
 
 Source: `spcf-as-backend` (Laravel 12 + Sanctum + spatie/laravel-permission
-+ spatie/laravel-query-builder), read at commit `1165499` (2026-09-09).
++ spatie/laravel-query-builder), read at commit `bfe249f` (2026-09-10).
 That repo belongs to the backend developer and is read-only from here; this
 file is a transcription of it. When it changes, re-read and update this.
 
@@ -229,9 +229,11 @@ parameter and returned a flat array. All four are gone.
 - **Sorts** are `first_name`, `last_name`, `full_name`, `username`.
   `email` and `created_at` are gone from the allow list.
 - **No `filter[search]`**, still.
-- **No default sort**, so an unsorted request returns rows in whatever
-  order the database gives, which is not stable across pages. The Manage
-  Accounts table sends `full_name` rather than relying on it.
+- **Default sort is `full_name`, with `orderBy('id')` behind it** as of
+  `7fb5fc1`. `full_name` is a virtual `CONCAT` column and carries no unique
+  index, so it ties freely; the `id` is what actually makes paging stable.
+  See **Ordering** below for why the tiebreaker is an `orderBy` and not part
+  of the default.
 
 `GET /cashiers` is new and unpaginated: an array of `{id, full_name}`
 ordered by `full_name`, in the envelope. It takes an optional
@@ -356,12 +358,13 @@ identifier that is not a cashier is a 422), `from_date`, `to_date`. All
 optional. No `search`.
 
 Sorts: `created_at`, `id`, `customer_name`, `total`, `amount_paid`,
-`change_amount`, `cashier_name`. Default `-created_at, id`.
+`change_amount`, `cashier_name`. Default `-created_at`, with
+`orderBy('id')` behind it as of `7fb5fc1`.
 
 **Any `sort` param suppresses that default outright** rather than adding to
-it: `defaultSorts()` returns early when the request carries sorts. A client
-declaring an initial sort therefore has to declare the `id` tiebreaker too,
-or page order is undefined for rows sharing a `created_at`.
+it: `defaultSorts()` returns early when the request carries sorts. The `id`
+is an `orderBy` rather than the second half of the default for exactly that
+reason, so it survives a header click. See **Ordering and page stability**.
 
 **Not the same allow-list as `/transactions`**: the payer sort is
 `customer_name` here and `customer` there, `cashier_name` is allowed here
@@ -409,32 +412,30 @@ Filters: `from_date`, `to_date`, both optional and both `Y-m-d`, with
 `to_date` carrying `after_or_equal:filter.from_date` as everywhere else. No
 `search`, no others.
 
-Sorts: `total_quantity`, `subtotal`, `service_name`. No `defaultSort`, but
-**`orderBy('service_id')` is applied unconditionally** after
-`allowedSorts()`, so every request ends in a unique key and pages are
-stable under any sort.
+Sorts: `total_quantity`, `subtotal`, `service_name`, default `service_name`,
+with **`orderBy('transaction_items.service_id')` applied unconditionally**
+after `allowedSorts()`, so every request ends in a unique key and pages are
+stable under any sort. See **Ordering and page stability**.
 
-That landed in `0428e2c`. Before it, the endpoint had no ordering of its
-own and both aggregate sorts tie freely, so paginating one could return a
-service on two pages and another on none while `pagination.total` stayed
-correct. Reproduced on June 2026 data at several page sizes, then verified
-fixed at all of them.
+The `orderBy` landed in `0428e2c`. Before it, the endpoint had no ordering
+of its own and both aggregate sorts tie freely, so paginating one could
+return a service on two pages and another on none while `pagination.total`
+stayed correct. Reproduced on June 2026 data at several page sizes, then
+verified fixed at all of them.
 
-**A `defaultSort` would not have fixed it**, and was tried first in
-`ab4c999`. `SortsQuery::defaultSorts()` returns early when the request
-carries any `sort`, so it is skipped for exactly the requests that tie.
-`orderBy` always applies, which is the difference.
+**`service_name` is a plain allow-listed sort, not a custom one**, as of
+`bfe249f`. The `leftJoin('services', ...)` moved out of the deleted
+`ServiceNameSort` class and up into the base query, which now selects
+`services.name as service_name` and groups by
+`transaction_items.service_id, services.name`. So `service_name` is a real
+select alias and `ORDER BY service_name` resolves against it.
 
-**`service_name` is a custom sort that may be a 500 under MySQL.**
-`ServiceNameSort` does `leftJoin('services', ...)` then
-`ORDER BY services.name`, while the query groups by
-`transaction_items.service_id`. The MySQL connection is configured
-`strict => true`, so `ONLY_FULL_GROUP_BY` is on, and MySQL does not deduce
-functional dependency through the nullable side of an outer join.
-**It did not fire** against the deployment this app talks to, checked on
-2026-09-09: the sort returns rows in name order. Recorded because the
-reasoning still applies to a stricter MySQL, so treat it as a thing to
-re-check if the sort ever 500s rather than as a live defect.
+That also retired an `ONLY_FULL_GROUP_BY` risk this file used to record.
+The old custom sort ordered by `services.name` while grouping only by
+`transaction_items.service_id`, and MySQL does not deduce functional
+dependency through the nullable side of an outer join — it never fired in
+practice, and the explicit `groupBy` on both columns now removes the
+reasoning behind it as well.
 
 ### The drill-down
 
@@ -452,34 +453,86 @@ request, so the looser "both ends agree" guard the other date-filtered
 tables use is not enough.
 
 Sorts: `created_at`, `id`, `series_number`, `customer_name`, `total`,
-`cashier_name`. Default `id`.
+`cashier_name`. Default `-created_at`, with `orderBy('id')` behind it as of
+`7fb5fc1`. The default was `id` until then.
 
 **A third distinct allow-list.** It allows `series_number`, which
 `/reports/transactions` does not, and allows neither `amount_paid` nor
-`change_amount`, which that endpoint does. Its default is a single key and
-needs no tiebreaker, `id` being unique.
+`change_amount`, which that endpoint does.
 
 ## Catalog and series-receipt sorts
 
-Read directly from the controllers at backend `0428e2c`, not inferred from
+Read directly from the controllers at backend `bfe249f`, not inferred from
 what the frontend happens to send. These three had no entry here until the
 sort plans were written and the allow-lists checked against the source.
 
-`GET /item-codes` — `allowedSorts('name', 'description')`. No `defaultSort`.
+`GET /item-codes` — `allowedSorts('name', 'description')`, default `name`.
 **`description` is allow-listed**, which the frontend did not know: the
 catalog's Description column offered no sort the endpoint would have served.
+Neither column is unique.
 
-`GET /services` — `allowedSorts('name', 'price', AllowedSort::custom('item_code', ItemCodeNameSort))`.
-No `defaultSort`. `item_code` sorts by the parent Item code's name, not by a
-column on `services`.
+`GET /services` — `allowedSorts('name', 'price', AllowedSort::custom('item_code', ItemCodeNameSort))`,
+default `name`. `item_code` sorts by the parent Item code's name, not by a
+column on `services`. `services.name` carries a unique index; `price` and
+`item_code` tie freely.
 
-`GET /series-receipts` — `allowedSorts('from', 'to', 'remaining_sheets', AllowedSort::custom('account', SeriesAccountNameSort))`.
-No `defaultSort`. `account` sorts by the assigned cashier's `full_name`; it
+`GET /series-receipts` — `allowedSorts('from', 'to', 'remaining_sheets', AllowedSort::custom('account', SeriesAccountNameSort))`,
+default `from`. `account` sorts by the assigned cashier's `full_name`; it
 is the wire's word for the cashier, and the frontend keeps it as a `sortKey`
-while naming the field `cashier` everywhere else. See CONTEXT.md.
+while naming the field `cashier` everywhere else. See CONTEXT.md. `from` and
+`to` are unique; `remaining_sheets` and `account` are not.
 
-None of the three declares a `defaultSort`, so an unsorted request returns
-rows in whatever order the database gives, which is not stable across pages.
+All three paginate stably regardless, because of the `orderBy` below.
+
+## Ordering and page stability
+
+**Every paginated endpoint ends its `ORDER BY` in a unique key**, as of
+`7fb5fc1` and `bfe249f`. The shape is the same everywhere: a `defaultSort`
+for the order the list opens in, and an unconditional `orderBy` behind it as
+the tiebreaker.
+
+| Endpoint | `defaultSort` | tiebreaker |
+|---|---|---|
+| `GET /item-codes` | `name` | `orderBy('id')` |
+| `GET /services` | `name` | `orderBy('id')` |
+| `GET /series-receipts` | `from` | `orderBy('id')` |
+| `GET /users` | `full_name` | `orderBy('id')` |
+| `GET /transactions` | `-created_at` | `orderBy('id')` |
+| `GET /activity-logs` | `-created_at` | `orderBy('id')` |
+| `GET /reports/transactions` | `-created_at` | `orderBy('id')` |
+| `GET /reports/services-sold/{service}` | `-created_at` | `orderBy('id')` |
+| `GET /reports/cashier-earnings` | `-total_earnings` | `orderBy('id')` |
+| `GET /reports/services-sold` | `service_name` | `orderBy('transaction_items.service_id')` |
+
+**The tiebreaker has to be an `orderBy` and cannot be part of the
+`defaultSort`.** `SortsQuery::defaultSorts()` returns early whenever the
+request carries any `sort` parameter, so a default is skipped for exactly the
+requests a user generates by clicking a column header. `orderBy` always
+applies. That is the difference between `ab4c999`, which added a
+`defaultSort` to services-sold and did not fix it, and `0428e2c`, which used
+`orderBy` and did.
+
+**The unqualified `orderBy('id')` is safe even where a sort joins another
+table.** Three sorts do join — `ItemCodeNameSort` (`item_codes`),
+`SeriesAccountNameSort` (`users`) and `CashierNameSort` (`users`) — and both
+tables in each join have an `id`, so this looks like an ambiguous-column
+error waiting to happen. It is not, because each of those sorts ends with
+`->select('<table>.*')`, and MySQL resolves an unqualified `ORDER BY` name
+against the select list before it looks at the FROM tables. The select list
+only ever holds one `id`. The generated SQL for
+`/reports/transactions?sort=cashier_name` is:
+
+```sql
+select `transactions`.* from `transactions`
+  inner join `users` on `transactions`.`cashier_id` = `users`.`id`
+  where `status` = ? order by `users`.`first_name` asc, `id` asc
+```
+
+Checked in a browser as an admin on 2026-09-10: `/services?sort=item_code`,
+`/series-receipts?sort=account`, `/reports/transactions?sort=cashier_name`
+and `/reports/services-sold/{id}?sort=cashier_name` all return 200. Recorded
+because reading the `ORDER BY` alone makes it look broken, and the `select`
+that resolves it is in a different file.
 
 ## Response shapes
 
