@@ -66,8 +66,6 @@ export function TransactionListPage() {
       {/* The page leads with the filter panel; the toolbar below carries
           the page-size control and nothing else. */}
       <TransactionListFilters
-        filters={tableState.filters}
-        onChange={tableState.setFilters}
         includeCashier={isAdmin}
         includeStatus
       />

@@ -36,10 +36,7 @@ export function TransactionReportPage() {
 
   return (
     <DataTable.Root title="Transactions Report" state={tableState}>
-      <TransactionReportFilters
-        filters={tableState.filters}
-        onChange={tableState.setFilters}
-      />
+      <TransactionReportFilters />
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />

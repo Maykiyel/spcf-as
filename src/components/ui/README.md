@@ -158,10 +158,7 @@ alongside the shared pieces, with no slot prop involved:
 <DataTable.Toolbar>
   <DataTable.PageSize />
   <Divider orientation="vertical" visibleFrom="xs" />
-  <ServiceStatusFilter
-    value={tableState.filters.is_active}
-    onChange={(is_active) => tableState.setFilters({ is_active })}
-  />
+  <ServiceFilterPanel />
   <DataTable.Search />
 </DataTable.Toolbar>
 ```
@@ -216,6 +213,36 @@ const tableState = useServerTableState({
   initialFilters: { status: null, from_date: null, to_date: null },
 });
 ```
+
+A panel then binds its controls through the table, never through props:
+
+```tsx
+export function TransactionListFilters({ includeStatus }: Props) {
+  const filter = useTableFilters();
+
+  return (
+    <Group align="flex-end" gap="md" wrap="wrap">
+      <TransactionPayerFilter {...filter("customer")} />
+      {includeStatus && <TransactionStatusFilter {...filter("status")} />}
+      <DateRangeTableFilter />
+    </Group>
+  );
+}
+```
+
+`useTableFilters` is called once and returns an accessor, rather than being a
+hook per key. Two panels render controls conditionally, which a
+`useTableFilter(key)` would turn into a conditional hook call.
+
+**Binding a key the table never declared throws**, on the first render, the
+way composing a piece outside `DataTable.Root` already does. `declaredOnly`
+drops an undeclared key, so the alternative is a control that renders and
+does nothing.
+
+`filters` and `setFilters` are on the provider value and deliberately not on
+the exported `DataTableContextValue`. The accessor is the only supported way
+in, so a panel cannot rebuild the read-by-key/write-as-patch bridge that used
+to be restated at about twelve call sites.
 
 `tableState.filters` holds the current values and `tableState.setFilters`
 merges a patch into them. Everything else follows from the declaration:
@@ -333,18 +360,16 @@ Filter controls are toolbar children, wired by the page:
 <DataTable.Root title="Transactions" state={tableState}>
   <DataTable.Toolbar>
     <DataTable.PageSize />
-    <DateRangeFilter
-      value={{
-        from: toApiDate(tableState.filters.from_date),
-        to: toApiDate(tableState.filters.to_date),
-      }}
-      onChange={(range) =>
-        tableState.setFilters({ from_date: range.from, to_date: range.to })
-      }
-    />
+    <DateRangeTableFilter />
   </DataTable.Toolbar>
   ...
 ```
+
+`DateRangeTableFilter` takes no props at any of its five call sites, unlike
+every other control. Its two keys come from the table's `dateRange`
+declaration, so there is nothing for a panel to parameterise, and it reads
+`useTableDateRange()` itself. It is therefore not renderable without a
+provider, which is the trade this makes deliberately.
 
 `toApiDate` on the way out rather than a cast: it is idempotent on a
 date-only string, so this re-establishes the `ApiDate` type instead of
@@ -768,8 +793,7 @@ a `SegmentedControl` cannot hold `null`, and nothing else.
     { label: "Active", value: "1" },
     { label: "Inactive", value: "0" },
   ]}
-  value={tableState.filters.is_active}
-  onChange={(is_active) => tableState.setFilters({ is_active })}
+  {...filter("is_active")}
 />
 ```
 

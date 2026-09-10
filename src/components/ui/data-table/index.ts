@@ -16,8 +16,10 @@ export type {
   ResolvedColumn,
   SortEntry,
   TableFilters,
+  TableFilterBinding,
   DataTableContextValue,
 } from "./types";
+export { useTableFilters, useTableDateRange } from "./data-table-context";
 export { MAX_SORT_COLUMNS } from "./types";
 export { encodeSortsForApi } from "./sort-params";
 export {

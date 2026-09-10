@@ -79,3 +79,19 @@ export type DataTableContextValue<T> = {
   sorts: SortEntry[];
   onSort: (key: string) => void;
 };
+
+/** What one filter control is handed: the current value and a way to report
+ * a change, with the key already closed over. */
+export type TableFilterBinding = {
+  value: string | null;
+  onChange: (value: string | null) => void;
+};
+
+/** What the provider actually carries. `filters` and `setFilters` are here
+ * and deliberately not on `DataTableContextValue`: `useTableFilters` and
+ * `useTableDateRange` are the only supported ways in, so a panel cannot
+ * rebuild the read-by-key/write-as-patch bridge by hand. */
+export type DataTableProviderValue<T> = DataTableContextValue<T> & {
+  filters: TableFilters;
+  setFilters: (patch: TableFilters) => void;
+};

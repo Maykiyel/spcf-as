@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { DataTableContext } from "./data-table-context";
-import type { DataTableContextValue } from "./types";
+import type { DataTableProviderValue } from "./types";
 import { Card } from "@/components/ui/card";
 
 type DataTableRootProps<T> = {
   title: string;
-  state: DataTableContextValue<T>;
+  state: DataTableProviderValue<T>;
   children: ReactNode;
 };
 
