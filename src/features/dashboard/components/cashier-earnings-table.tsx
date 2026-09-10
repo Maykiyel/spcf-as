@@ -1,14 +1,9 @@
-import {
-  DataTable,
-  useServerTableState,
-  type ColumnDef,
-} from "@/components/ui/data-table";
-import { formatCurrency } from "@/utils/currency";
+import { DataTable, useServerTableState } from "@/components/ui/data-table";
 import {
   getCashierEarnings,
   CASHIER_EARNINGS_SORT_PLAN,
 } from "../api/get-cashier-earnings";
-import type { CashierEarnings } from "../types";
+import { cashierEarningsColumns } from "./cashier-earnings-columns";
 
 const URL_KEY = "cashiers";
 
@@ -16,17 +11,6 @@ const URL_KEY = "cashiers";
  * Sent explicitly because `useServerTableState` would otherwise default
  * to 25, which is the app's number rather than this endpoint's. */
 const PAGE_SIZE = 5;
-
-// Both keys are the endpoint's own sort names, which is why header clicks
-// need no mapping. See `get-cashier-earnings.ts` for the row rename.
-const columns: ColumnDef<CashierEarnings>[] = [
-  { field: "cashier_name", header: "Cashier" },
-  {
-    field: "total_earnings",
-    header: "Total Earnings",
-    render: (row) => formatCurrency(row.total_earnings),
-  },
-];
 
 /**
  * Who collected what, admin-only. Holds its own query and renders only on
@@ -43,7 +27,7 @@ export function CashierEarningsTable() {
     // invalidates this key, because the dashboard has no mutations.
     queryKey: ["cashier-earnings"],
     queryFn: getCashierEarnings,
-    columns,
+    columns: cashierEarningsColumns,
     initialPageSize: PAGE_SIZE,
     sortPlan: CASHIER_EARNINGS_SORT_PLAN,
     urlKey: URL_KEY,

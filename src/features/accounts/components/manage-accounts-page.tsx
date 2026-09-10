@@ -1,75 +1,26 @@
-import { Badge, Divider, Group, Stack, Title } from "@mantine/core";
+import { Divider, Group, Stack, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus } from "@tabler/icons-react";
-import {
-  DataTable,
-  useServerTableState,
-  type ColumnDef,
-} from "@/components/ui/data-table";
+import { DataTable, useServerTableState } from "@/components/ui/data-table";
 import { PrimaryButton } from "@/components/ui/button";
-import type { Role } from "@/features/auth/types";
 import {
   getUserAccounts,
   USER_ACCOUNTS_QUERY_KEY,
   USER_ACCOUNTS_SORT_PLAN,
 } from "../api/get-user-accounts";
-import type { UserAccount } from "../types";
 import {
   UserAccountRoleFilter,
   UserAccountStatusFilter,
 } from "./user-account-filters";
 import { CreateAccountModal } from "./create-account-modal";
-import { UserAccountActionsCell } from "./user-account-actions-cell";
+import { userAccountColumns } from "./user-account-columns";
 
 const URL_KEY = "accounts";
-
-const ROLE_LABEL: Record<Role, string> = {
-  admin: "Admin",
-  cashier: "Cashier",
-};
 
 /** `role` and `is_active` are the only two filters `/users` allows, and
  * `null` is what each sends when unfiltered. Module scope for the same
  * reason: `useServerTableState` keys its query on this object. */
 const INITIAL_FILTERS = { role: null, is_active: null };
-// Module scope, not rebuilt per render: `useServerTableState` memoises on
-// this array's identity.
-//
-// Every sortable key here is one `USER_ACCOUNTS_SORT_PLAN` allow-lists. A
-// key it doesn't know is a 400 on the first header click, which is why
-// `username` is renamed at the fetcher rather than carrying `user_name`.
-const columns: ColumnDef<UserAccount>[] = [
-  { field: "full_name", header: "Name" },
-  { field: "username", header: "Username" },
-  {
-    field: "role",
-    header: "Role",
-    render: (row) => (
-      <Badge
-        color={row.role === "admin" ? "primary" : "tertiary"}
-        variant="light"
-      >
-        {ROLE_LABEL[row.role]}
-      </Badge>
-    ),
-  },
-  {
-    // No field: the badge reads `is_active`, but shows a word rather than
-    // the raw `true`/`false`.
-    id: "status",
-    header: "Status",
-    render: (row) => (
-      <Badge color={row.is_active ? "success" : "danger"} variant="light">
-        {row.is_active ? "Active" : "Inactive"}
-      </Badge>
-    ),
-  },
-  {
-    id: "actions",
-    header: "Actions",
-    render: (row) => <UserAccountActionsCell account={row} />,
-  },
-];
 
 export function ManageAccountsPage() {
   const [createOpen, { open: openCreate, close: closeCreate }] =
@@ -78,7 +29,7 @@ export function ManageAccountsPage() {
   const tableState = useServerTableState({
     queryKey: [...USER_ACCOUNTS_QUERY_KEY],
     queryFn: getUserAccounts,
-    columns,
+    columns: userAccountColumns,
     urlKey: URL_KEY,
     sortPlan: USER_ACCOUNTS_SORT_PLAN,
     initialFilters: INITIAL_FILTERS,

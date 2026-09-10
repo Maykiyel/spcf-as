@@ -16,6 +16,16 @@ import { SERVICES_SOLD_SORT_PLAN } from "@/features/reports/api/get-services-sol
 import { servicesSoldColumns } from "@/features/reports/components/services-sold-columns";
 import { ACTIVITY_LOGS_SORT_PLAN } from "@/features/activity-log/api/get-activity-logs";
 import { activityLogColumns } from "@/features/activity-log/components/activity-log-columns";
+import { USER_ACCOUNTS_SORT_PLAN } from "@/features/accounts/api/get-user-accounts";
+import { userAccountColumns } from "@/features/accounts/components/user-account-columns";
+import { CASHIER_EARNINGS_SORT_PLAN } from "@/features/dashboard/api/get-cashier-earnings";
+import { cashierEarningsColumns } from "@/features/dashboard/components/cashier-earnings-columns";
+import { SERVICES_SORT_PLAN } from "@/features/services/api/get-services";
+import { serviceColumns } from "@/features/services/components/service-columns";
+import { ITEM_CODES_SORT_PLAN } from "@/features/item-codes/api/get-item-codes";
+import { itemCodeColumns } from "@/features/item-codes/components/item-code-columns";
+import { SERIES_RECEIPTS_SORT_PLAN } from "@/features/series-receipts/api/get-series-receipts";
+import { seriesReceiptColumns } from "@/features/series-receipts/components/series-receipt-columns";
 
 /**
  * What every table offers a sort on, named outright.
@@ -106,6 +116,52 @@ const CASES: Case[] = [
     // `created_at` is the endpoint's only allow-listed sort, so When is the
     // only header that may carry a caret.
     sortable: ["created_at"],
+    unreachable: [],
+  },
+  {
+    endpoint: "GET /users",
+    plan: USER_ACCOUNTS_SORT_PLAN,
+    columns: userAccountColumns as ColumnDef<never>[],
+    // Role, Status and Actions are shown and not sortable: `/users`
+    // allow-lists none of them.
+    sortable: ["full_name", "username"],
+    // The only non-empty one. `/users` orders by either half of a name and
+    // the directory shows the whole name in one column, so both are named
+    // rather than treated as a defect.
+    unreachable: ["first_name", "last_name"],
+  },
+  {
+    endpoint: "GET /reports/cashier-earnings",
+    plan: CASHIER_EARNINGS_SORT_PLAN,
+    columns: cashierEarningsColumns as ColumnDef<never>[],
+    sortable: ["cashier_name", "total_earnings"],
+    unreachable: [],
+  },
+  {
+    endpoint: "GET /services",
+    plan: SERVICES_SORT_PLAN,
+    columns: serviceColumns({ onEdit: () => {} }) as ColumnDef<never>[],
+    // Description is shown and not sortable, unlike the item code catalog
+    // below: `/services` allow-lists `description` on neither.
+    sortable: ["item_code", "name", "price"],
+    unreachable: [],
+  },
+  {
+    endpoint: "GET /item-codes",
+    plan: ITEM_CODES_SORT_PLAN,
+    columns: itemCodeColumns({ onEdit: () => {} }) as ColumnDef<never>[],
+    // Description sorts: the gap `68594fb` closed, and what this case guards.
+    sortable: ["name", "description"],
+    unreachable: [],
+  },
+  {
+    endpoint: "GET /series-receipts",
+    plan: SERIES_RECEIPTS_SORT_PLAN,
+    columns: seriesReceiptColumns as ColumnDef<never>[],
+    // `cashier` is the column's identity and `account` is the wire's word
+    // for it, reached through `sortKey`. That is why `account` is not
+    // unreachable despite no column being named for it.
+    sortable: ["cashier", "from", "to", "remaining_sheets"],
     unreachable: [],
   },
 ];
