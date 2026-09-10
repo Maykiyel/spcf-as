@@ -28,7 +28,6 @@ export const TRANSACTION_REPORT_SORT_PLAN: SortPlan = {
     "change_amount",
     "cashier_name",
   ],
-  unique: ["id"],
   default: [
     { key: "created_at", direction: "desc" },
     { key: "id", direction: "asc" },

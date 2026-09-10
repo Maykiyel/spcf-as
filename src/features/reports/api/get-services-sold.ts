@@ -18,6 +18,5 @@ export const getServicesSold = createListAdapter<ServiceSoldRow>(
  * scanning, and a declared default is what lights the header's caret. */
 export const SERVICES_SOLD_SORT_PLAN: SortPlan = {
   allowed: ["total_quantity", "subtotal", "service_name"],
-  unique: ["service_name"],
   default: [{ key: "service_name", direction: "asc" }],
 };

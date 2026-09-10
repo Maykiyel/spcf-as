@@ -237,12 +237,34 @@ describe("DashboardPage", () => {
       // cell reads and what the sort click sends, and the endpoint
       // allow-lists `cashier_name`.
       //
-      // It joins the declared earnings sort as the tiebreaker rather than
-      // replacing it — two columns is the documented cap, so neither is
-      // evicted.
+      // It replaces the declared earnings sort rather than joining behind
+      // it. This used to join, which read as a free tiebreaker here and as
+      // a dead header on the tables whose default does not tie. #126.
       await waitFor(() =>
         expect(lastEarningsParams().sorts).toEqual([
-          { key: "total_earnings", direction: "desc" },
+          { key: "cashier_name", direction: "asc" },
+        ]),
+      );
+    });
+
+    it("still composes earnings with cashier name, asked for in two clicks", async () => {
+      signIn(admin);
+      renderPage();
+
+      // Clicking the declared column first takes the table off its default,
+      // so the second click joins instead of replacing — the pair the old
+      // join-behind rule produced on one click is still reachable.
+      fireEvent.click(await screen.findByText("Total Earnings"));
+      await waitFor(() =>
+        expect(lastEarningsParams().sorts).toEqual([
+          { key: "total_earnings", direction: "asc" },
+        ]),
+      );
+
+      fireEvent.click(screen.getByText("Cashier"));
+      await waitFor(() =>
+        expect(lastEarningsParams().sorts).toEqual([
+          { key: "total_earnings", direction: "asc" },
           { key: "cashier_name", direction: "asc" },
         ]),
       );

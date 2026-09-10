@@ -7,7 +7,6 @@ import {
   isColumnSortable,
   sortableColumnIds,
   sortPlanDefault,
-  sortPlanDefaultIsTotalOrder,
   unreachableSortKeys,
   type SortPlan,
 } from "./sort-plan";
@@ -16,7 +15,6 @@ type Row = { id: number; name: string; total: number };
 
 const plan: SortPlan = {
   allowed: ["id", "name", "total"],
-  unique: ["id"],
   default: [
     { key: "name", direction: "asc" },
     { key: "id", direction: "asc" },
@@ -116,34 +114,6 @@ describe("sortPlanDefault", () => {
     // The hook holds this in state; a caller mutating it would edit the plan.
     expect(sortPlanDefault(plan)).not.toBe(plan.default);
     expect(sortPlanDefault(plan)).toEqual(plan.default);
-  });
-});
-
-describe("sortPlanDefaultIsTotalOrder", () => {
-  it("is true when the default ends in a unique key", () => {
-    expect(sortPlanDefaultIsTotalOrder(plan)).toBe(true);
-  });
-
-  it("is false when the unique key is not last", () => {
-    // Order matters: a unique key ahead of another makes the rest inert, it
-    // doesn't make the whole default a total order.
-    expect(
-      sortPlanDefaultIsTotalOrder({
-        ...plan,
-        default: [
-          { key: "id", direction: "asc" },
-          { key: "name", direction: "asc" },
-        ],
-      }),
-    ).toBe(false);
-  });
-
-  it("is false when nothing is declared unique, or nothing is declared", () => {
-    expect(
-      sortPlanDefaultIsTotalOrder({ allowed: ["name"], default: plan.default }),
-    ).toBe(false);
-    expect(sortPlanDefaultIsTotalOrder({ allowed: ["name"] })).toBe(false);
-    expect(sortPlanDefaultIsTotalOrder()).toBe(false);
   });
 });
 

@@ -9,10 +9,6 @@ import type { ColumnDef, SortEntry } from "./types";
  */
 export type SortPlan = {
   allowed: readonly string[];
-  /** Which allow-listed keys are unique per row. A default ending in one
-   * orders the rows completely, so the first click on another header
-   * replaces it rather than joining behind it. */
-  unique?: readonly string[];
   /** The endpoint's own default, declared so the header carries a caret
    * over rows that are plainly ordered. Any `sort` param suppresses the
    * server's default outright rather than adding to it, so a declared
@@ -43,11 +39,6 @@ export const isColumnSortable = <T>(
 
 export const sortPlanDefault = (plan?: SortPlan): SortEntry[] =>
   plan?.default ? [...plan.default] : [];
-
-export const sortPlanDefaultIsTotalOrder = (plan?: SortPlan): boolean => {
-  const last = plan?.default?.[plan.default.length - 1];
-  return Boolean(last && plan?.unique?.includes(last.key));
-};
 
 /** Drops what the endpoint would reject. A header only ever offers an
  * allow-listed key, so a restored or hand-edited URL is the only way an

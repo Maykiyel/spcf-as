@@ -93,19 +93,23 @@ which has always been free of all three)
 
 **Sort plan**:
 One endpoint's sort surface, declared once beside the fetcher that owns it
-and passed to `useServerTableState` as `sortPlan`. Three parts: `allowed`
-(the keys the endpoint allow-lists, a 400 or 422 otherwise), `unique` (which
-of those order rows completely on their own), and `default` (what it sorts
-by when asked for nothing, tiebreaker included, because any `sort` param
+and passed to `useServerTableState` as `sortPlan`. Two parts: `allowed`
+(the keys the endpoint allow-lists, a 400 or 422 otherwise) and `default`
+(what it sorts by when asked for nothing, because any `sort` param
 suppresses the server's own default outright). No two allow-lists in this
 app are alike, which is why the plan is per endpoint rather than shared: see
 the Transactions Report and Service Breakdown entries.
 
 It replaced three declarations that restated each other, two of them
-enforced only by a "must stay equal to" comment, and it turned the
-total-order claim from a hand-maintained boolean into something derived from
-`unique`. It also narrows what a URL may carry, the way `declaredOnly` does
-for filters.
+enforced only by a "must stay equal to" comment. It also narrows what a URL
+may carry, the way `declaredOnly` does for filters.
+
+**It carried a third part, `unique`, until #126.** That named which
+allow-listed keys order rows on their own, and the table tier used it to
+decide whether a first header click replaced the declared sort or joined
+behind it. Backend `7fb5fc1` ended the question it answered by terminating
+every endpoint's `ORDER BY` in a unique key, and the joining half of that
+rule was itself the bug: see the Services Sold Report entry.
 
 **Sortability is derived from the plan, never declared.** A column sorts
 exactly when its `sortKey ?? field` is allow-listed, resolved by
@@ -280,12 +284,16 @@ to every request to keep paging deterministic. Backend `0428e2c` made the
 endpoint order by `service_id` unconditionally, so that append is gone. See
 `BACKEND_NOTES.md` for what it was working around.
 
-**A unique declared sort surfaced a table-tier bug.** A declared sort used
-to sit at priority 1 while a clicked column joined behind it, so a unique
-declared key made every other header inert: clicking Revenue reordered
-nothing. `sortsToExtend` now has the first click supersede a declared
-default instead. The Transactions Report had the same defect for the same
-reason, its `id` tiebreaker being unique, and is fixed by the same change.
+**A declared sort surfaced a table-tier bug, twice.** A declared sort used
+to sit at priority 1 while a clicked column joined behind it, so clicking
+Revenue here reordered nothing. `sortsToExtend` was changed to have the
+first click supersede a declared default — but only where the default was a
+total order, which left the same defect standing wherever it was not:
+Status on the Transactions list and Username on Manage Accounts both lit a
+caret and moved no rows. A header's behaviour depended on whether the
+*default's* key happened to tie, which a user cannot see. #126 dropped the
+condition, so the first click always supersedes. Composing two columns is
+still available by clicking the declared one first.
 
 Its filter surface is a date range and nothing else; neither endpoint here
 allow-lists a search or any other filter.

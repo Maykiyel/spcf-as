@@ -5,7 +5,6 @@ import { MAX_SORT_COLUMNS, type SortEntry, type TableFilters } from "./types";
 import {
   allowedSorts,
   sortPlanDefault,
-  sortPlanDefaultIsTotalOrder,
   type SortPlan,
 } from "./sort-plan";
 
@@ -89,16 +88,22 @@ const sameSorts = (a: SortEntry[], b: SortEntry[]): boolean =>
       entry.key === b[index].key && entry.direction === b[index].direction,
   );
 
-/** What a click extends. An untouched declared sort that already orders the
- * rows completely is dropped rather than joined, because nothing appended
- * behind a total order can reorder anything. See `initialSortsAreTotalOrder`. */
+/** What a click extends. The first click on a still-untouched declared sort
+ * replaces it rather than joining behind it: a header means "sort by this",
+ * and a second column is something the user asks for by clicking twice.
+ *
+ * This used to happen only where the declared sort was a total order, on the
+ * grounds that a key appended behind one is inert. The other half of that —
+ * joining behind a default that ties — made a header's behaviour depend on
+ * whether the *default's* key happened to tie, which a user cannot see. It
+ * left Status on the transactions list and Username on Manage Accounts
+ * lighting a caret and reordering nothing. See #126. */
 export function sortsToExtend(
   current: SortEntry[],
   key: string,
   initialSorts: SortEntry[],
-  initialSortsAreTotalOrder = false,
 ): SortEntry[] {
-  if (!initialSortsAreTotalOrder || initialSorts.length === 0) return current;
+  if (initialSorts.length === 0) return current;
 
   const isUntouchedDefault = sameSorts(current, initialSorts);
   const alreadyActive = current.some((sort) => sort.key === key);
@@ -113,14 +118,8 @@ export function sortsAfterClick(
   current: SortEntry[],
   key: string,
   initialSorts: SortEntry[],
-  initialSortsAreTotalOrder = false,
 ): SortEntry[] {
-  const base = sortsToExtend(
-    current,
-    key,
-    initialSorts,
-    initialSortsAreTotalOrder,
-  );
+  const base = sortsToExtend(current, key, initialSorts);
   const activeIdx = base.findIndex((sort) => sort.key === key);
   const isDeclared = initialSorts.some((sort) => sort.key === key);
 
@@ -184,7 +183,6 @@ function useUrlAdapter(
   urlKey: string | undefined,
   initialFilters: TableFilters,
   initialSorts: SortEntry[],
-  initialSortsAreTotalOrder: boolean,
   sortPlan: SortPlan | undefined,
 ): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -282,7 +280,7 @@ function useUrlAdapter(
   const onSort = (key: string) => {
     updateParams({
       [paramName("sort")]: encodeSorts(
-        sortsAfterClick(sorts, key, initialSorts, initialSortsAreTotalOrder),
+        sortsAfterClick(sorts, key, initialSorts),
         initialSorts,
       ),
       [paramName("page")]: null,
@@ -334,7 +332,6 @@ function useLocalAdapter(
   initialPageSize: number,
   initialFilters: TableFilters,
   initialSorts: SortEntry[],
-  initialSortsAreTotalOrder: boolean,
 ): TableControlsAdapter {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -356,7 +353,7 @@ function useLocalAdapter(
 
   const onSort = (key: string) => {
     setSorts((prev) =>
-      sortsAfterClick(prev, key, initialSorts, initialSortsAreTotalOrder),
+      sortsAfterClick(prev, key, initialSorts),
     );
     setPage(1);
   };
@@ -402,21 +399,18 @@ export function useTableControls(
     () => (sortPlan ? sortPlanDefault(sortPlan) : NO_SORTS),
     [sortPlan],
   );
-  const initialSortsAreTotalOrder = sortPlanDefaultIsTotalOrder(sortPlan);
 
   const urlAdapter = useUrlAdapter(
     initialPageSize,
     urlKey,
     initialFilters,
     initialSorts,
-    initialSortsAreTotalOrder,
     sortPlan,
   );
   const localAdapter = useLocalAdapter(
     initialPageSize,
     initialFilters,
     initialSorts,
-    initialSortsAreTotalOrder,
   );
 
   return urlKey ? urlAdapter : localAdapter;
