@@ -313,10 +313,6 @@ instants of 31 December fall outside it.
 
 ## Known backend gaps (asked for, not yet landed)
 
-- **`servicesSold` still has no `defaultSort`.** `allowedSorts`
-  (`total_quantity`, `subtotal`, `service_name`) landed in `2a67f91`, but
-  the default did not, and it is a `groupBy` aggregate — so with no sort
-  applied, page order is undefined and pagination can repeat or skip rows.
 - **App timezone is still `UTC`**, so every "today"/"month" boundary is a
   UTC one. In UTC+8 that is 08:00 Manila to 08:00.
 - **Password validation is still `['required', 'string']`** — no minimum
@@ -326,6 +322,7 @@ instants of 31 December fall outside it.
 - **No `search` filter** on `/activity-logs`, `/reports/*`, `/users` or
   `/cashiers`. Activity logs remain date-only with `created_at` as the
   sole sort.
+
 ## `GET /reports/transactions`
 
 Admin only, under `throttle:reports`. Envelope is the usual one plus a
