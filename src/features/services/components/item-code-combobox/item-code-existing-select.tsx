@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { CheckIcon, Combobox, Group } from "@mantine/core";
 import { useItemCodeSearch } from "./use-item-code-search";
 import { ItemCodeComboboxTarget } from "./item-code-combobox-target";
@@ -15,12 +14,8 @@ export function ItemCodeExistingSelect({
   onChange,
   error,
 }: ItemCodeExistingSelectProps) {
-  const { search, setSearch, itemCodes, isFetching, combobox } =
+  const { search, setSearch, showSelection, itemCodes, isFetching, combobox } =
     useItemCodeSearch(value?.name ?? "");
-
-  useEffect(() => {
-    setSearch(value?.name ?? "");
-  }, [value?.name, setSearch]);
 
   return (
     <Combobox
@@ -28,7 +23,7 @@ export function ItemCodeExistingSelect({
       onOptionSubmit={(optionValue) => {
         const itemCode = itemCodes.find((ic) => String(ic.id) === optionValue);
         if (itemCode) {
-          setSearch(itemCode.name);
+          showSelection();
           onChange({ kind: "existing", id: itemCode.id, name: itemCode.name });
         }
         combobox.closeDropdown();

@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Combobox, Text } from "@mantine/core";
 import { useItemCodeSearch } from "./use-item-code-search";
 import { ItemCodeComboboxTarget } from "./item-code-combobox-target";
@@ -15,12 +14,16 @@ export function ItemCodeSelect({
   onChange,
   error,
 }: ItemCodeSelectProps) {
-  const { search, setSearch, trimmed, itemCodes, isFetching, combobox } =
-    useItemCodeSearch(value?.name ?? "");
-
-  useEffect(() => {
-    setSearch(value?.name ?? "");
-  }, [value?.name, setSearch]);
+  const {
+    search,
+    setSearch,
+    showSelection,
+    trimmed,
+    hasTyped,
+    itemCodes,
+    isFetching,
+    combobox,
+  } = useItemCodeSearch(value?.name ?? "");
 
   const exactMatch = itemCodes.find(
     (ic) => ic.name.toLowerCase() === trimmed.toLowerCase(),
@@ -31,13 +34,14 @@ export function ItemCodeSelect({
       store={combobox}
       onOptionSubmit={(optionValue) => {
         if (optionValue === "__create__") {
+          showSelection();
           onChange({ kind: "new", name: trimmed });
         } else {
           const itemCode = itemCodes.find(
             (ic) => String(ic.id) === optionValue,
           );
           if (itemCode) {
-            setSearch(itemCode.name);
+            showSelection();
             onChange({
               kind: "existing",
               id: itemCode.id,
@@ -67,7 +71,10 @@ export function ItemCodeSelect({
               {ic.name}
             </Combobox.Option>
           ))}
-          {trimmed && !exactMatch && (
+          {/* Only once they have actually typed. Showing a selection's own
+              name is not a request to create one, and the list behind
+              `exactMatch` is the unfiltered page, which need not contain it. */}
+          {hasTyped && trimmed && !exactMatch && (
             <Combobox.Option value="__create__">
               <Text c="primary" fw={600} size="sm">
                 + Create new item code: "{trimmed}"
