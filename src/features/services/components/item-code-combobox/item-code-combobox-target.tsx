@@ -34,7 +34,13 @@ export function ItemCodeComboboxTarget({
           combobox.updateSelectedOptionIndex();
         }}
         onClick={() => combobox.openDropdown()}
-        onFocus={() => combobox.openDropdown()}
+        // Selected, because the text is usually the current selection's
+        // name rather than a query: typing should replace it, not append
+        // to it and search for "ALUMNICAP".
+        onFocus={(e) => {
+          e.currentTarget.select();
+          combobox.openDropdown();
+        }}
         onBlur={() => combobox.closeDropdown()}
         rightSection={
           isFetching ? (
