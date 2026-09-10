@@ -147,6 +147,10 @@ _Avoid_: a dumping ground for anything that isn't a component — a helper used 
 The in-progress transaction a cashier assembles on the New Transaction page — line items, payer name, amount paid — before Confirm saves it. Distinct from the confirmed `TransactionDTO` the View Transaction and Print pages load.
 _Avoid_: receipt, cart, basket — in code. On screen the builder panel deliberately still reads "Receipt", which is the cashiers’ word from the legacy system; this rule governs identifiers and types, not the UI copy.
 
+**Draft readiness**:
+Whether a [[transaction-draft]] can be confirmed, and why not, answered by one call to `draftReadiness({ payerName, lineItems, amountPaid, isSyncing })` in `transaction-draft.ts`. It returns `{ ready, reasons }`, and the verdict is true exactly when there are no reasons, because `ready` is read off `reasons` rather than computed beside them. That is the point of the shape: it used to be two exported functions plus an `isSyncing` clause composed separately onto each at the provider, which meant a Confirm button enabled while the list beside it said why it should not be was one edit away in either direction. A fourth condition goes in this one function, in the order it should appear to the cashier, and the Confirm button and the requirements list both follow. `reasons` are the form's own field labels, not codes, because there is one renderer and the strings already match the labels beside the inputs.
+_Avoid_: validation (nothing here is rejected, the draft is simply not finished), canConfirm (that is the context field the verdict feeds, not the rule)
+
 **Acknowledgement Receipt**:
 The printed artifact produced for one completed Transaction, given to the payer. Distinct from **Series receipt** (below) — an Acknowledgement Receipt is the document a payer walks away with; a Series receipt is the pre-numbered block of physical sheets its number is drawn from.
 _Avoid_: bare "receipt" in code (ambiguous with Series receipt — always qualify). User-facing copy may still say "Receipt" where that is what cashiers call it.

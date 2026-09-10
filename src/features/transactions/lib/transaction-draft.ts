@@ -128,9 +128,9 @@ export function setLineItemQuantity(
 }
 
 // Change is never negative in the UI — an insufficient amount tendered is
-// caught by `canConfirmTransaction`/`getMissingRequirements` and blocks
-// Confirm before this would ever matter, but clamping keeps the displayed
-// figure sane while the cashier is still mid-typing an amount.
+// caught by `draftReadiness` and blocks Confirm before this would ever
+// matter, but clamping keeps the displayed figure sane while the cashier is
+// still mid-typing an amount.
 export function calculateChange(
   lineItems: DraftLineItem[],
   amountPaid: number,
@@ -138,32 +138,32 @@ export function calculateChange(
   return Math.max(0, roundToCents(amountPaid - calculateTotal(lineItems)));
 }
 
-type ConfirmCheck = {
+type DraftReadinessCheck = {
   payerName: string;
   lineItems: DraftLineItem[];
   amountPaid: number;
+  /** Inside the rule, not composed onto it at the provider, which is how
+   * the verdict and the reasons came to be stated separately. */
+  isSyncing: boolean;
 };
 
-export function canConfirmTransaction({
-  payerName,
-  lineItems,
-  amountPaid,
-}: ConfirmCheck): boolean {
-  return (
-    payerName.trim().length > 0 &&
-    lineItems.length > 0 &&
-    roundToCents(amountPaid) >= roundToCents(calculateTotal(lineItems))
-  );
-}
+export type DraftReadiness = {
+  ready: boolean;
+  /** What stops it, as the labels the form already uses. */
+  reasons: string[];
+};
 
-export function getMissingRequirements({
+/** Whether a draft can be confirmed, and why not. See `CONTEXT.md`, Draft
+ * readiness, for why this is one function rather than two. */
+export function draftReadiness({
   payerName,
   lineItems,
   amountPaid,
-}: ConfirmCheck): string[] {
-  const missing: string[] = [];
-  if (!payerName.trim()) missing.push("Payer Name");
-  if (lineItems.length === 0) missing.push("At least 1 item");
+  isSyncing,
+}: DraftReadinessCheck): DraftReadiness {
+  const reasons: string[] = [];
+  if (!payerName.trim()) reasons.push("Payer Name");
+  if (lineItems.length === 0) reasons.push("At least 1 item");
   // Only flag amount-paid insufficiency once there's actually a total to
   // compare against — otherwise an empty draft would show both "At
   // least 1 item" and a confusing "must cover ₱0" at the same time.
@@ -171,7 +171,10 @@ export function getMissingRequirements({
     lineItems.length > 0 &&
     roundToCents(amountPaid) < roundToCents(calculateTotal(lineItems))
   ) {
-    missing.push("Amount Paid (must cover total)");
+    reasons.push("Amount Paid (must cover total)");
   }
-  return missing;
+  // Last, where the provider used to append it. The order is user-visible.
+  if (isSyncing) reasons.push("Still syncing — please wait a moment");
+
+  return { ready: reasons.length === 0, reasons };
 }
