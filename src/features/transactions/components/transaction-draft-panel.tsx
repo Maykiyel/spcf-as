@@ -26,7 +26,11 @@ export function TransactionDraftPanel() {
     event.preventDefault();
     if (meta.canConfirm) {
       actions.confirmTransaction((saved) => {
-        navigate(`/transactions/${saved.control_id}`);
+        // No Back from here: the draft is reset on confirm, so there is
+        // nothing behind this page to return to.
+        navigate(`/transactions/${saved.control_id}`, {
+          state: { from: "new" },
+        });
       });
     }
   };

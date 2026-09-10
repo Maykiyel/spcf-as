@@ -54,10 +54,12 @@ function makeServerError(): AxiosError {
   return error;
 }
 
-function renderPage(controlId = "62598") {
+/** `state` is what the three call sites use to say where they sent the
+ * user from; absent is a bookmark, a pasted link, or a refresh. */
+function renderPage(controlId = "62598", state?: { from: "list" | "new" }) {
   const router = createMemoryRouter(
     [{ path: "/transactions/:controlId", element: <ViewTransactionPage /> }],
-    { initialEntries: [`/transactions/${controlId}`] },
+    { initialEntries: [{ pathname: `/transactions/${controlId}`, state }] },
   );
   return renderWithQueryClient(<RouterProvider router={router} />);
 }
@@ -268,5 +270,53 @@ describe("ViewTransactionPage", () => {
     expect(
       await screen.findByText(/Voided on Sep 1, 2026,.* by an unknown admin/),
     ).toBeInTheDocument();
+  });
+});
+
+// The three call sites into this page disagree on purpose about whether
+// there is anything to go back to, and `location.state` is the only thing
+// that tells them apart. See #129.
+describe("ViewTransactionPage — the way back", () => {
+  beforeEach(() => {
+    mockGetTransaction.mockReset();
+    mockNavigate.mockReset();
+    mockGetTransaction.mockResolvedValue(fakeTransaction);
+  });
+
+  const backControl = () => screen.queryByText("Back to Transactions");
+
+  it("offers none on the post-confirm arrival", async () => {
+    renderPage("62598", { from: "new" });
+
+    await screen.findByText("asdfsf");
+    // The draft is reset by then, so there is nothing behind this page —
+    // "back" would land on a blank New Transaction.
+    expect(backControl()).not.toBeInTheDocument();
+  });
+
+  it("pops history for a row clicked on a list", async () => {
+    renderPage("62598", { from: "list" });
+
+    await screen.findByText("asdfsf");
+    fireEvent.click(backControl()!);
+
+    // -1, not the list's path: only popping brings the list back on the
+    // page, sort and filters the user left it on.
+    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(-1);
+  });
+
+  it("falls back to the list when it was not told where it came from", async () => {
+    // A bookmark, a pasted link, or a refresh, which loses `state`. There
+    // is no history entry to pop, and this is the arrival most in need of
+    // a way out, so it gets the list's own path.
+    renderPage("62598");
+
+    await screen.findByText("asdfsf");
+    expect(backControl()).toBeInTheDocument();
+
+    fireEvent.click(backControl()!);
+    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(
+      "/transactions/receipts",
+    );
   });
 });

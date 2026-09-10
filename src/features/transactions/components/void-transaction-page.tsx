@@ -70,7 +70,11 @@ export function VoidTransactionPage() {
       </DataTable.Toolbar>
       <DataTable.Grid
         onRowClick={(row: TransactionListRow) =>
-          navigate(`/transactions/${row.control_id}`)
+          // `from` is what gives the detail page a Back control that
+          // returns here with this page, sort and filters intact.
+          navigate(`/transactions/${row.control_id}`, {
+            state: { from: "list" },
+          })
         }
       />
       <DataTable.Pagination />
