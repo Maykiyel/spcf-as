@@ -221,6 +221,43 @@ describe("useLineItemSync — addFeeItem", () => {
       quantity: 1,
     });
   });
+
+  it("never shows the count going backwards while clicks are still queued", async () => {
+    mockInitiateTransaction.mockResolvedValue(initiatedTransaction());
+    // Both deferred, so the window between the two responses can be
+    // observed. With the second pre-resolved it closes inside one flush,
+    // and the dip this covers is transient — a test asserting only the
+    // settled count passes either way.
+    const firstAdd = deferred<TransactionItemDTO>();
+    const secondAdd = deferred<TransactionItemDTO>();
+    mockAddTransactionItem
+      .mockImplementationOnce(() => firstAdd.promise)
+      .mockImplementationOnce(() => secondAdd.promise);
+
+    const { result } = renderHook(() => useLineItemSync());
+
+    act(() => result.current.addFeeItem(parkingFee));
+    await advance(400); // first request out, carrying quantity 1
+
+    act(() => result.current.addFeeItem(parkingFee)); // lands mid-flight
+    expect(result.current.lineItems[0].quantity).toBe(2);
+
+    // The response answers the batch it was sent — one — and knows nothing
+    // of the click that landed after it. Reconciling to it here is what put
+    // a 1 on screen between two 2s. #118.
+    firstAdd.resolve(resolvedItem({ quantity: 1 }));
+    await flush();
+
+    expect(mockAddTransactionItem).toHaveBeenCalledTimes(2); // re-fire is out
+    expect(result.current.lineItems[0].quantity).toBe(2);
+
+    // Nothing queued behind this one, so it *is* reconciled.
+    secondAdd.resolve(resolvedItem({ quantity: 2 }));
+    await flush();
+
+    expect(result.current.lineItems[0].quantity).toBe(2);
+    expect(result.current.lineItems[0].id).toBe("501");
+  });
 });
 
 describe("useLineItemSync — setLineItemQuantity", () => {

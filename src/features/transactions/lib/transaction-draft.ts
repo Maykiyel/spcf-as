@@ -89,29 +89,37 @@ export function revertOptimisticIncrement(
 // persisted, matched by feeItemId (the endpoint upserts by service, so a
 // repeat add always resolves to the same backend item). Replaces the
 // client-guessed id/quantity with the server's real values.
+//
+// `keepClientQuantity` holds the draft's own count when clicks are still
+// queued behind this response: the server answered the batch it was sent,
+// not the ones that landed after. See #118.
 export function upsertLineItemFromDTO(
   lineItems: DraftLineItem[],
   feeItemId: number,
   item: { id: number; name: string; price: number; quantity: number },
+  { keepClientQuantity = false } = {},
 ): DraftLineItem[] {
+  const existingIndex = lineItems.findIndex(
+    (existing) => existing.feeItemId === feeItemId,
+  );
+  const existing = lineItems[existingIndex];
+
   const nextLineItem: DraftLineItem = {
     id: String(item.id),
     feeItemId,
     name: item.name,
     price: item.price,
-    quantity: item.quantity,
+    // No existing row means nothing was guessed, so there is nothing to keep.
+    quantity:
+      keepClientQuantity && existing ? existing.quantity : item.quantity,
   };
-
-  const existingIndex = lineItems.findIndex(
-    (existing) => existing.feeItemId === feeItemId,
-  );
 
   if (existingIndex === -1) {
     return [...lineItems, nextLineItem];
   }
 
-  return lineItems.map((existing, index) =>
-    index === existingIndex ? nextLineItem : existing,
+  return lineItems.map((line, index) =>
+    index === existingIndex ? nextLineItem : line,
   );
 }
 

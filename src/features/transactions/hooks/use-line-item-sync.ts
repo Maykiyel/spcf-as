@@ -177,7 +177,19 @@ export function useLineItemSync() {
         service_id: id,
         quantity,
       });
-      setLineItems((current) => upsertLineItemFromDTO(current, id, item));
+      // Read now, not inside the updater: React runs that later, by which
+      // point the finally below has re-fired and zeroed the count.
+      const hasQueuedClicks = state.pendingCount > 0;
+      setLineItems((current) =>
+        upsertLineItemFromDTO(current, id, item, {
+          // Clicks landed while this request was out. The draft already
+          // counts them and the response does not, so taking the server's
+          // number here shows the count going backwards until the re-fire
+          // below corrects it. The last flush has nothing queued behind it
+          // and does reconcile.
+          keepClientQuantity: hasQueuedClicks,
+        }),
+      );
       resolvedItem = item;
       resolvedTransactionId = currentTransactionId;
     } catch (error) {
