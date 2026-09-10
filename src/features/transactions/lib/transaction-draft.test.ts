@@ -10,8 +10,7 @@ import {
   revertOptimisticIncrement,
   upsertLineItemFromDTO,
   setLineItemQuantity,
-  canConfirmTransaction,
-  getMissingRequirements,
+  draftReadiness,
 } from "./transaction-draft";
 import type { FeeCatalogItem, DraftLineItem } from "../types";
 
@@ -41,7 +40,10 @@ describe("isLineItemLocked", () => {
   };
 
   it("is locked while still on its optimistic client-only id, regardless of pendingFeeItemIds", () => {
-    const optimisticItem: DraftLineItem = { ...settledItem, id: "optimistic-2" };
+    const optimisticItem: DraftLineItem = {
+      ...settledItem,
+      id: "optimistic-2",
+    };
     expect(isLineItemLocked(optimisticItem, new Set())).toBe(true);
   });
 
@@ -541,147 +543,167 @@ describe("calculateChange", () => {
   });
 });
 
-describe("canConfirmTransaction", () => {
-  it("false when the payer name is blank", () => {
-    expect(
-      canConfirmTransaction({
-        payerName: "  ",
-        lineItems: [
-          { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 1 },
-        ],
-        amountPaid: 100,
-      }),
-    ).toBe(false);
+describe("draftReadiness", () => {
+  const item = (price: number, quantity = 1): DraftLineItem => ({
+    id: "a",
+    feeItemId: 1,
+    name: "x",
+    price,
+    quantity,
   });
 
-  it("false when there are no line items", () => {
-    expect(
-      canConfirmTransaction({
+  const CASES: {
+    name: string;
+    input: Parameters<typeof draftReadiness>[0];
+    ready: boolean;
+    reasons: string[];
+  }[] = [
+    {
+      name: "blank payer name, otherwise complete",
+      input: {
+        payerName: "  ",
+        lineItems: [item(100)],
+        amountPaid: 100,
+        isSyncing: false,
+      },
+      ready: false,
+      reasons: ["Payer Name"],
+    },
+    {
+      name: "empty payer name, otherwise complete",
+      input: {
+        payerName: "",
+        lineItems: [item(100)],
+        amountPaid: 100,
+        isSyncing: false,
+      },
+      ready: false,
+      reasons: ["Payer Name"],
+    },
+    {
+      name: "no name and no items",
+      input: {
+        payerName: "   ",
+        lineItems: [],
+        amountPaid: 0,
+        isSyncing: false,
+      },
+      ready: false,
+      reasons: ["Payer Name", "At least 1 item"],
+    },
+    {
+      name: "name present, draft empty",
+      input: {
         payerName: "Juan Dela Cruz",
         lineItems: [],
         amountPaid: 0,
-      }),
-    ).toBe(false);
-  });
-
-  it("false when amount paid is less than the total", () => {
-    expect(
-      canConfirmTransaction({
+        isSyncing: false,
+      },
+      ready: false,
+      reasons: ["At least 1 item"],
+    },
+    {
+      // The guard: an empty draft must not also say "must cover ₱0", which
+      // reads as a second thing to fix when there is only one.
+      name: "empty draft never flags the amount against a zero total",
+      input: {
+        payerName: "",
+        lineItems: [],
+        amountPaid: 0,
+        isSyncing: false,
+      },
+      ready: false,
+      reasons: ["Payer Name", "At least 1 item"],
+    },
+    {
+      name: "amount paid short of the total",
+      input: {
         payerName: "Juan Dela Cruz",
-        lineItems: [
-          { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 1 },
-        ],
+        lineItems: [item(100)],
         amountPaid: 50,
-      }),
-    ).toBe(false);
-  });
-
-  it("true when there's a payer name, at least one line item, and enough amount paid", () => {
-    expect(
-      canConfirmTransaction({
+        isSyncing: false,
+      },
+      ready: false,
+      reasons: ["Amount Paid (must cover total)"],
+    },
+    {
+      name: "name, an item, and exactly enough paid",
+      input: {
         payerName: "Juan Dela Cruz",
-        lineItems: [
-          { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 1 },
-        ],
+        lineItems: [item(100)],
         amountPaid: 100,
-      }),
-    ).toBe(true);
-  });
-
-  it("true when amount paid exceeds the total (change is owed)", () => {
-    expect(
-      canConfirmTransaction({
+        isSyncing: false,
+      },
+      ready: true,
+      reasons: [],
+    },
+    {
+      name: "amount paid exceeds the total, change owed",
+      input: {
         payerName: "Juan Dela Cruz",
-        lineItems: [
-          { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 1 },
-        ],
+        lineItems: [item(100)],
         amountPaid: 500,
-      }),
-    ).toBe(true);
-  });
-
-  it("true when a summed total drifts a hair above the round amount typed (float precision)", () => {
-    // Reproduces the reported bug: 128.02 x 3 + 615.94 sums to
-    // 1000.0000000000001137 in raw JS floats (verified), even though it
-    // displays as a clean ₱1,000.00 total, and the cashier typed exactly
-    // 1000 as Amount Paid.
-    expect(
-      canConfirmTransaction({
+        isSyncing: false,
+      },
+      ready: true,
+      reasons: [],
+    },
+    {
+      // Reproduces the reported bug: 128.02 x 3 + 615.94 sums to
+      // 1000.0000000000001137 in raw JS floats (verified), even though it
+      // displays as a clean ₱1,000.00 total, and the cashier typed exactly
+      // 1000 as Amount Paid.
+      name: "a summed total drifting a hair above the round amount typed",
+      input: {
         payerName: "Juan Dela Cruz",
         lineItems: [
           { id: "a", feeItemId: 1, name: "x", price: 128.02, quantity: 3 },
           { id: "b", feeItemId: 2, name: "y", price: 615.94, quantity: 1 },
         ],
         amountPaid: 1000,
-      }),
-    ).toBe(true);
-  });
-});
-
-describe("getMissingRequirements", () => {
-  it("returns both requirements when name is empty and draft has no line items", () => {
-    expect(
-      getMissingRequirements({
-        payerName: "   ",
-        lineItems: [],
-        amountPaid: 0,
-      }),
-    ).toEqual(["Payer Name", "At least 1 item"]);
-  });
-
-  it("returns missing payer name when line items exist and amount paid is sufficient but name is empty", () => {
-    expect(
-      getMissingRequirements({
-        payerName: "",
-        lineItems: [
-          { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 1 },
-        ],
+        isSyncing: false,
+      },
+      ready: true,
+      reasons: [],
+    },
+    {
+      name: "syncing blocks an otherwise complete draft",
+      input: {
+        payerName: "Juan Dela Cruz",
+        lineItems: [item(100)],
         amountPaid: 100,
-      }),
-    ).toEqual(["Payer Name"]);
-  });
-
-  it("returns missing line items when payer name exists but draft is empty", () => {
-    expect(
-      getMissingRequirements({
-        payerName: "Juan Dela Cruz",
-        lineItems: [],
-        amountPaid: 0,
-      }),
-    ).toEqual(["At least 1 item"]);
-  });
-
-  it("returns insufficient amount paid when items exist but amount paid is short", () => {
-    expect(
-      getMissingRequirements({
-        payerName: "Juan Dela Cruz",
-        lineItems: [
-          { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 1 },
-        ],
-        amountPaid: 50,
-      }),
-    ).toEqual(["Amount Paid (must cover total)"]);
-  });
-
-  it("does not flag amount paid when there are no line items yet", () => {
-    expect(
-      getMissingRequirements({
+        isSyncing: true,
+      },
+      ready: false,
+      reasons: ["Still syncing — please wait a moment"],
+    },
+    {
+      // Order is user-visible copy, and syncing is the transient one, so it
+      // sits behind the requirements the cashier can actually act on.
+      name: "the syncing reason comes last",
+      input: {
         payerName: "",
         lineItems: [],
         amountPaid: 0,
-      }),
-    ).toEqual(["Payer Name", "At least 1 item"]);
+        isSyncing: true,
+      },
+      ready: false,
+      reasons: [
+        "Payer Name",
+        "At least 1 item",
+        "Still syncing — please wait a moment",
+      ],
+    },
+  ];
+
+  it.each(CASES)("$name", ({ input, ready, reasons }) => {
+    expect(draftReadiness(input)).toEqual({ ready, reasons });
   });
 
-  it("returns an empty array when name, line items, and amount paid are all satisfied", () => {
-    expect(
-      getMissingRequirements({
-        payerName: "Juan Dela Cruz",
-        lineItems: [
-          { id: "a", feeItemId: 1, name: "x", price: 100, quantity: 1 },
-        ],
-        amountPaid: 100,
-      }),
-    ).toEqual([]);
+  // The defect this function exists to remove: a Confirm button enabled
+  // while the list beside it says why it should not be.
+  it.each(CASES)("$name — the verdict agrees with the reasons", ({ input }) => {
+    const { ready, reasons } = draftReadiness(input);
+    expect(ready).toBe(reasons.length === 0);
   });
 });

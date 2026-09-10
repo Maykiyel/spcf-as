@@ -11,8 +11,7 @@ import {
 import {
   calculateChange,
   calculateTotal,
-  canConfirmTransaction,
-  getMissingRequirements,
+  draftReadiness,
 } from "../lib/transaction-draft";
 import { useDiscardedTransactionNotice } from "../hooks/use-discarded-transaction-notice";
 import { useLineItemSync } from "../hooks/use-line-item-sync";
@@ -174,13 +173,6 @@ export function TransactionBuilderProvider({
     [lineItemSync.lineItems, amountPaid],
   );
 
-  const canConfirm =
-    canConfirmTransaction({
-      payerName,
-      lineItems: lineItemSync.lineItems,
-      amountPaid,
-    }) && !lineItemSync.isSyncing;
-
   // Memoized on catalog/filter state only, so draft-side changes don't
   // re-render FiltersPanel/FeeCatalogPanel. addFeeItem is stable (see
   // use-line-item-sync.ts) so it's safe to include.
@@ -219,11 +211,18 @@ export function TransactionBuilderProvider({
   );
 
   // Memoized on draft state only, so catalog-side changes don't
-  // re-render TransactionDraftPanel. missingRequirements is computed inline
-  // (not listed as a dep) since a fresh array every render would defeat
-  // the memo regardless of its content.
-  const draftValue: TransactionDraftValue = useMemo(
-    () => ({
+  // re-render TransactionDraftPanel.
+  const draftValue: TransactionDraftValue = useMemo(() => {
+    // Called inside, not above: it returns a fresh object every render, and
+    // its four inputs are already dependencies of this memo.
+    const readiness = draftReadiness({
+      payerName,
+      lineItems: lineItemSync.lineItems,
+      amountPaid,
+      isSyncing: lineItemSync.isSyncing,
+    });
+
+    return {
       state: {
         transactionId: lineItemSync.transactionId,
         payerName,
@@ -241,43 +240,32 @@ export function TransactionBuilderProvider({
       meta: {
         total,
         change,
-        canConfirm,
-        missingRequirements: [
-          ...getMissingRequirements({
-            payerName,
-            lineItems: lineItemSync.lineItems,
-            amountPaid,
-          }),
-          ...(lineItemSync.isSyncing
-            ? ["Still syncing — please wait a moment"]
-            : []),
-        ],
+        canConfirm: readiness.ready,
+        missingRequirements: readiness.reasons,
         isConfirming,
         isCancelling,
         isSyncing: lineItemSync.isSyncing,
         pendingFeeItemIds: lineItemSync.pendingFeeItemIds,
         pendingRemovalFeeItemIds: lineItemSync.pendingRemovalFeeItemIds,
       },
-    }),
-    [
-      lineItemSync.transactionId,
-      payerName,
-      amountPaid,
-      lineItemSync.lineItems,
-      lineItemSync.setLineItemQuantity,
-      lineItemSync.removeLineItem,
-      cancelDraft,
-      confirmTransaction,
-      total,
-      change,
-      canConfirm,
-      isConfirming,
-      isCancelling,
-      lineItemSync.isSyncing,
-      lineItemSync.pendingFeeItemIds,
-      lineItemSync.pendingRemovalFeeItemIds,
-    ],
-  );
+    };
+  }, [
+    lineItemSync.transactionId,
+    payerName,
+    amountPaid,
+    lineItemSync.lineItems,
+    lineItemSync.setLineItemQuantity,
+    lineItemSync.removeLineItem,
+    cancelDraft,
+    confirmTransaction,
+    total,
+    change,
+    isConfirming,
+    isCancelling,
+    lineItemSync.isSyncing,
+    lineItemSync.pendingFeeItemIds,
+    lineItemSync.pendingRemovalFeeItemIds,
+  ]);
 
   return (
     <CatalogBuilderContext value={catalogValue}>
