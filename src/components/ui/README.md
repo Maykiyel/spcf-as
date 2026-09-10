@@ -186,6 +186,23 @@ sends `filter[search]` only for endpoints that opt in with
 adapter hasn't opted in gives you a box that does nothing, so the two go
 together.
 
+### The list adapter's seams
+
+`createListAdapter<TWire, TRow, TMeta>` takes four options, and `TRow`
+defaults to `TWire` so a call site that renames nothing declares one type:
+
+| Option | Purpose |
+| --- | --- |
+| `supportsSearch` | Whether the endpoint accepts `filter[search]`, as above. |
+| `selectMeta` | Reads a value sitting beside the rows in the envelope, such as the transactions report's server-computed `total_earnings`. |
+| `selectRow` | Renames a wire row to the shape the table reads. A column's sort key has to be a word the endpoint allow-lists, so a field the wire and the UI name differently is renamed here rather than at the column. `/users` (`user_name` to `username`), `/reports/cashier-earnings` (`full_name` to `cashier_name`) and `/series-receipts` (`account` to `cashier`) each use it. All three previously hand-wrote the mapping and rebuilt the envelope around it, which dropped `meta` on the way. |
+| `pinnedFilters` | Filters applied past the point the URL reaches, for a list whose scope is the page's own rather than the user's. `getVoidableTransactions` pins `status: "completed"`, because `status` as a declared filter defaulting to `completed` would leave `?void_status=pending` a working way to fill the page with rows that can only 409. |
+
+**A key may be pinned or declared, not both.** The adapter throws on the
+first request if it is. A declared key reaches the URL and the pinned one
+overrides it, so the control would render and do nothing, which is the same
+failure an undeclared filter key already throws for.
+
 ### Filtering a server-backed table
 
 Declare the table's filters once, with the values that mean "unfiltered":
@@ -204,13 +221,12 @@ const tableState = useServerTableState({
 merges a patch into them. Everything else follows from the declaration:
 
 - **The values are part of the query cache key.** This is the whole reason
-  the hook owns them. The mechanism this replaces, `createListAdapter`'s
-  `extra` argument, hands the fetcher values it never puts in the key, so
-  every consumer has to remember to add them to its own `queryKey` by hand.
+  the hook owns them. The mechanism this replaced, `createListAdapter`'s
+  `extra` argument, handed the fetcher values it never put in the key, so
+  every consumer had to remember to add them to its own `queryKey` by hand.
   Services was the only one that ever did, and it remembered; #84 moved it
-  onto this and `extra` now has **no consumers**. It stays for a parameter
-  that genuinely isn't a `filter[...]`, but a filter is not that case, and
-  forgetting the key serves the previous filter's cached rows with no error
+  onto this and `extra` was deleted in #101 having had no consumers since.
+  Forgetting the key serves the previous filter's cached rows with no error
   at all — the worst available failure.
 - **Changing a filter resets to page 1**, for the same reason changing
   search or sort does.

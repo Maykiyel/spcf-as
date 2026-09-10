@@ -82,8 +82,7 @@ describe("useServerTableState filters", () => {
   it("refetches on a filter change instead of serving the previous filter's rows", async () => {
     // The failure this guards is silent. Passing filters to the fetcher
     // without putting them in the query key re-renders with the old filter's
-    // cached rows and no error, which is what `createListAdapter`'s `extra`
-    // argument does unless the consumer adds them to its `queryKey` by hand.
+    // cached rows and no error at all.
     const { result } = renderHook(
       () =>
         useServerTableState({
