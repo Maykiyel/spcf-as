@@ -21,3 +21,11 @@ export const VOIDABLE_TRANSACTIONS_QUERY_KEY = [
  * collide under the shared prefix. */
 export const transactionDetailQueryKey = (controlId: number) =>
   [...TRANSACTIONS_QUERY_KEY, controlId] as const;
+
+/** Distinct from the receipts list for the same reason the Void list is:
+ * the dashboard section asks `/transactions` a different question, with a
+ * page size of its own and no filters at all. */
+export const RECENT_TRANSACTIONS_QUERY_KEY = [
+  ...TRANSACTIONS_QUERY_KEY,
+  "recent",
+] as const;

@@ -60,6 +60,7 @@ const CASES: Case[] = [
     columns: transactionListColumns({
       includeCashier: true,
       includeStatus: true,
+      includeItems: true,
       actions: () => null,
     }) as ColumnDef<never>[],
     // Not Control ID, Cashier, Items or Total: the endpoint allow-lists none
@@ -185,6 +186,7 @@ describe("what each table offers a sort on", () => {
     const columns = transactionListColumns({
       includeCashier: true,
       includeStatus: false,
+      includeItems: true,
       actions: () => null,
     }) as ColumnDef<never>[];
 
@@ -196,6 +198,24 @@ describe("what each table offers a sort on", () => {
     expect(unreachableSortKeys(TRANSACTIONS_SORT_PLAN, columns)).toEqual([
       "status",
     ]);
+  });
+
+  it("keeps all four sorts on the dashboard's Recent Transactions", () => {
+    // Two columns lighter than the receipts list, and neither of them was
+    // sortable — so trimming for a dashboard-width table costs no header.
+    const columns = transactionListColumns({
+      includeCashier: false,
+      includeStatus: true,
+      includeItems: false,
+    }) as ColumnDef<never>[];
+
+    expect(sortableColumnIds(TRANSACTIONS_SORT_PLAN, columns)).toEqual([
+      "date",
+      "series_number",
+      "customer_name",
+      "status",
+    ]);
+    expect(unreachableSortKeys(TRANSACTIONS_SORT_PLAN, columns)).toEqual([]);
   });
 });
 

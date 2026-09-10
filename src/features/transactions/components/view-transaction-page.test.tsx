@@ -54,9 +54,12 @@ function makeServerError(): AxiosError {
   return error;
 }
 
-/** `state` is what the three call sites use to say where they sent the
+/** `state` is what the four call sites use to say where they sent the
  * user from; absent is a bookmark, a pasted link, or a refresh. */
-function renderPage(controlId = "62598", state?: { from: "list" | "new" }) {
+function renderPage(
+  controlId = "62598",
+  state?: { from: "list" | "new" | "dashboard" },
+) {
   const router = createMemoryRouter(
     [{ path: "/transactions/:controlId", element: <ViewTransactionPage /> }],
     { initialEntries: [{ pathname: `/transactions/${controlId}`, state }] },
@@ -302,6 +305,17 @@ describe("ViewTransactionPage — the way back", () => {
 
     // -1, not the list's path: only popping brings the list back on the
     // page, sort and filters the user left it on.
+    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(-1);
+  });
+
+  it("names the dashboard when the row was clicked there", async () => {
+    renderPage("62598", { from: "dashboard" });
+
+    await screen.findByText("asdfsf");
+    // The label is the promise the control makes, and popping lands on
+    // /dashboard: "Back to Transactions" there would be a lie.
+    fireEvent.click(screen.getByText("Back to Dashboard"));
+
     expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(-1);
   });
 

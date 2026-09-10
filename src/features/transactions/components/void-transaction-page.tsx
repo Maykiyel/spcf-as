@@ -44,6 +44,7 @@ export function VoidTransactionPage() {
   const columns = transactionListColumns({
     includeCashier: true,
     includeStatus: false,
+    includeItems: true,
     actions: (row) => <VoidTransactionAction transaction={row} />,
   });
 

@@ -49,6 +49,7 @@ export function TransactionListPage() {
   const columns = transactionListColumns({
     includeCashier: isAdmin,
     includeStatus: true,
+    includeItems: true,
   });
 
   const tableState = useServerTableState({
