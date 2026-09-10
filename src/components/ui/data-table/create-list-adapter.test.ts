@@ -128,20 +128,80 @@ describe("createListAdapter", () => {
     expect(config!.params).not.toHaveProperty("filter[from_date]");
   });
 
-  it("merges extra params on top of the standard ones", async () => {
+  it("renames a wire row through selectRow", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        widgets: [{ id: "1", wire_name: "left" }],
+        pagination: { total: 1 },
+      },
+    } as any);
+
+    const getWidgets = createListAdapter<
+      { id: string; wire_name: string },
+      { id: string; name: string }
+    >("/widgets", "widgets", {
+      selectRow: ({ wire_name, ...row }) => ({ ...row, name: wire_name }),
+    });
+    const result = await getWidgets(baseParams);
+
+    expect(result.data).toEqual([{ id: "1", name: "left" }]);
+  });
+
+  it("keeps meta through a row mapping", async () => {
+    // The two renaming fetchers used to rebuild the envelope by hand and
+    // dropped `meta` doing it. Latent until one of them declares a
+    // `selectMeta`, so it is asserted rather than left to be discovered.
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        widgets: [{ id: "1", wire_name: "left" }],
+        total_earnings: 48250,
+        pagination: { total: 1 },
+      },
+    } as any);
+
+    const getWidgets = createListAdapter<
+      { id: string; wire_name: string },
+      { id: string; name: string },
+      number
+    >("/widgets", "widgets", {
+      selectRow: ({ wire_name, ...row }) => ({ ...row, name: wire_name }),
+      selectMeta: (body) => body.total_earnings as number,
+    });
+    const result = await getWidgets(baseParams);
+
+    expect(result).toEqual({
+      data: [{ id: "1", name: "left" }],
+      total: 1,
+      meta: 48250,
+    });
+  });
+
+  it("sends a pinned filter the caller never declared", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       data: { widgets: [], pagination: { total: 0 } },
     } as any);
 
-    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets");
-    await getWidgets(baseParams, { "filter[is_active]": 1 });
+    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets", {
+      pinnedFilters: { status: "completed" },
+    });
+    await getWidgets({ ...baseParams, filters: { customer: "ana" } });
 
-    expect(apiClient.get).toHaveBeenCalledWith(
-      "/widgets",
-      expect.objectContaining({
-        params: expect.objectContaining({ "filter[is_active]": 1 }),
-      }),
-    );
+    const [, config] = vi.mocked(apiClient.get).mock.calls[0];
+    expect(config!.params).toHaveProperty("filter[status]", "completed");
+    expect(config!.params).toHaveProperty("filter[customer]", "ana");
+  });
+
+  it("throws when a key is both pinned and declared", async () => {
+    // A declared key reaches the URL and the pinned one overrides it, so the
+    // control renders and does nothing. Same failure as an undeclared key.
+    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets", {
+      pinnedFilters: { status: "completed" },
+    });
+
+    await expect(
+      getWidgets({ ...baseParams, filters: { status: null } }),
+    ).rejects.toThrow(/both pinned and declared/);
+    expect(apiClient.get).not.toHaveBeenCalled();
   });
 
   it("unwraps data[responseKey] and pagination.total", async () => {
@@ -163,11 +223,13 @@ describe("createListAdapter", () => {
       data: { widgets: [{ id: "1" }], total_earnings: 48250, pagination: { total: 42 } },
     } as any);
 
-    const getWidgets = createListAdapter<{ id: string }, number>(
-      "/widgets",
-      "widgets",
-      { selectMeta: (body) => body.total_earnings as number },
-    );
+    const getWidgets = createListAdapter<
+      { id: string },
+      { id: string },
+      number
+    >("/widgets", "widgets", {
+      selectMeta: (body) => body.total_earnings as number,
+    });
     const result = await getWidgets(baseParams);
 
     expect(result).toEqual({ data: [{ id: "1" }], total: 42, meta: 48250 });

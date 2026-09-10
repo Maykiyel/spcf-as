@@ -6,29 +6,24 @@ import { Notifications, notifications } from "@mantine/notifications";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import type { QueryClient } from "@tanstack/react-query";
 import { screen, renderWithQueryClient } from "@/test/render";
+import { apiClient } from "@/lib/axios/api-client";
 import { getCashiers } from "@/api/cashiers";
-import { getTransactions } from "../api/get-transactions";
 import { voidTransaction } from "../api/void-transaction";
 import { transactionDetailQueryKey } from "../api/transaction-query-keys";
 import type { TransactionListRow } from "../types";
 import { VoidTransactionPage } from "./void-transaction-page";
 
-// Seam: the page component, with the list fetcher and the void action
-// mocked at the module boundary.
+// Seam: the page component, with HTTP and the void action mocked.
 //
-// `get-transactions` is mocked, not `get-voidable-transactions`: the
-// second is where the status pin lives, so mocking it would mock away the
-// only thing this list does differently.
+// Mocked at axios rather than at the list fetcher, because the status pin
+// is `createListAdapter`'s `pinnedFilters` config: mocking the fetcher
+// module would mock away the only thing this list does differently, and
+// the pin would go untested. This is one level below where it lives.
 
-vi.mock("../api/get-transactions", async () => {
-  // A factory, not a bare `vi.mock`: automock empties exported arrays, so
-  // any constant that returns to this module would silently become `[]`.
-  const actual = await vi.importActual<
-    typeof import("../api/get-transactions")
-  >("../api/get-transactions");
-  return { ...actual, getTransactions: vi.fn() };
-});
-const mockGetTransactions = vi.mocked(getTransactions);
+vi.mock("@/lib/axios/api-client", () => ({
+  apiClient: { get: vi.fn() },
+}));
+const mockApiGet = vi.mocked(apiClient.get);
 
 vi.mock("../api/void-transaction");
 const mockVoidTransaction = vi.mocked(voidTransaction);
@@ -87,13 +82,15 @@ const rows: TransactionListRow[] = [
   },
 ];
 
-/** One page of transactions, in the shape `useServerTableState` expects. */
-const page = (data: TransactionListRow[]) => ({ data, total: data.length });
+/** One page of transactions, in the envelope `/transactions` sends. */
+const page = (data: TransactionListRow[]) => ({
+  data: { transactions: data, pagination: { total: data.length } },
+});
 
-/** The params of the most recent request, which is where the pinned status
- * is observable. */
-const lastRequest = () =>
-  mockGetTransactions.mock.calls[mockGetTransactions.mock.calls.length - 1][0];
+/** The query params of the most recent request, which is where the pinned
+ * status is observable as the wire sees it. */
+const lastParams = () =>
+  mockApiGet.mock.calls[mockApiGet.mock.calls.length - 1][1]!.params;
 
 /** `MemoryRouter` keeps history off `window.location`. */
 function LocationProbe() {
@@ -142,7 +139,7 @@ const conflict = (message: string) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetTransactions.mockResolvedValue(page(rows));
+  mockApiGet.mockResolvedValue(page(rows) as never);
   mockGetCashiers.mockResolvedValue([
     { id: 7, full_name: "Jaypee Pahayahay" },
   ] as never);
@@ -158,7 +155,7 @@ describe("VoidTransactionPage", () => {
     renderPage();
 
     await screen.findByText("Juan Dela Cruz");
-    expect(lastRequest().filters).toMatchObject({ status: "completed" });
+    expect(lastParams()).toMatchObject({ "filter[status]": "completed" });
   });
 
   it("keeps the status pinned against a hand-edited URL", async () => {
@@ -168,7 +165,7 @@ describe("VoidTransactionPage", () => {
     renderPage("/void?void_status=pending");
 
     await screen.findByText("Juan Dela Cruz");
-    expect(lastRequest().filters).toMatchObject({ status: "completed" });
+    expect(lastParams()).toMatchObject({ "filter[status]": "completed" });
   });
 
   it("offers no status filter, because the status is not the admin's to choose", async () => {
@@ -256,11 +253,11 @@ describe("VoidTransactionPage", () => {
     seedDetail(queryClient, detailKey);
 
     await openConfirmFor(1201);
-    const requestsBefore = mockGetTransactions.mock.calls.length;
+    const requestsBefore = mockApiGet.mock.calls.length;
     fireEvent.click(dialog().getByRole("button", { name: "Void Transaction" }));
 
     await waitFor(() =>
-      expect(mockGetTransactions.mock.calls.length).toBeGreaterThan(
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(
         requestsBefore,
       ),
     );
@@ -312,11 +309,11 @@ describe("VoidTransactionPage", () => {
 
     renderPage();
     await openConfirmFor(1201);
-    const requestsBefore = mockGetTransactions.mock.calls.length;
+    const requestsBefore = mockApiGet.mock.calls.length;
     fireEvent.click(dialog().getByRole("button", { name: "Void Transaction" }));
 
     await waitFor(() =>
-      expect(mockGetTransactions.mock.calls.length).toBeGreaterThan(
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(
         requestsBefore,
       ),
     );

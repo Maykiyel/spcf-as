@@ -7,6 +7,7 @@ import type { SortPlan } from "@/components/ui/data-table";
  * question. No `supportsSearch`: an unknown filter key here is a 400. */
 export const getTransactionReport = createListAdapter<
   TransactionReportRow,
+  TransactionReportRow,
   number
 >("/reports/transactions", "transactions", {
   selectMeta: (body) => body.total_earnings as number,
