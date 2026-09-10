@@ -1,34 +1,57 @@
-# React + TypeScript + Vite
+# spcf-as
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Accounting system frontend for SPCF: a cashier takes payments and prints an
+Acknowledgement Receipt, an admin manages the service catalog, user accounts and
+pre-numbered receipt series, and reads the reports and audit trail.
 
-Currently, two official plugins are available:
+Scope is deliberately limited to Inventory, Transactions and Series Receipts.
+Suppliers and Students are handled by a different system SPCF already runs and
+were removed rather than deferred; see
+[`docs/adr/0001`](docs/adr/0001-remove-suppliers-students.md) before adding
+either back.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Vite + React + TypeScript, talking to a Laravel API in a separate repository.
 
-## React Compiler
+## Running it
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+pnpm install
+pnpm dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Needs `VITE_APP_API_URL` in `.env`, pointing at the backend's `/api` root
+(`http://localhost:8000/api` against a local `php artisan serve`). The app
+derives its Sanctum CSRF origin by stripping the trailing `/api`, so that
+suffix matters. A missing or malformed value throws at startup rather than
+failing later on the first request.
+
+The backend is its own repository and is the source of truth for wire
+behaviour. `BACKEND_NOTES.md` transcribes what it actually returns and
+enforces, per endpoint.
+
+## Verifying a change
+
+```bash
+npx tsc -p tsconfig.app.json --noEmit
+npx oxlint src
+npx vitest run
+```
+
+The suite takes roughly four minutes. There is no formatter in the toolchain
+and `prettier` is not a dependency, so match the surrounding style by hand
+rather than running one.
+
+## Where things are documented
+
+- **`CONTEXT.md`** — the domain glossary and the coding standard. Read it first
+  and in full. Its Language section is what stops two names existing for one
+  thing, and its Comments section is enforced in review.
+- **`AGENTS.md`** — issue tracker, triage labels, and where domain docs live.
+- **`BACKEND_NOTES.md`** — the API, per endpoint: envelope, status codes, sort
+  allow-lists, filter surfaces, response shapes, and the gaps still open.
+- **`docs/adr/`** — decisions that would otherwise look like oversights.
+- **`docs/operations/`** — turnover steps that happen outside the codebase, such
+  as the per-workstation printer setup an Acknowledgement Receipt needs.
+- **`src/components/ui/README.md`** — the shared UI tier and its one hard rule:
+  nothing in it may import from `src/features/*` or `src/app/*`. Oxlint enforces
+  that.
