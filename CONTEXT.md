@@ -110,7 +110,8 @@ for filters.
 **Sortability is derived from the plan, never declared.** A column sorts
 exactly when its `sortKey ?? field` is allow-listed, resolved by
 `useServerTableState` before the grid sees it. That was unsafe while
-`ColumnDef.key` doubled as identity, and became safe with [[column-field-and-id]].
+`ColumnDef.key` doubled as identity, and became safe with
+[[column-field-id-and-sortkey]].
 `app/sort-plan-conformance.test.ts` names what each table offers, since
 derivation makes "a sortable column names an allow-listed key" true by
 construction: the risk moved to the plan, where a key wrongly added to
