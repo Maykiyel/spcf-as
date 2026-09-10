@@ -61,8 +61,6 @@ export function VoidTransactionPage() {
     <DataTable.Root title="Void Transactions" state={tableState}>
       {/* Same panel as the receipts list, one control lighter. */}
       <TransactionListFilters
-        filters={tableState.filters}
-        onChange={tableState.setFilters}
         includeCashier
         includeStatus={false}
       />

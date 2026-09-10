@@ -1,14 +1,14 @@
 import { Group, Select } from "@mantine/core";
-import type { TableFilters } from "@/components/ui/data-table";
+import { useTableFilters } from "@/components/ui/data-table";
 import { TableFilterText } from "@/components/ui/table-filter";
 import { CashierFilter, DateRangeTableFilter } from "@/components/filters";
 import { TRANSACTION_STATUS_LABEL } from "../lib/transaction-status";
 import { TRANSACTION_STATUSES } from "../types";
 
 /** Each control takes a value and reports a change, knowing nothing about
- * the URL; `useServerTableState` owns the values. The panel is exported and
- * the transaction-specific controls are private, which is what lets a second
- * page reuse the whole set rather than re-wiring six `setFilters` calls.
+ * the URL or its own key; `useTableFilters` binds both. The panel is
+ * exported and the transaction-specific controls are private, which is what
+ * lets a second page reuse the whole set.
  */
 
 type FilterProps = {
@@ -64,11 +64,6 @@ function TransactionStatusFilter({ value, onChange }: FilterProps) {
 }
 
 type TransactionListFiltersProps = {
-  /** The table's current filter values, straight off `useServerTableState`. */
-  filters: TableFilters;
-  /** `setFilters`. A patch, because the date range moves both ends at once
-   * and two writes would mean two refetches for one action. */
-  onChange: (patch: TableFilters) => void;
   /** Whether the cashier filter belongs here. Admin-only: `filter[cashier_id]`
    * is a 400 for a cashier on `/transactions`, so `false` must mean never
    * mounted, not hidden. */
@@ -86,40 +81,21 @@ type TransactionListFiltersProps = {
  * fail the first time anyone typed in it.
  */
 export function TransactionListFilters({
-  filters,
-  onChange,
   includeCashier,
   includeStatus,
 }: TransactionListFiltersProps) {
+  const filter = useTableFilters();
+
   return (
     // `align="flex-end"` so labelled inputs share a baseline whatever their
     // label lengths, and wrap together.
     <Group align="flex-end" gap="md" wrap="wrap">
-      <TransactionPayerFilter
-        value={filters.customer}
-        onChange={(customer) => onChange({ customer })}
-      />
-      <TransactionSeriesNumberFilter
-        value={filters.series_number}
-        onChange={(series_number) => onChange({ series_number })}
-      />
-      <TransactionItemNameFilter
-        value={filters.item_name}
-        onChange={(item_name) => onChange({ item_name })}
-      />
-      {includeStatus && (
-        <TransactionStatusFilter
-          value={filters.status}
-          onChange={(status) => onChange({ status })}
-        />
-      )}
-      <DateRangeTableFilter filters={filters} onChange={onChange} />
-      {includeCashier && (
-        <CashierFilter
-          value={filters.cashier_id}
-          onChange={(cashier_id) => onChange({ cashier_id })}
-        />
-      )}
+      <TransactionPayerFilter {...filter("customer")} />
+      <TransactionSeriesNumberFilter {...filter("series_number")} />
+      <TransactionItemNameFilter {...filter("item_name")} />
+      {includeStatus && <TransactionStatusFilter {...filter("status")} />}
+      <DateRangeTableFilter />
+      {includeCashier && <CashierFilter {...filter("cashier_id")} />}
     </Group>
   );
 }

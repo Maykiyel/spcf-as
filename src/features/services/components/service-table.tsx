@@ -2,7 +2,7 @@ import { Divider } from "@mantine/core";
 import { DataTable, useServerTableState } from "@/components/ui/data-table";
 import { getServices, SERVICES_SORT_PLAN } from "../api/get-services";
 import { serviceColumns } from "./service-columns";
-import { ServiceStatusFilter } from "./service-status-filter";
+import { ServiceFilterPanel } from "./service-filter-panel";
 import type { Service } from "@/api/services";
 
 type ServiceTableProps = {
@@ -36,10 +36,7 @@ export function ServiceTable({ onEdit }: ServiceTableProps) {
       <DataTable.Toolbar>
         <DataTable.PageSize />
         <Divider orientation="vertical" visibleFrom="xs" />
-        <ServiceStatusFilter
-          value={tableState.filters.is_active}
-          onChange={(is_active) => tableState.setFilters({ is_active })}
-        />
+        <ServiceFilterPanel />
         <DataTable.Search />
       </DataTable.Toolbar>
       <DataTable.Grid />

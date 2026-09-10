@@ -118,6 +118,10 @@ construction: the risk moved to the plan, where a key wrongly added to
 _Avoid_: sort config, allow-list on its own (that is one of the three
 parts), default sorts (the old `*_DEFAULT_SORTS` constants, now gone)
 
+**Table filter binding**:
+How a filter control reaches its table: `useTableFilters()` once at the top of a panel, then `<CashierFilter {...filter("cashier_id")} />` per control. An accessor rather than a `useTableFilter(key)` hook because two panels render controls conditionally, which a per-key hook would make a conditional hook call. It replaced about twelve hand-written `value={filters.x} onChange={(x) => onChange({ x })}` pairs and the `filters`/`onChange` prop pair on eight call sites. `filters` and `setFilters` ride on the provider value and are deliberately absent from the exported `DataTableContextValue`, so the accessor is the only way in and a panel cannot rebuild that bridge. Binding a key the table never declared throws on first render, because `declaredOnly` drops it and the alternative is a control that renders and does nothing. The date range is the exception at all five of its call sites: `DateRangeTableFilter` takes no props and reads `useTableDateRange()` itself, its two keys being fixed by the table's [[date-range-filter-descriptor]] rather than named by a panel.
+_Avoid_: filter props (that is the thing it replaced), filter context (the context is the table's, this is one accessor onto it)
+
 **Date range filter descriptor**:
 The single `dateRange` option a table declares on `useServerTableState` when
 it filters by a period. It is one declaration because the parts are useless

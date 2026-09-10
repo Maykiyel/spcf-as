@@ -8,10 +8,7 @@ import {
   USER_ACCOUNTS_QUERY_KEY,
   USER_ACCOUNTS_SORT_PLAN,
 } from "../api/get-user-accounts";
-import {
-  UserAccountRoleFilter,
-  UserAccountStatusFilter,
-} from "./user-account-filters";
+import { UserAccountFilterPanel } from "./user-account-filter-panel";
 import { CreateAccountModal } from "./create-account-modal";
 import { userAccountColumns } from "./user-account-columns";
 
@@ -58,15 +55,7 @@ export function ManageAccountsPage() {
         <DataTable.Toolbar>
           <DataTable.PageSize />
           <Divider orientation="vertical" visibleFrom="xs" />
-          <UserAccountRoleFilter
-            value={tableState.filters.role}
-            onChange={(role) => tableState.setFilters({ role })}
-          />
-          <Divider orientation="vertical" visibleFrom="xs" />
-          <UserAccountStatusFilter
-            value={tableState.filters.is_active}
-            onChange={(is_active) => tableState.setFilters({ is_active })}
-          />
+          <UserAccountFilterPanel />
         </DataTable.Toolbar>
         <DataTable.Grid />
         <DataTable.Pagination />

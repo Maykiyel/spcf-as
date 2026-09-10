@@ -5,7 +5,7 @@ import { render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { theme } from "@/config/theme";
 import { DataTable } from "./index";
-import type { ResolvedColumn, DataTableContextValue } from "./types";
+import type { ResolvedColumn, DataTableProviderValue } from "./types";
 
 // Seam: the toolbar composed under a real DataTable.Root, with the table
 // state hand-built as a test double. The state hooks have their own tests;
@@ -27,8 +27,8 @@ const columns: ResolvedColumn<Row>[] = [
 ];
 
 function stubState(
-  overrides: Partial<DataTableContextValue<Row>> = {},
-): DataTableContextValue<Row> {
+  overrides: Partial<DataTableProviderValue<Row>> = {},
+): DataTableProviderValue<Row> {
   return {
     columns,
     rows: [],
@@ -44,13 +44,15 @@ function stubState(
     onSearchChange: vi.fn(),
     sorts: [],
     onSort: vi.fn(),
+    filters: {},
+    setFilters: vi.fn(),
     ...overrides,
   };
 }
 
 function renderToolbar(
   children: ReactNode,
-  state: DataTableContextValue<Row> = stubState(),
+  state: DataTableProviderValue<Row> = stubState(),
 ) {
   return render(
     <MantineProvider theme={theme}>

@@ -32,10 +32,7 @@ export function ActivityLogPage() {
 
   return (
     <DataTable.Root title="Activity Log" state={tableState}>
-      <ActivityLogFilters
-        filters={tableState.filters}
-        onChange={tableState.setFilters}
-      />
+      <ActivityLogFilters />
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />

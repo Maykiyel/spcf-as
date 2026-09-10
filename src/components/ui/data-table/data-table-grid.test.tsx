@@ -4,7 +4,7 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { theme } from "@/config/theme";
 import { DataTable } from "./index";
-import type { ResolvedColumn, DataTableContextValue } from "./types";
+import type { ResolvedColumn, DataTableProviderValue } from "./types";
 
 // Seam: the grid under a real DataTable.Root, with the table state
 // hand-built as a double. Two behaviours here fail silently:
@@ -29,8 +29,8 @@ const rows: Row[] = [
 ];
 
 function stubState(
-  overrides: Partial<DataTableContextValue<Row>> = {},
-): DataTableContextValue<Row> {
+  overrides: Partial<DataTableProviderValue<Row>> = {},
+): DataTableProviderValue<Row> {
   return {
     columns: [],
     rows,
@@ -46,6 +46,8 @@ function stubState(
     onSearchChange: vi.fn(),
     sorts: [],
     onSort: vi.fn(),
+    filters: {},
+    setFilters: vi.fn(),
     ...overrides,
   };
 }
@@ -55,7 +57,7 @@ function renderGrid(
   {
     onRowClick,
     ...overrides
-  }: Partial<DataTableContextValue<Row>> & {
+  }: Partial<DataTableProviderValue<Row>> & {
     onRowClick?: (row: Row) => void;
   } = {},
 ) {

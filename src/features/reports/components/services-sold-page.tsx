@@ -32,10 +32,7 @@ export function ServicesSoldPage() {
 
   return (
     <DataTable.Root title="Services Sold Report" state={tableState}>
-      <DateRangeTableFilter
-        filters={tableState.filters}
-        onChange={tableState.setFilters}
-      />
+      <DateRangeTableFilter />
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />

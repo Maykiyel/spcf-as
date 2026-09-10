@@ -68,10 +68,7 @@ export function ServiceBreakdownPage() {
       </Group>
 
       <DataTable.Root title={title} state={tableState}>
-        <DateRangeTableFilter
-          filters={tableState.filters}
-          onChange={tableState.setFilters}
-        />
+        <DateRangeTableFilter />
         <Divider />
         <DataTable.Toolbar>
           <DataTable.PageSize />
