@@ -1,12 +1,7 @@
 import { Divider } from "@mantine/core";
-import {
-  DataTable,
-  useServerTableState,
-  type ColumnDef,
-} from "@/components/ui/data-table";
+import { DataTable, useServerTableState } from "@/components/ui/data-table";
 import { getServices, SERVICES_SORT_PLAN } from "../api/get-services";
-import { ServiceActiveToggle } from "./service-active-toggle";
-import { ServiceActionsCell } from "./service-actions-cell";
+import { serviceColumns } from "./service-columns";
 import { ServiceStatusFilter } from "./service-status-filter";
 import type { Service } from "@/api/services";
 
@@ -22,35 +17,6 @@ const URL_KEY = "services";
 const INITIAL_FILTERS = { is_active: null };
 
 export function ServiceTable({ onEdit }: ServiceTableProps) {
-  const columns: ColumnDef<Service>[] = [
-    {
-      field: "item_code",
-      header: "Item Code",
-      render: (row) => row.item_code?.name ?? "",
-    },
-    { field: "name", header: "Service" },
-    {
-      field: "description",
-      header: "Description",
-      render: (row) => row.description ?? "—",
-    },
-    {
-      field: "price",
-      header: "Price",
-      render: (row) => `₱${row.price.toFixed(2)}`,
-    },
-    {
-      id: "is_active",
-      header: "Active",
-      render: (row) => <ServiceActiveToggle service={row} />,
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      render: (row) => <ServiceActionsCell service={row} onEdit={onEdit} />,
-    },
-  ];
-
   // `["services"]` is a prefix, not the whole key — the hook appends the
   // page, size, search, sorts and filters. The filter is no longer named
   // here by hand, which is the point: it was in the request but not in the
@@ -59,7 +25,7 @@ export function ServiceTable({ onEdit }: ServiceTableProps) {
   const tableState = useServerTableState({
     queryKey: ["services"],
     queryFn: getServices,
-    columns,
+    columns: serviceColumns({ onEdit }),
     urlKey: URL_KEY,
     sortPlan: SERVICES_SORT_PLAN,
     initialFilters: INITIAL_FILTERS,
