@@ -13,6 +13,7 @@ import {
   setLineItemQuantity as setLineItemQuantityInList,
   upsertLineItemFromDTO,
 } from "../lib/transaction-draft";
+import { createWriteQueue } from "../lib/write-queue";
 import type {
   FeeCatalogItem,
   PendingLineItemIntent,
@@ -23,17 +24,28 @@ import type {
 // calls. Matches the debounce used elsewhere in the app.
 const DEBOUNCE_MS = 400;
 
-// Safety cap on cancel's drain loop — shouldn't ever be hit.
-const MAX_CANCEL_DRAIN_ROUNDS = 10;
-
-// One state object per fee, replacing four parallel Records that had to
-// be kept in sync by hand at every mutation site.
+// What a fee add coalesces: clicks accumulate into one quantity, and the
+// guard keeps a second flush off the wire while the first is out.
 type FeeAddState = {
   pendingCount: number;
-  flushTimeout: ReturnType<typeof setTimeout> | null;
   inFlight: boolean;
-  inFlightPromise: Promise<void> | null;
 };
+
+// Lazy state init rather than a ref, because a queue must be built once and
+// this module deliberately never mutates a ref during render.
+function usePendingWriteQueue<K>() {
+  const [pendingKeys, setPendingKeys] = useState<ReadonlySet<K>>(
+    () => new Set(),
+  );
+  const [queue] = useState(() =>
+    createWriteQueue<K>({
+      debounceMs: DEBOUNCE_MS,
+      onPendingChange: setPendingKeys,
+    }),
+  );
+
+  return [pendingKeys, queue] as const;
+}
 
 function getFeeAddState(
   states: Record<number, FeeAddState>,
@@ -42,12 +54,7 @@ function getFeeAddState(
   const existing = states[feeItemId];
   if (existing) return existing;
 
-  const created: FeeAddState = {
-    pendingCount: 0,
-    flushTimeout: null,
-    inFlight: false,
-    inFlightPromise: null,
-  };
+  const created: FeeAddState = { pendingCount: 0, inFlight: false };
   states[feeItemId] = created;
   return created;
 }
@@ -87,26 +94,33 @@ export function useLineItemSync() {
     return initiatingRef.current;
   };
 
-  // Add-fee batching state, keyed by feeItemId (the service id). See
-  // FeeAddState above.
+  // Add-fee coalescing state, keyed by feeItemId (the service id). The
+  // timers, in-flight promises and pending set live in feeQueue below.
   const feeAddStatesRef = useRef<Record<number, FeeAddState>>({});
 
+  // Fees with outstanding add activity (scheduled or in-flight) — feeds
+  // isLineItemLocked and isSyncing.
+  const [pendingFeeItemIds, feeQueue] = usePendingWriteQueue<number>();
+
+  // The newest quantity asked for per line — a quantity edit coalesces by
+  // replacing, where a fee add accumulates.
+  const latestRequestedQuantityRef = useRef<Record<string, number>>({});
+
+  // Lines with an outstanding quantity write (scheduled or in-flight) —
+  // feeds isSyncing.
+  const [pendingQuantityLineItemIds, quantityQueue] =
+    usePendingWriteQueue<string>();
+
   useEffect(() => {
-    const states = feeAddStatesRef.current;
     return () => {
-      Object.values(states).forEach((state) => {
-        if (state.flushTimeout) clearTimeout(state.flushTimeout);
-      });
+      feeQueue.reset();
+      quantityQueue.reset();
     };
-  }, []);
+  }, [feeQueue, quantityQueue]);
 
   // What the cashier asked for on a line that was locked at the time,
   // keyed by feeItemId — replayed once that fee settles.
   const pendingIntentsRef = useRef<Record<number, PendingLineItemIntent>>({});
-
-  // Fees with outstanding add activity (scheduled or in-flight) — feeds
-  // isLineItemLocked and isSyncing.
-  const [pendingFeeItemIds, pendingFeeSet] = useSetState<number>();
 
   // Fees the cashier asked to remove while still locked — separate from
   // pendingFeeItemIds because it drives distinct UI: the row stays but
@@ -173,33 +187,19 @@ export function useLineItemSync() {
       notifyMutationError(error, "Couldn't add that fee. Please try again.");
     } finally {
       state.inFlight = false;
-      // Clicks that landed while this was in flight accumulated on the
-      // state — send them now instead of waiting for another debounce
-      // window.
+      // Re-firing here, before the queue clears this key, is what keeps the
+      // fee continuously pending across the two flushes. Another debounce
+      // window would strand the clicks that accumulated while in flight.
       if (state.pendingCount > 0) {
-        void runFlushAddFeeItem(feeItem);
+        feeQueue.flushNow(id, () => flushAddFeeItem(feeItem));
+      } else if (resolvedItem && resolvedTransactionId) {
+        applyQueuedIntent(id, resolvedItem, resolvedTransactionId);
       } else {
-        pendingFeeSet.remove(id);
-        if (resolvedItem && resolvedTransactionId) {
-          applyQueuedIntent(id, resolvedItem, resolvedTransactionId);
-        } else {
-          // The add failed — nothing exists server-side to replay against.
-          delete pendingIntentsRef.current[id];
-          pendingRemovalSet.remove(id);
-        }
+        // The add failed — nothing exists server-side to replay against.
+        delete pendingIntentsRef.current[id];
+        pendingRemovalSet.remove(id);
       }
     }
-  };
-
-  const runFlushAddFeeItem = (feeItem: FeeCatalogItem): Promise<void> => {
-    const state = getFeeAddState(feeAddStatesRef.current, feeItem.id);
-    const promise = flushAddFeeItem(feeItem).finally(() => {
-      if (state.inFlightPromise === promise) {
-        state.inFlightPromise = null;
-      }
-    });
-    state.inFlightPromise = promise;
-    return promise;
   };
 
   const addFeeItemImpl = (feeItem: FeeCatalogItem) => {
@@ -215,48 +215,10 @@ export function useLineItemSync() {
     delete pendingIntentsRef.current[feeItem.id];
     pendingRemovalSet.remove(feeItem.id);
 
-    pendingFeeSet.add(feeItem.id);
-
     const state = getFeeAddState(feeAddStatesRef.current, feeItem.id);
     state.pendingCount += 1;
 
-    if (state.flushTimeout) clearTimeout(state.flushTimeout);
-
-    state.flushTimeout = setTimeout(() => {
-      state.flushTimeout = null;
-      void runFlushAddFeeItem(feeItem);
-    }, DEBOUNCE_MS);
-  };
-
-  // Per-line-item debounce state for quantity edits, keyed by lineItemId.
-  const quantityTimeoutsRef = useRef<
-    Record<string, ReturnType<typeof setTimeout>>
-  >({});
-  const latestRequestedQuantityRef = useRef<Record<string, number>>({});
-  // The in-flight PATCH promise for a line's quantity, if any — lets
-  // cancel()'s drain loop wait on it the same way it already waits on
-  // in-flight adds (via feeAddStatesRef's inFlightPromise).
-  const quantityInFlightPromisesRef = useRef<
-    Record<string, Promise<void> | null>
-  >({});
-
-  // Lines with an outstanding quantity write (scheduled or in-flight) —
-  // feeds isSyncing.
-  const [pendingQuantityLineItemIds, pendingQuantitySet] =
-    useSetState<string>();
-
-  useEffect(() => {
-    const timeouts = quantityTimeoutsRef.current;
-    return () => {
-      Object.values(timeouts).forEach(clearTimeout);
-    };
-  }, []);
-
-  // Skip clearing if a newer edit already scheduled its own timeout —
-  // there's still more work coming for this line.
-  const clearQuantityPendingIfSettled = (lineItemId: string) => {
-    if (quantityTimeoutsRef.current[lineItemId]) return;
-    pendingQuantitySet.remove(lineItemId);
+    feeQueue.schedule(feeItem.id, () => flushAddFeeItem(feeItem));
   };
 
   // Fires the PATCH for a quantity change. No locking decisions here —
@@ -267,53 +229,38 @@ export function useLineItemSync() {
     quantity: number,
   ) => {
     latestRequestedQuantityRef.current[lineItemId] = quantity;
-    pendingQuantitySet.add(lineItemId);
 
-    const existingTimeout = quantityTimeoutsRef.current[lineItemId];
-    if (existingTimeout) clearTimeout(existingTimeout);
-
-    quantityTimeoutsRef.current[lineItemId] = setTimeout(() => {
-      delete quantityTimeoutsRef.current[lineItemId];
+    quantityQueue.schedule(lineItemId, async () => {
       const requestedQuantity = latestRequestedQuantityRef.current[lineItemId];
 
-      const promise = updateTransactionItemQuantity(
-        currentTransactionId,
-        Number(lineItemId),
-        requestedQuantity,
-      )
-        .then((item) => {
-          // A newer change superseded this request while it was in
-          // flight — drop the response rather than clobber the newer
-          // (already-sent or still-debouncing) value.
-          if (
-            latestRequestedQuantityRef.current[lineItemId] !==
-            requestedQuantity
-          ) {
-            return;
-          }
-          setLineItems((current) =>
-            current.map((existing) =>
-              existing.id === lineItemId
-                ? { ...existing, quantity: item.quantity, price: item.price }
-                : existing,
-            ),
-          );
-        })
-        .catch((error: unknown) => {
-          notifyMutationError(
-            error,
-            "Couldn't update that item's quantity. Please try again.",
-          );
-        })
-        .finally(() => {
-          clearQuantityPendingIfSettled(lineItemId);
-          if (quantityInFlightPromisesRef.current[lineItemId] === promise) {
-            delete quantityInFlightPromisesRef.current[lineItemId];
-          }
-        });
-
-      quantityInFlightPromisesRef.current[lineItemId] = promise;
-    }, DEBOUNCE_MS);
+      try {
+        const item = await updateTransactionItemQuantity(
+          currentTransactionId,
+          Number(lineItemId),
+          requestedQuantity,
+        );
+        // A newer change superseded this request while it was in flight —
+        // drop the response rather than clobber the newer (already-sent or
+        // still-debouncing) value.
+        if (
+          latestRequestedQuantityRef.current[lineItemId] !== requestedQuantity
+        ) {
+          return;
+        }
+        setLineItems((current) =>
+          current.map((existing) =>
+            existing.id === lineItemId
+              ? { ...existing, quantity: item.quantity, price: item.price }
+              : existing,
+          ),
+        );
+      } catch (error) {
+        notifyMutationError(
+          error,
+          "Couldn't update that item's quantity. Please try again.",
+        );
+      }
+    });
   };
 
   const setLineItemQuantityImpl = (lineItemId: string, quantity: number) => {
@@ -388,12 +335,8 @@ export function useLineItemSync() {
     // A quantity change still debounced (not yet fired) for this line is
     // superseded by removal — the line is going away, so the PATCH it
     // would have sent should never fire.
-    const queuedQuantityTimeout = quantityTimeoutsRef.current[lineItemId];
-    if (queuedQuantityTimeout) {
-      clearTimeout(queuedQuantityTimeout);
-      delete quantityTimeoutsRef.current[lineItemId];
+    if (quantityQueue.cancel(lineItemId)) {
       delete latestRequestedQuantityRef.current[lineItemId];
-      clearQuantityPendingIfSettled(lineItemId);
     }
 
     if (!transactionId) return;
@@ -404,17 +347,11 @@ export function useLineItemSync() {
   // there's nothing in flight left to drain (Confirm is gated on
   // isSyncing) and nothing server-side to cancel.
   const resetImpl = () => {
-    Object.values(quantityTimeoutsRef.current).forEach(clearTimeout);
-    quantityTimeoutsRef.current = {};
+    quantityQueue.reset();
     latestRequestedQuantityRef.current = {};
-    quantityInFlightPromisesRef.current = {};
-    pendingQuantitySet.clear();
 
-    Object.values(feeAddStatesRef.current).forEach((state) => {
-      if (state.flushTimeout) clearTimeout(state.flushTimeout);
-    });
+    feeQueue.reset();
     feeAddStatesRef.current = {};
-    pendingFeeSet.clear();
 
     pendingIntentsRef.current = {};
     pendingRemovalSet.clear();
@@ -426,7 +363,7 @@ export function useLineItemSync() {
   // Not gated on isSyncing (unlike Confirm) — Cancel should feel instant
   // from the caller's side; this resolves internally instead. It resolves
   // the true transaction id (the in-flight initiate promise, since the
-  // closure variable can lag) and drains every in-flight add first, so a
+  // closure variable can lag) and drains every in-flight write first, so a
   // late response can't resurrect an item after the cashier already
   // cancelled.
   const cancelImpl = async (): Promise<void> => {
@@ -441,27 +378,7 @@ export function useLineItemSync() {
       }
     }
 
-    let drainRounds = 0;
-    while (
-      (Object.values(feeAddStatesRef.current).some(
-        (state) => state.inFlightPromise,
-      ) ||
-        Object.values(quantityInFlightPromisesRef.current).some(
-          (promise) => promise,
-        )) &&
-      drainRounds < MAX_CANCEL_DRAIN_ROUNDS
-    ) {
-      const inFlightPromises = [
-        ...Object.values(feeAddStatesRef.current)
-          .map((state) => state.inFlightPromise)
-          .filter((promise): promise is Promise<void> => promise !== null),
-        ...Object.values(quantityInFlightPromisesRef.current).filter(
-          (promise): promise is Promise<void> => promise !== null,
-        ),
-      ];
-      await Promise.allSettled(inFlightPromises);
-      drainRounds += 1;
-    }
+    await Promise.all([feeQueue.drain(), quantityQueue.drain()]);
 
     if (effectiveTransactionId) {
       await cancelTransaction(effectiveTransactionId);
