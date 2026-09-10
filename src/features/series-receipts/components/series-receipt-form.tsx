@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NumberInput, Select, Group, SimpleGrid, Modal, Text } from "@mantine/core";
+import { NumberInput, Select, Group, SimpleGrid, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
   useMutation,
@@ -11,6 +11,7 @@ import {
 import { AxiosError } from "axios";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton, DangerButton } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { IconRefresh, IconDeviceFloppy } from "@tabler/icons-react";
 import {
   notifySuccess,
@@ -243,11 +244,13 @@ export function SeriesReceiptForm() {
         </Card.Body>
       </Card.Root>
 
-      <Modal
+      <ConfirmModal
         opened={confirmOpen}
         onClose={handleCancelConfirm}
         title="Confirm series receipt"
-        centered
+        confirmLabel="Confirm"
+        onConfirm={handleConfirmCreate}
+        loading={createMutation.isPending}
       >
         <Text size="sm">
           Creates receipts numbered{" "}
@@ -257,16 +260,7 @@ export function SeriesReceiptForm() {
           · <strong>{pendingFields?.sheets}</strong> sheets for{" "}
           <strong>{pendingCashierName}</strong>. Is this correct?
         </Text>
-        <Group justify="flex-end" mt="lg">
-          <DangerButton onClick={handleCancelConfirm}>Cancel</DangerButton>
-          <PrimaryButton
-            loading={createMutation.isPending}
-            onClick={handleConfirmCreate}
-          >
-            Confirm
-          </PrimaryButton>
-        </Group>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }

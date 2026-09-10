@@ -4,6 +4,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   notifySuccess,
   notifyMutationError,
@@ -121,12 +122,13 @@ export function UserAccountActionsCell({
       {/* Deactivation is confirmed; reactivation isn't. One cuts off a
           cashier mid-shift and suspends their receipt stock, the other
           only gives access back. */}
-      <Modal
+      <ConfirmModal
         opened={confirmDeactivateOpen}
         onClose={confirmDeactivate.close}
         title="Deactivate account"
-        centered
-        closeOnClickOutside={!toggleMutation.isPending}
+        confirmLabel="Deactivate Account"
+        onConfirm={() => toggleMutation.mutate()}
+        loading={toggleMutation.isPending}
       >
         <Stack gap="sm">
           <Text size="sm">
@@ -142,22 +144,7 @@ export function UserAccountActionsCell({
             </Text>
           )}
         </Stack>
-
-        <Group justify="flex-end" mt="lg">
-          <DangerButton
-            onClick={confirmDeactivate.close}
-            disabled={toggleMutation.isPending}
-          >
-            Cancel
-          </DangerButton>
-          <PrimaryButton
-            loading={toggleMutation.isPending}
-            onClick={() => toggleMutation.mutate()}
-          >
-            Deactivate Account
-          </PrimaryButton>
-        </Group>
-      </Modal>
+      </ConfirmModal>
 
       <Modal
         opened={confirmDeleteOpen}

@@ -7,13 +7,13 @@ import {
   Textarea,
   Group,
   SimpleGrid,
-  Modal,
   Text,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton, DangerButton } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { IconRefresh, IconDeviceFloppy } from "@tabler/icons-react";
 import {
   notifySuccess,
@@ -296,24 +296,20 @@ export function ServiceForm({
         </Card.Body>
       </Card.Root>
 
-      <Modal
+      <ConfirmModal
         opened={confirmOpen}
         onClose={closeConfirm}
         title="Move service to a different item code"
-        centered
+        confirmLabel="Move"
+        onConfirm={handleConfirmMove}
+        loading={isPending}
       >
         <Text size="sm">
           Move <strong>{editingService?.name}</strong> from{" "}
           <strong>{originalItemCode?.name}</strong> to{" "}
           <strong>{selection?.name}</strong>?
         </Text>
-        <Group justify="flex-end" mt="lg">
-          <DangerButton onClick={closeConfirm}>Cancel</DangerButton>
-          <PrimaryButton loading={isPending} onClick={handleConfirmMove}>
-            Move
-          </PrimaryButton>
-        </Group>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }

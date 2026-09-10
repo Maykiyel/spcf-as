@@ -1,7 +1,8 @@
-import { Group, Modal, Stack, Text } from "@mantine/core";
+import { Group, Stack, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { DangerButton, PrimaryButton } from "@/components/ui/button";
+import { DangerButton } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   notifySuccess,
   notifyMutationError,
@@ -91,12 +92,13 @@ export function VoidTransactionAction({
         Void
       </DangerButton>
 
-      <Modal
+      <ConfirmModal
         opened={confirmOpen}
         onClose={closeConfirm}
         title="Void transaction"
-        centered
-        closeOnClickOutside={!voidMutation.isPending}
+        confirmLabel="Void Transaction"
+        onConfirm={() => voidMutation.mutate()}
+        loading={voidMutation.isPending}
       >
         <Stack gap="sm">
           <Text size="sm">
@@ -133,22 +135,7 @@ export function VoidTransactionAction({
             />
           </Stack>
         </Stack>
-
-        <Group justify="flex-end" mt="lg">
-          <DangerButton
-            onClick={closeConfirm}
-            disabled={voidMutation.isPending}
-          >
-            Cancel
-          </DangerButton>
-          <PrimaryButton
-            loading={voidMutation.isPending}
-            onClick={() => voidMutation.mutate()}
-          >
-            Void Transaction
-          </PrimaryButton>
-        </Group>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }

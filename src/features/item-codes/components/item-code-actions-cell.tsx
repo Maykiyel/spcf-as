@@ -1,11 +1,8 @@
-import { Group, Modal, Text } from "@mantine/core";
+import { Group, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  EditButton,
-  DangerButton,
-  PrimaryButton,
-} from "@/components/ui/button";
+import { EditButton, DangerButton } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   notifySuccess,
   notifyMutationError,
@@ -54,27 +51,20 @@ export function ItemCodeActionsCell({
         <DangerButton onClick={openConfirm}>Delete</DangerButton>
       </Group>
 
-      <Modal
+      <ConfirmModal
         opened={confirmOpen}
         onClose={closeConfirm}
         title="Delete item code"
-        centered
+        confirmLabel="Delete"
+        onConfirm={() => deleteMutation.mutate()}
+        loading={deleteMutation.isPending}
       >
         <Text size="sm">
           Delete <strong>{itemCode.name}</strong>? This can't be undone. If any
           services still belong to this item code, deletion will be blocked
           until they're removed or reassigned.
         </Text>
-        <Group justify="flex-end" mt="lg">
-          <DangerButton onClick={closeConfirm}>Cancel</DangerButton>
-          <PrimaryButton
-            loading={deleteMutation.isPending}
-            onClick={() => deleteMutation.mutate()}
-          >
-            Delete
-          </PrimaryButton>
-        </Group>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }
