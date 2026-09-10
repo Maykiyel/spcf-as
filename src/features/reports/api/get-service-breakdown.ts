@@ -23,6 +23,5 @@ export const SERVICE_BREAKDOWN_SORT_PLAN: SortPlan = {
     "total",
     "cashier_name",
   ],
-  unique: ["id"],
   default: [{ key: "id", direction: "asc" }],
 };

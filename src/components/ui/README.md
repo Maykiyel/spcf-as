@@ -452,15 +452,14 @@ settled. Naming that here is the point of this note.
 
 ### The sort plan
 
-An endpoint's sort surface is one fact: which keys it allow-lists, which of
-those are unique, and what it sorts by when asked for nothing. A table
-declares it once, beside the fetcher that owns the endpoint:
+An endpoint's sort surface is one fact: which keys it allow-lists, and what
+it sorts by when asked for nothing. A table declares it once, beside the
+fetcher that owns the endpoint:
 
 ```tsx
 export const TRANSACTION_REPORT_SORT_PLAN: SortPlan = {
   allowed: ["created_at", "id", "customer_name", "total", "amount_paid",
             "change_amount", "cashier_name"],
-  unique: ["id"],
   default: [
     { key: "created_at", direction: "desc" },
     { key: "id", direction: "asc" },
@@ -500,14 +499,19 @@ and wrong wherever the endpoint already has one. Leave `default` out
 entirely and the table starts unsorted, which is what the three catalog
 tables do.
 
-**`unique` replaced the total-order boolean.** A default ending in a unique
-key orders the rows completely, so nothing appended behind it can reorder
-anything: the click lights a caret and changes nothing on screen, which
-reads as broken. Naming which keys are unique lets that be derived rather
-than asserted, and the first click on another column then replaces the
-default instead of joining it. `sortsToExtend` is where this lives. Order
-matters: a unique key that is not last does not make the default a total
-order.
+**The first click on a declared sort replaces it.** A header means "sort by
+this"; a second column is something the user asks for by clicking twice.
+`sortsToExtend` is where this lives.
+
+The plan carried a third part, `unique`, until #126: the replace only
+happened where the default ended in a unique key, on the grounds that
+nothing appended behind a total order can reorder anything. The other half
+of that rule — joining behind a default that ties — made a header's
+behaviour depend on whether the *default's* key happened to tie, which a
+user cannot see, and left Status on the transactions list and Username on
+Manage Accounts lighting a caret and moving no rows. Backend `7fb5fc1`
+separately ended the question `unique` answered, by terminating every
+endpoint's `ORDER BY` in a unique key.
 
 **The plan narrows what a URL may carry.** `parseSorts` drops any key
 outside `allowed`, for the same reason `declaredOnly` drops an undeclared
@@ -549,10 +553,12 @@ nothing. `sortsAfterClick` is where this lives.
 
 **A second column joins it rather than replacing it**, up to
 `MAX_SORT_COLUMNS`, exactly as it would if the first sort had been clicked
-rather than declared. That is right whenever the declared sort ties: the
-Dashboard's earnings table declares `-total_earnings`, and a click on
-Cashier genuinely breaks the ties among equal earners. A plan naming
-`unique` is what turns this off where it would be wrong.
+rather than declared. Composing a declared sort with another column is
+still available, it is just asked for rather than assumed: click the
+declared column first — which takes the table off its default — then the
+second. On the Dashboard's earnings table that gives
+`total_earnings, cashier_name`, which is what joining behind the default
+used to produce for free.
 
 **A note on mocking.** A plan lives in the same module as its fetcher, and a
 bare `vi.mock` on that module automocks every export, so the plan becomes
