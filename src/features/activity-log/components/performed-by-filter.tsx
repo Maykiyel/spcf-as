@@ -19,8 +19,7 @@ export function PerformedByFilter({ value, onChange }: PerformedByFilterProps) {
   return (
     <Select
       label="Performed By"
-      // No System option: those entries carry a null actor id, and the
-      // filter takes a user id, so no value would select them.
+      // No System option: those entries carry a null actor id.
       placeholder="Anyone"
       data={(actors.data ?? []).map((actor) => ({
         value: String(actor.id),

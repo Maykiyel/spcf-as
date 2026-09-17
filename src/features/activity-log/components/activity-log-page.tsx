@@ -17,9 +17,8 @@ import { activityLogColumns } from "./activity-log-columns";
 
 const URL_KEY = "activity";
 
-/** The actor filter, under the wire's own name; the picker and the column
- * both read "Performed By". Module scope, not rebuilt per render: the
- * query key includes it. */
+/** `user_id` is the wire's name for Performed By; see CONTEXT.md. Module
+ * scope, not rebuilt per render: the query key includes it. */
 const FILTERS: TableFilters = { user_id: null };
 
 /**

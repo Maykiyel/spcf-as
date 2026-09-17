@@ -11,8 +11,6 @@ export function ActivityLogFilters() {
   return (
     <Group align="flex-end" gap="md" wrap="wrap">
       <DateRangeTableFilter />
-      {/* `user_id` is the wire's name; the label and the column say
-          Performed By. See CONTEXT.md's entry. */}
       <PerformedByFilter {...filter("user_id")} />
     </Group>
   );

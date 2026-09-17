@@ -99,8 +99,7 @@ const voidDetail: ActivityLogDetail = {
   ],
 };
 
-/** An admin and a cashier: `/cashiers` could not have returned the first,
- * which is the whole reason this picker reads the directory instead. */
+/** Includes an admin, which `/cashiers` could not have returned. */
 const actors = [
   { id: 99, full_name: "Mike Bautista" },
   { id: 7, full_name: "Jaypee Pahayahay" },
@@ -461,9 +460,9 @@ describe("ActivityLogPage — the Performed By filter", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
-    // The key is `sometimes|required` on the wire, so an empty value is a
-    // 422. Null is what `createListAdapter` drops from the request, and its
-    // own test covers that half; the picker's own clear takes this path too.
+    // Cleared from the toolbar because Mantine marks the Select's own X
+    // `aria-hidden`; both run the same `onChange(null)`. Null is what
+    // `createListAdapter` drops — its own test covers that half.
     await waitFor(() => expect(lastRequest().filters?.user_id).toBeNull());
   });
 

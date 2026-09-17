@@ -16,15 +16,12 @@ export const activityLogColumns: ColumnDef<ActivityLogListRow>[] = [
     header: "Type",
   },
   {
-    // The wire's own word for the readable sentence, kept rather than
-    // translated. See CONTEXT.md.
     field: "context",
     header: "Context",
   },
   {
     field: "actor",
-    // The two words the filter above the table uses, not "Account", which
-    // this codebase already gave to the Accounts nav group.
+    // Not "Account": this codebase already gave that word to the nav group.
     header: "Performed By",
     // Never null: a system-generated entry arrives named "System".
     render: (row) => row.actor.name,

@@ -2,10 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { apiClient } from "@/lib/axios/api-client";
 import { getActors, type Actor } from "./actors";
 
-// Seam: getActors' interface against a mocked apiClient.get. The request is
-// the assertion: both parameters fail silently. A missing `per_page` drops
-// the picker to 25 accounts, and a missing `sort` leaves its order to the
-// endpoint's default — neither shows up as an error.
+// Seam: getActors' interface against a mocked apiClient.get. Both params
+// fail silently — no `per_page` drops the picker to 25 accounts, and no
+// `sort` leaves its order to the endpoint's own default.
 
 vi.mock("@/lib/axios/api-client", () => ({
   apiClient: { get: vi.fn() },
