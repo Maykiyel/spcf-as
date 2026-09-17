@@ -4,6 +4,7 @@ import {
   useServerTableState,
   type TableFilters,
 } from "@/components/ui/data-table";
+import { currentMonthRange } from "@/components/ui/date-range";
 import {
   getTransactionReport,
   TRANSACTION_REPORT_SORT_PLAN,
@@ -31,7 +32,10 @@ export function TransactionReportPage() {
     urlKey: URL_KEY,
     sortPlan: TRANSACTION_REPORT_SORT_PLAN,
     initialFilters: REPORT_FILTERS,
-    dateRange: {},
+    // Optional, unlike its two siblings: no row here links anywhere that
+    // needs both dates, so an admin can still clear to all dates. The
+    // default is what stops the total beneath the table reading all-time.
+    dateRange: { default: currentMonthRange },
   });
 
   return (
@@ -42,6 +46,7 @@ export function TransactionReportPage() {
         <DataTable.PageSize />
         <DataTable.ClearFilters />
       </DataTable.Toolbar>
+      <DataTable.Period />
       <DataTable.Grid />
       <TransactionReportTotal
         total={tableState.meta}

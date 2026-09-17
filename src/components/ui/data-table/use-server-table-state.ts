@@ -5,6 +5,7 @@ import { notifications } from "@mantine/notifications";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { ColumnDef, SortEntry, TableFilters } from "./types";
 import {
+  DATE_RANGE_FILTER_KEYS,
   dateRangeInitialFilters,
   dateRangePeriod,
   dateRangeUsable,
@@ -59,6 +60,9 @@ type UseServerTableStateOptions<T, TMeta> = {
   dateRange?: DateRangeSpec;
 };
 
+// Module scope so the memo below has a stable empty case.
+const NO_EMPTIABLE_FILTERS: string[] = [];
+
 export function useServerTableState<
   T extends Record<string, any>,
   TMeta = undefined,
@@ -93,6 +97,16 @@ export function useServerTableState<
     [initialFilters, defaultPeriod],
   );
 
+  // A required range cannot be emptied — a missing end is a 422 there — so
+  // clearing one means "back to the default". Optional ranges get the
+  // third state, which is how the Transactions Report reaches all dates
+  // from a month it opens on.
+  const rangeIsEmptiable = Boolean(dateRange) && !dateRange?.required;
+  const emptiableFilters = useMemo(
+    () => (rangeIsEmptiable ? DATE_RANGE_FILTER_KEYS : NO_EMPTIABLE_FILTERS),
+    [rangeIsEmptiable],
+  );
+
   const {
     page,
     pageSize,
@@ -107,7 +121,13 @@ export function useServerTableState<
     setFilters,
     isFiltered,
     clearFilters,
-  } = useTableControls(initialPageSize, urlKey, declaredFilters, sortPlan);
+  } = useTableControls(
+    initialPageSize,
+    urlKey,
+    declaredFilters,
+    sortPlan,
+    emptiableFilters,
+  );
 
   const period = dateRangePeriod(filters);
 

@@ -74,6 +74,7 @@ export function ServiceBreakdownPage() {
           <DataTable.PageSize />
           <DataTable.ClearFilters />
         </DataTable.Toolbar>
+        <DataTable.Period />
         <DataTable.Grid />
         <DataTable.Pagination />
       </DataTable.Root>

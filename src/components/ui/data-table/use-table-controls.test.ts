@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   clearParamUpdates,
+  filterFromParam,
+  filterToParam,
   isTableFiltered,
   nextSorts,
   sortsAfterClick,
@@ -259,5 +261,49 @@ describe("clearParamUpdates", () => {
     const updates = clearParamUpdates({ status: null }, paramName);
     expect(updates).not.toHaveProperty("receipts_sort");
     expect(updates).not.toHaveProperty("receipts_size");
+  });
+});
+
+describe("filterFromParam / filterToParam", () => {
+  it("reads a missing param as the declared default", () => {
+    expect(filterFromParam(null, "2026-09-01")).toBe("2026-09-01");
+    expect(filterFromParam(null, null)).toBeNull();
+  });
+
+  it("keeps a filter at its default out of the URL", () => {
+    // `?status=all` is noise, and makes an unfiltered table look filtered.
+    expect(filterToParam("2026-09-01", "2026-09-01")).toBeNull();
+  });
+
+  it("round-trips a filter deliberately set to nothing", () => {
+    // Absent means "at its default", so a key with a non-null default
+    // needs a way to say "none" — without it, clearing the Transactions
+    // Report's range lands straight back on the current month.
+    const written = filterToParam(null, "2026-09-01", true);
+
+    expect(written).not.toBeNull();
+    expect(filterFromParam(written, "2026-09-01", true)).toBeNull();
+  });
+
+  it("leaves a key whose default is already nothing alone", () => {
+    // Nothing to distinguish: absent and none are the same state here, and
+    // the sentinel would only add a param nothing reads differently.
+    expect(filterToParam(null, null, true)).toBeNull();
+  });
+
+  it("clears a key that cannot hold nothing back to its default", () => {
+    // The Services Sold range is `required`: a missing end is a 422, so
+    // "none" is not a state that page can be left in.
+    expect(filterToParam(null, "2026-09-01", false)).toBeNull();
+  });
+
+  it("does not read the sentinel as none where the default is nothing", () => {
+    // Item Name is a partial text match with no default, so `none` is a
+    // word someone typed rather than a marker.
+    expect(filterFromParam("none", null, true)).toBe("none");
+  });
+
+  it("does not read the sentinel on a key that cannot hold nothing", () => {
+    expect(filterFromParam("none", "2026-09-01", false)).toBe("none");
   });
 });
