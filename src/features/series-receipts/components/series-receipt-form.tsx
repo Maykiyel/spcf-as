@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { NumberInput, Select, Group, SimpleGrid, Text } from "@mantine/core";
+import {
+  NumberInput,
+  Select,
+  Group,
+  SimpleGrid,
+  Text,
+  TextInput,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
@@ -22,6 +29,7 @@ import {
   type SeriesReceiptFormInput,
   type SeriesReceiptInputFields,
 } from "../api/create-series-receipt";
+import { formatSeriesNumber } from "@/utils/series-number";
 import {
   computeToFromSheets,
   computeSheetsFromTo,
@@ -178,7 +186,15 @@ export function SeriesReceiptForm() {
                 )}
               />
 
-              <NumberInput label="From" value={from ?? ""} disabled readOnly />
+              {/* Read-only, so it reads the way every other display of
+                  a series number does. A NumberInput cannot hold leading
+                  zeros, which is why this one is not one. */}
+              <TextInput
+                label="From"
+                value={from === undefined ? "" : formatSeriesNumber(from)}
+                disabled
+                readOnly
+              />
 
               <NumberInput
                 label="To"
@@ -209,8 +225,8 @@ export function SeriesReceiptForm() {
 
             {from !== undefined && toDraft !== null && (
               <Text size="sm" c="dimmed" mt="xs">
-                Creates receipts numbered {from}–{toDraft} · {sheets || 0}{" "}
-                sheets
+                Creates receipts numbered {formatSeriesNumber(from)}–
+                {formatSeriesNumber(toDraft)} · {sheets || 0} sheets
               </Text>
             )}
 
@@ -246,7 +262,7 @@ export function SeriesReceiptForm() {
         <Text size="sm">
           Creates receipts numbered{" "}
           <strong>
-            {from}–{pendingTo}
+            {formatSeriesNumber(from)}–{formatSeriesNumber(pendingTo)}
           </strong>{" "}
           · <strong>{pendingFields?.sheets}</strong> sheets for{" "}
           <strong>{pendingCashierName}</strong>. Is this correct?

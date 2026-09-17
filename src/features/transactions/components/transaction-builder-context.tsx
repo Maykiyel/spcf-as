@@ -30,6 +30,7 @@ import {
   type CatalogBuilderValue,
   type TransactionDraftValue,
 } from "./transaction-builder-context-value";
+import { formatSeriesNumber } from "@/utils/series-number";
 
 // Stable empty-array reference so `catalog` doesn't change identity every
 // render while loading, which would defeat the useMemos below.
@@ -131,7 +132,7 @@ export function TransactionBuilderProvider({
           // series_number is one sheet number drawn from it. Matches the
           // label the View Transaction page already uses for this field.
           saved.series_number
-            ? `Transaction completed — Series No. ${saved.series_number}.`
+            ? `Transaction completed — Series No. ${formatSeriesNumber(saved.series_number)}.`
             : "Transaction completed successfully.",
         );
         // Before the resets, per spec: the caller navigates away on this

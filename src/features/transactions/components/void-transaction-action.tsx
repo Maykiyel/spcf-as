@@ -14,6 +14,7 @@ import {
 } from "../api/transaction-query-keys";
 import { voidTransaction } from "../api/void-transaction";
 import type { TransactionListRow } from "../types";
+import { formatSeriesNumber } from "@/utils/series-number";
 
 type VoidTransactionActionProps = {
   transaction: TransactionListRow;
@@ -113,13 +114,7 @@ export function VoidTransactionAction({
             />
             <ConfirmDetail
               label="Series No."
-              // Never null here, but the row type allows it and a blank
-              // line beside a label reads as a bug.
-              value={
-                transaction.series_number === null
-                  ? "—"
-                  : String(transaction.series_number)
-              }
+              value={formatSeriesNumber(transaction.series_number)}
             />
             <ConfirmDetail
               label="Payer"

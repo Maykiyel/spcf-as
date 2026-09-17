@@ -7,6 +7,7 @@ import { formatDateTime } from "@/utils/date-time";
 import type { TransactionListRow } from "../types";
 import { TransactionItemNamesCell } from "./transaction-item-names-cell";
 import { TransactionStatusBadge } from "./transaction-status-badge";
+import { formatSeriesNumber } from "@/utils/series-number";
 
 type TransactionListColumnsOptions = {
   /** The caller decides, since the reason differs by page: the receipts
@@ -60,7 +61,7 @@ export function transactionListColumns({
       field: "series_number",
       header: "Series No.",
       // `null` until saved, which the receipts list does show.
-      render: (row) => row.series_number ?? "—",
+      render: (row) => formatSeriesNumber(row.series_number),
     },
     {
       field: "customer_name",

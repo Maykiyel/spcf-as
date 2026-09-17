@@ -166,7 +166,7 @@ describe("TransactionListPage", () => {
 
     expect(await screen.findByText("Juan Dela Cruz")).toBeInTheDocument();
     expect(tableRows().getByText("1201")).toBeInTheDocument();
-    expect(tableRows().getByText("4501")).toBeInTheDocument();
+    expect(tableRows().getByText("004501")).toBeInTheDocument();
     expect(tableRows().getByText("₱1,500.00")).toBeInTheDocument();
   });
 
@@ -265,6 +265,23 @@ describe("TransactionListPage", () => {
     await waitFor(() =>
       expect(lastRequest()).toMatchObject({
         filters: { item_name: "graduation" },
+      }),
+    );
+  });
+
+  it("finds a receipt from the padded number the column shows", async () => {
+    renderPage();
+    await screen.findByText("Juan Dela Cruz");
+
+    // Padding the column is what creates this: the screen says `004501`
+    // and the wire stores `4501`, so a copied number would match nothing.
+    fireEvent.change(screen.getByLabelText("Series No."), {
+      target: { value: "004501" },
+    });
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { series_number: "4501" },
       }),
     );
   });

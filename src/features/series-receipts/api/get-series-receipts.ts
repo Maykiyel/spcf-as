@@ -1,4 +1,9 @@
-import { createListAdapter, type SortPlan } from "@/components/ui/data-table";
+import {
+  createListAdapter,
+  type ServerTableParams,
+  type SortPlan,
+} from "@/components/ui/data-table";
+import { stripSeriesNumberPadding } from "@/utils/series-number";
 import type { Cashier } from "@/api/cashiers";
 import type { SeriesReceipt } from "../types";
 
@@ -16,13 +21,24 @@ type SeriesReceiptWireRow = Omit<SeriesReceipt, "cashier"> & {
  * `account` collides with the unrelated Accounts nav group. The wire keeps
  * its own name in the sort plan below.
  */
-export const getSeriesReceipts = createListAdapter<
+const listSeriesReceipts = createListAdapter<
   SeriesReceiptWireRow,
   SeriesReceipt
 >("/series-receipts", "series_receipts", {
   supportsSearch: true,
   selectRow: ({ account, ...row }) => ({ ...row, cashier: account }),
 });
+
+/** The box searches the booklet's bounds, its remaining sheets and the
+ * cashier's name, all partially — so the padding a user copied off the
+ * From and To columns is stripped here, where this table's request is
+ * built. Not in the toolbar's search control: that one is shared and
+ * domain-agnostic, and must not learn what a series number is. */
+export const getSeriesReceipts = (params: ServerTableParams) =>
+  listSeriesReceipts({
+    ...params,
+    search: params.search && stripSeriesNumberPadding(params.search),
+  });
 
 /** Read from `SeriesReceiptController::index` at backend `bfe249f`: `from`,
  * `to`, `remaining_sheets`, and `account` as an `AllowedSort::custom` over
