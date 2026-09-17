@@ -2,7 +2,8 @@ import { Card, Center, Flex, Text } from "@mantine/core";
 
 function SchoolYearBadge() {
   return (
-    <Flex>
+    // At 375px the burger, this and the account dropdown do not all fit.
+    <Flex visibleFrom="sm">
       <Card
         style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
         bg="rgba(255,255,255,0.1)"
