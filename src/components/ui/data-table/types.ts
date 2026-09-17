@@ -90,8 +90,12 @@ export type TableFilterBinding = {
 /** What the provider actually carries. `filters` and `setFilters` are here
  * and deliberately not on `DataTableContextValue`: `useTableFilters` and
  * `useTableDateRange` are the only supported ways in, so a panel cannot
- * rebuild the read-by-key/write-as-patch bridge by hand. */
+ * rebuild the read-by-key/write-as-patch bridge by hand. `isFiltered` and
+ * `clearFilters` are here for the same reason: answering either needs both
+ * the current values and the declared ones, which only this tier holds. */
 export type DataTableProviderValue<T> = DataTableContextValue<T> & {
   filters: TableFilters;
   setFilters: (patch: TableFilters) => void;
+  isFiltered: boolean;
+  clearFilters: () => void;
 };

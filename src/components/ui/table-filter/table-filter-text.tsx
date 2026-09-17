@@ -52,11 +52,20 @@ export function TableFilterText({
     setDraft((prev) => (normalize(prev) === value ? prev : (value ?? "")));
   }, [value]);
 
+  // Published only when the debounced draft itself moves, which is why
+  // `value` is a ref here. Naming it as a dependency re-ran this on a Clear,
+  // in the same pass that the re-sync above scheduled the new draft — so it
+  // still saw the old one, and put the cleared value straight back.
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  });
+
   useEffect(() => {
     const next = normalize(debounced);
-    if (next === value) return;
+    if (next === valueRef.current) return;
     onChangeRef.current(next);
-  }, [debounced, value]);
+  }, [debounced]);
 
   return (
     <TextInput

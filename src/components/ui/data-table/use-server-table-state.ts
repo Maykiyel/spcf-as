@@ -105,6 +105,8 @@ export function useServerTableState<
     onSort,
     resetSort,
     setFilters,
+    isFiltered,
+    clearFilters,
   } = useTableControls(initialPageSize, urlKey, declaredFilters, sortPlan);
 
   const period = dateRangePeriod(filters);
@@ -170,6 +172,8 @@ export function useServerTableState<
     onSort,
     filters,
     setFilters,
+    isFiltered,
+    clearFilters,
     /** The declared range's current value, for a link out of this table.
      * `{from: null, to: null}` on a table that declares none. */
     period,

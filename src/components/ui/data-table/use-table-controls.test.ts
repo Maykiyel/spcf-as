@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+  clearParamUpdates,
+  isTableFiltered,
   nextSorts,
   sortsAfterClick,
   sortsToExtend,
+  tableParamName,
 } from "./use-table-controls";
 
 describe("nextSorts", () => {
@@ -179,5 +182,82 @@ describe("sortsAfterClick", () => {
   it("adds a declared column back from unsorted like any other", () => {
     const declared = [asc("service_name")];
     expect(sortsAfterClick([], "service_name", declared)).toEqual(declared);
+  });
+});
+
+describe("isTableFiltered", () => {
+  const declared = { status: null, customer: null };
+
+  it("is false on a table nobody has touched", () => {
+    expect(isTableFiltered(declared, declared, "")).toBe(false);
+  });
+
+  it("is true once any single filter moves off its declared value", () => {
+    expect(
+      isTableFiltered({ ...declared, status: "completed" }, declared, ""),
+    ).toBe(true);
+  });
+
+  it("is true on the first character of a search, not once it settles", () => {
+    // The draft, not the debounced value: the control is the signal that
+    // the table is narrowed, and it would arrive 400ms late otherwise.
+    expect(isTableFiltered(declared, declared, "s")).toBe(true);
+  });
+
+  it("is false for a filter sitting on a non-null declared default", () => {
+    // The Services Sold report opens on the current month. That period is
+    // the unfiltered state there, so it must not light the control.
+    const withDefault = { from_date: "2026-09-01", to_date: "2026-09-30" };
+    expect(isTableFiltered(withDefault, withDefault, "")).toBe(false);
+  });
+
+  it("is true for half a date range", () => {
+    // The date control cannot emit one, but a truncated URL can, and it
+    // disables the query and renders an empty table with no explanation.
+    // No special case: the missing end reads as its default and the set
+    // one does not, so the general rule already catches it.
+    const range = { from_date: null, to_date: null };
+    expect(
+      isTableFiltered({ ...range, from_date: "2026-08-01" }, range, ""),
+    ).toBe(true);
+  });
+
+  it("ignores a key the table never declared", () => {
+    expect(isTableFiltered({ ...declared, rogue: "1" }, declared, "")).toBe(
+      false,
+    );
+  });
+});
+
+describe("clearParamUpdates", () => {
+  const paramName = (name: string) => tableParamName("receipts", name);
+
+  it("names every declared filter, the search and the page in one record", () => {
+    // One record, not a per-key loop: the adapter applies it in a single
+    // history replacement, so the whole clear is one refetch.
+    expect(
+      clearParamUpdates({ status: null, customer: null }, paramName),
+    ).toEqual({
+      receipts_status: null,
+      receipts_customer: null,
+      receipts_q: null,
+      receipts_page: null,
+    });
+  });
+
+  it("clears a filter declared with a value to absent, not to that value", () => {
+    // Returning a filter to its declared default is exactly what drops it
+    // from the URL, so a cleared table's URL is clean by construction.
+    expect(clearParamUpdates({ from_date: "2026-09-01" }, paramName)).toEqual({
+      receipts_from_date: null,
+      receipts_q: null,
+      receipts_page: null,
+    });
+  });
+
+  it("leaves sort and page size out, so both survive a clear", () => {
+    const updates = clearParamUpdates({ status: null }, paramName);
+    expect(updates).not.toHaveProperty("receipts_sort");
+    expect(updates).not.toHaveProperty("receipts_size");
   });
 });

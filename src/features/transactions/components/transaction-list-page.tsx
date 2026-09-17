@@ -65,11 +65,13 @@ export function TransactionListPage() {
   return (
     <DataTable.Root title="Transactions" state={tableState}>
       {/* The page leads with the filter panel; the toolbar below carries
-          the page-size control and nothing else. */}
+          the page-size control and the clear, which is absent until
+          something is narrowing the table. */}
       <TransactionListFilters includeCashier={isAdmin} includeStatus />
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />
+        <DataTable.ClearFilters />
       </DataTable.Toolbar>
       <DataTable.Grid
         onRowClick={(row: TransactionListRow) =>

@@ -18,6 +18,11 @@ export type TableControls = {
   /** Merges a patch in. A patch, not a single key/value: a date range
    * moves both ends at once and two writes would mean two refetches. */
   setFilters: (patch: TableFilters) => void;
+  /** Whether anything is currently narrowing the table. */
+  isFiltered: boolean;
+  /** Every filter back to its declared default, the search emptied, page
+   * one — in one write. */
+  clearFilters: () => void;
 };
 
 type TableControlsAdapter = TableControls;
@@ -31,6 +36,41 @@ const declaredOnly = (
   Object.fromEntries(
     Object.entries(patch).filter(([key]) => key in initialFilters),
   );
+
+/** Whether anything is narrowing the table: any declared filter away from
+ * the value it was declared with, or text in the search box. Reads the
+ * search draft rather than the debounced value, so the control appears on
+ * the first keystroke rather than 400ms later.
+ *
+ * Half a date range needs no special case: the missing end reads as its
+ * default and the set one does not. */
+export function isTableFiltered(
+  filters: TableFilters,
+  initialFilters: TableFilters,
+  searchQuery: string,
+): boolean {
+  if (searchQuery !== "") return true;
+  return Object.entries(initialFilters).some(
+    ([key, declared]) => filters[key] !== declared,
+  );
+}
+
+/** Every key a clear writes, as one record. Returning a filter to its
+ * declared default is exactly what drops it from the URL, so `null` is both
+ * "cleared" and "absent" and a cleared table's URL is clean by
+ * construction. Sort and size are absent, so both survive. */
+export function clearParamUpdates(
+  initialFilters: TableFilters,
+  paramName: (name: string) => string,
+): Record<string, string | null> {
+  const updates: Record<string, string | null> = {};
+  for (const key of Object.keys(initialFilters)) {
+    updates[paramName(key)] = null;
+  }
+  updates[paramName("q")] = null;
+  updates[paramName("page")] = null;
+  return updates;
+}
 
 /** A table's URL params are `<urlKey>_<name>`, filters sharing a namespace
  * with `page`, `size`, `q` and `sort`. None collide today. Exported so a
@@ -230,12 +270,24 @@ function useUrlAdapter(
   // Commit the debounced draft to the URL once typing settles.
   useEffect(() => {
     if (!urlKey) return;
+    // `setSearchParams` changes identity on every location change, so this
+    // re-runs on someone else's write too — including a clear, which moves
+    // the draft 400ms before the debounce catches up. Publishing then would
+    // put the old query straight back.
+    if (debouncedSearchDraft !== searchDraft) return;
     if (debouncedSearchDraft === urlSearchQuery) return;
     updateParams({
       [paramName("q")]: debouncedSearchDraft || null,
       [paramName("page")]: null, // stale page after filtering would show an empty page
     });
-  }, [debouncedSearchDraft, urlKey, urlSearchQuery, updateParams, paramName]);
+  }, [
+    debouncedSearchDraft,
+    searchDraft,
+    urlKey,
+    urlSearchQuery,
+    updateParams,
+    paramName,
+  ]);
 
   const page = clampPage(searchParams.get(paramName("page")));
   const pageSize = clampPageSize(
@@ -308,6 +360,14 @@ function useUrlAdapter(
     updateParams(updates);
   };
 
+  // The draft is reset here rather than left to the debounce: emptying only
+  // the draft would leave the old query in force for 400ms and then fire a
+  // second refetch.
+  const clearFilters = () => {
+    setSearchDraft("");
+    updateParams(clearParamUpdates(initialFilters, paramName));
+  };
+
   return {
     page,
     pageSize,
@@ -320,6 +380,8 @@ function useUrlAdapter(
     onSort,
     resetSort,
     setFilters,
+    isFiltered: isTableFiltered(filters, initialFilters, searchDraft),
+    clearFilters,
   };
 }
 
@@ -362,6 +424,12 @@ function useLocalAdapter(
     setPage(1);
   };
 
+  const clearFilters = () => {
+    setFiltersState(initialFilters);
+    setSearchQuery("");
+    setPage(1);
+  };
+
   return {
     page,
     pageSize,
@@ -374,6 +442,8 @@ function useLocalAdapter(
     onSort,
     resetSort,
     setFilters,
+    isFiltered: isTableFiltered(filters, initialFilters, searchQuery),
+    clearFilters,
   };
 }
 

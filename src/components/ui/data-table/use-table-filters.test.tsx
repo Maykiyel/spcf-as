@@ -30,6 +30,8 @@ function wrapperFor(filters: TableFilters, setFilters = vi.fn()) {
     onSort: vi.fn(),
     filters,
     setFilters,
+    isFiltered: false,
+    clearFilters: vi.fn(),
   };
 
   return {

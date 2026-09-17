@@ -46,6 +46,8 @@ function stubState(
     onSort: vi.fn(),
     filters: {},
     setFilters: vi.fn(),
+    isFiltered: false,
+    clearFilters: vi.fn(),
     ...overrides,
   };
 }

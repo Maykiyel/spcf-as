@@ -19,7 +19,7 @@ const createPopTransition = (position: string) => {
   };
 };
 
-const AppTooltip = ({ ...props }: TooltipProps) => {
+export const AppTooltip = ({ ...props }: TooltipProps) => {
   const defaultPosition = props.position ?? "top";
 
   return (
@@ -43,10 +43,7 @@ const AppTooltip = ({ ...props }: TooltipProps) => {
             "inset 0 0 0 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1), 0 10px 24px rgba(0, 0, 0, 0.1)",
         },
       }}
-      // color="rgba(17, 16, 23, 0.7)"
       color="navy.9"
     />
   );
 };
-
-export default AppTooltip;
