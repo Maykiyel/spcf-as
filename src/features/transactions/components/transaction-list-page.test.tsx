@@ -104,7 +104,12 @@ const lastRequest = () =>
  * has to be read through the router rather than through the address bar. */
 function LocationProbe() {
   const location = useLocation();
-  return <span data-testid="location">{location.pathname}</span>;
+  return (
+    <>
+      <span data-testid="location">{location.pathname}</span>
+      <span data-testid="location-search">{location.search}</span>
+    </>
+  );
 }
 
 function renderPage(initialEntry = "/transactions/receipts") {
@@ -385,6 +390,123 @@ describe("TransactionListPage", () => {
       "href",
       "/transactions/1201",
     );
+  });
+
+  it("offers no clear control until something is narrowing the table", async () => {
+    renderPage();
+    await screen.findByText("Juan Dela Cruz");
+
+    // Absent rather than disabled: its presence is itself the signal that
+    // the list is filtered.
+    expect(
+      screen.queryByRole("button", { name: "Clear filters" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers a clear control once any single filter is set", async () => {
+    renderPage();
+    await screen.findByText("Juan Dela Cruz");
+
+    fireEvent.change(screen.getByLabelText("Payer Name"), {
+      target: { value: "santos" },
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "Clear filters" }),
+    ).toBeInTheDocument();
+  });
+
+  it("returns every filter to its declared default at the endpoint", async () => {
+    renderPage(
+      "/transactions/receipts?receipts_customer=santos&receipts_status=returned&receipts_page=3",
+    );
+    await screen.findByText("Juan Dela Cruz");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        page: 1,
+        filters: {
+          customer: null,
+          series_number: null,
+          status: null,
+          item_name: null,
+          from_date: null,
+          to_date: null,
+          cashier_id: null,
+        },
+      }),
+    );
+  });
+
+  it("clears in exactly one further request, however many filters were set", async () => {
+    renderPage(
+      "/transactions/receipts?receipts_customer=santos&receipts_status=returned&receipts_item_name=rent",
+    );
+    await screen.findByText("Juan Dela Cruz");
+    const before = mockGetTransactions.mock.calls.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // The point of clearing through one parameter write: a per-key setter
+    // would fire a request per filter. The fixed flush is the negative
+    // half — `waitFor` returns on the first call and proves nothing about
+    // the two that must not follow.
+    await waitFor(() =>
+      expect(mockGetTransactions.mock.calls.length).toBe(before + 1),
+    );
+    await flush();
+
+    expect(mockGetTransactions.mock.calls.length).toBe(before + 1);
+  });
+
+  it("leaves no filter, search or page parameter in the URL behind", async () => {
+    renderPage(
+      "/transactions/receipts?receipts_customer=santos&receipts_page=3",
+    );
+    await screen.findByText("Juan Dela Cruz");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // Returning a filter to its declared value is what drops it, so a
+    // cleared table's URL is clean rather than full of empty params.
+    await waitFor(() =>
+      expect(screen.getByTestId("location-search")).toHaveTextContent(""),
+    );
+    expect(screen.getByTestId("location-search").textContent).toBe("");
+  });
+
+  it("keeps the sort and the page size through a clear", async () => {
+    renderPage(
+      "/transactions/receipts?receipts_customer=santos&receipts_size=50&receipts_sort=customer:asc",
+    );
+    await screen.findByText("Juan Dela Cruz");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        per_page: 50,
+        sorts: [{ key: "customer", direction: "asc" }],
+        filters: { customer: null },
+      }),
+    );
+  });
+
+  it("offers the clear control as the recovery path from half a date range", async () => {
+    // The state that otherwise renders an empty table with no explanation:
+    // the query is disabled, so nothing has been asked for at all.
+    renderPage("/transactions/receipts?receipts_from_date=2026-08-01");
+    await flush();
+    expect(mockGetTransactions).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() => expect(mockGetTransactions).toHaveBeenCalled());
+    expect(lastRequest()).toMatchObject({
+      filters: { from_date: null, to_date: null },
+    });
   });
 
   it("says so when nothing matches", async () => {

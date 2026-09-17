@@ -583,3 +583,76 @@ describe("useServerTableState initial sort", () => {
     );
   });
 });
+
+describe("useServerTableState clearing", () => {
+  let queryFn: ReturnType<typeof createFetcher>;
+
+  beforeEach(() => {
+    queryFn = createFetcher();
+  });
+
+  it("reports a search as narrowing on the keystroke, not on the debounce", async () => {
+    // The clear control is rendered off this, so a debounced answer would
+    // leave the table visibly filtered with no way to say so for 400ms.
+    const { result } = renderTable({
+      queryKey: ["widgets"],
+      queryFn,
+      columns,
+      urlKey: "tx",
+    });
+
+    expect(result.current.table.isFiltered).toBe(false);
+
+    act(() => result.current.table.onSearchChange("san"));
+
+    expect(result.current.table.isFiltered).toBe(true);
+  });
+
+  it("empties the search box itself, not only the committed query", async () => {
+    // Emptying the draft alone would leave the old query in force for the
+    // length of the debounce and then fire a second refetch.
+    const { result } = renderTable({
+      queryKey: ["widgets"],
+      queryFn,
+      columns,
+      urlKey: "tx",
+    });
+
+    act(() => result.current.table.onSearchChange("santos"));
+    await waitFor(() =>
+      expect(new URLSearchParams(result.current.search).get("tx_q")).toBe(
+        "santos",
+      ),
+    );
+
+    act(() => result.current.table.clearFilters());
+
+    expect(result.current.table.searchQuery).toBe("");
+    await waitFor(() =>
+      expect(new URLSearchParams(result.current.search).get("tx_q")).toBeNull(),
+    );
+  });
+
+  it("clears the local adapter's filters, search and page together", async () => {
+    // No `urlKey`, so nothing here touches the URL — the same two
+    // questions have to be answerable either way.
+    const { result } = renderTable({
+      queryKey: ["widgets"],
+      queryFn,
+      columns,
+      initialFilters: { status: null },
+    });
+
+    act(() => result.current.table.setFilters({ status: "active" }));
+    act(() => result.current.table.onSearchChange("san"));
+    act(() => result.current.table.onPageChange(3));
+    expect(result.current.table.isFiltered).toBe(true);
+
+    act(() => result.current.table.clearFilters());
+
+    expect(result.current.table.filters).toEqual({ status: null });
+    expect(result.current.table.searchQuery).toBe("");
+    expect(result.current.table.page).toBe(1);
+    expect(result.current.table.isFiltered).toBe(false);
+  });
+});

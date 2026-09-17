@@ -1,7 +1,7 @@
 import { Center, Flex, Text } from "@mantine/core";
 import type { Icon } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router";
-import AppTooltip from "./app-tooltip";
+import { AppTooltip } from "@/components/ui/tooltip";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSidebarExpanded } from "../use-sidebar-expanded";
 

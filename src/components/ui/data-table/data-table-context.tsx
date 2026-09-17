@@ -55,6 +55,17 @@ export function useTableFilters(): (key: string) => TableFilterBinding {
   };
 }
 
+/** What the clear control reads. Off the provider value rather than the
+ * public context for the same reason `filters` is: this is the supported
+ * way in. */
+export function useTableClearFilters(): {
+  isFiltered: boolean;
+  clearFilters: () => void;
+} {
+  const { isFiltered, clearFilters } = useProviderValue();
+  return { isFiltered, clearFilters };
+}
+
 /** Binds the date range, whose two keys come from the table's `dateRange`
  * declaration rather than from a panel, so there is nothing to name here. */
 export function useTableDateRange(): {

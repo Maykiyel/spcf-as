@@ -4,6 +4,7 @@ export {
   DataTablePageSize,
   DataTableSearch,
 } from "./data-table-toolbar";
+export { DataTableClearFilters } from "./data-table-clear-filters";
 export { DataTableGrid } from "./data-table-grid";
 export { DataTablePagination } from "./data-table-pagination";
 export { useServerTableState } from "./use-server-table-state";
@@ -41,6 +42,7 @@ import {
   DataTablePageSize,
   DataTableSearch,
 } from "./data-table-toolbar";
+import { DataTableClearFilters } from "./data-table-clear-filters";
 import { DataTableGrid } from "./data-table-grid";
 import { DataTablePagination } from "./data-table-pagination";
 
@@ -49,6 +51,7 @@ export const DataTable = {
   Toolbar: DataTableToolbar,
   PageSize: DataTablePageSize,
   Search: DataTableSearch,
+  ClearFilters: DataTableClearFilters,
   Grid: DataTableGrid,
   Pagination: DataTablePagination,
 };

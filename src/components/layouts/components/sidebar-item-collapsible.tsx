@@ -12,7 +12,7 @@ import { IconChevronRight, type Icon } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import SidebarSubItem from "./sidebar-sub-item";
 import { useSidebarExpanded } from "../use-sidebar-expanded";
-import AppTooltip from "./app-tooltip";
+import { AppTooltip } from "@/components/ui/tooltip";
 
 type SidebarItemCollapsibleProps = {
   label: string;
