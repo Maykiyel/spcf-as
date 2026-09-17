@@ -3,6 +3,7 @@ import type { Icon } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router";
 import AppTooltip from "./app-tooltip";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSidebarExpanded } from "../use-sidebar-expanded";
 
 type SidebarItemSimpleProps = {
   label: string;
@@ -11,13 +12,18 @@ type SidebarItemSimpleProps = {
 };
 
 function SidebarItemSimple({ label, icon: Icon, to }: SidebarItemSimpleProps) {
-  const { desktopOpened } = useSidebarStore();
+  const { closeMobile } = useSidebarStore();
+  const expanded = useSidebarExpanded();
   const { pathname } = useLocation();
   const isActive = to === pathname;
 
   return (
-    <AppTooltip disabled={desktopOpened} position="right" label={label}>
-      <Link style={{ color: "white", textDecoration: "none" }} to={to}>
+    <AppTooltip disabled={expanded} position="right" label={label}>
+      <Link
+        style={{ color: "white", textDecoration: "none" }}
+        to={to}
+        onClick={closeMobile}
+      >
         <Flex
           data-expanded={isActive}
           className={isActive ? "" : "sidebar-item"}
@@ -31,9 +37,7 @@ function SidebarItemSimple({ label, icon: Icon, to }: SidebarItemSimpleProps) {
           </Center>
           <Text
             fz={14}
-            className={["sidebar-link", !desktopOpened ? "hidden" : ""].join(
-              " ",
-            )}
+            className={["sidebar-link", !expanded ? "hidden" : ""].join(" ")}
           >
             {label}
           </Text>

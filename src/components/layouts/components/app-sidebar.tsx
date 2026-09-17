@@ -12,11 +12,14 @@ import SidebarLinksContainer from "./sidebar-links-container";
 import {
   IconLayoutSidebarLeftCollapseFilled,
   IconLayoutSidebarRightCollapseFilled,
+  IconX,
 } from "@tabler/icons-react";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSidebarExpanded } from "../use-sidebar-expanded";
 
 const AppSidebar = () => {
-  const { toggleDesktop, desktopOpened } = useSidebarStore();
+  const { toggleDesktop, closeMobile } = useSidebarStore();
+  const expanded = useSidebarExpanded();
 
   return (
     <AppShell.Navbar
@@ -36,7 +39,7 @@ const AppSidebar = () => {
           justify="space-between"
         >
           <Flex align="center" gap="sm">
-            {desktopOpened ? (
+            {expanded ? (
               <Image src={logo} w={30} h={30} />
             ) : (
               <Center style={{ width: 30, height: 30 }}>
@@ -46,16 +49,16 @@ const AppSidebar = () => {
                   c="navy"
                   className="sidebar-toggle"
                   variant="transparent"
+                  aria-label="Expand sidebar"
                 >
                   <IconLayoutSidebarRightCollapseFilled />
                 </ActionIcon>
               </Center>
             )}
             <Text
-              className={[
-                "sidebar-logo-text",
-                desktopOpened ? "" : "hidden",
-              ].join(" ")}
+              className={["sidebar-logo-text", expanded ? "" : "hidden"].join(
+                " ",
+              )}
               size="md"
               c="primary2"
               fw={600}
@@ -64,16 +67,31 @@ const AppSidebar = () => {
             </Text>
           </Flex>
 
-          {desktopOpened && (
-            <ActionIcon
-              onClick={toggleDesktop}
-              color="navy"
-              c="navy"
-              className="sidebar-toggle"
-              variant="transparent"
-            >
-              <IconLayoutSidebarLeftCollapseFilled />
-            </ActionIcon>
+          {expanded && (
+            <>
+              <ActionIcon
+                onClick={toggleDesktop}
+                visibleFrom="sm"
+                color="navy"
+                c="navy"
+                className="sidebar-toggle"
+                variant="transparent"
+                aria-label="Collapse sidebar"
+              >
+                <IconLayoutSidebarLeftCollapseFilled />
+              </ActionIcon>
+              <ActionIcon
+                onClick={closeMobile}
+                hiddenFrom="sm"
+                color="navy"
+                c="navy"
+                className="sidebar-toggle"
+                variant="transparent"
+                aria-label="Close navigation"
+              >
+                <IconX />
+              </ActionIcon>
+            </>
           )}
         </Flex>
 
