@@ -533,3 +533,35 @@ describe("ManageAccountsPage", () => {
     ).toHaveLength(1);
   });
 });
+
+describe("ManageAccountsPage — clearing", () => {
+  it("offers no clear control on an unnarrowed directory", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+
+    expect(
+      screen.queryByRole("button", { name: "Clear filters" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("returns both filters to unfiltered and still loads rows", async () => {
+    renderPage();
+    await screen.findByText("Jaypee Pahayahay");
+    chooseFilter("Cashier");
+    chooseFilter("Inactive");
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { role: "cashier", is_active: "0" },
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { role: null, is_active: null },
+      }),
+    );
+    expect(await screen.findByText("Jaypee Pahayahay")).toBeInTheDocument();
+  });
+});

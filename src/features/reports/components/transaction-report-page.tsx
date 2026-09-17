@@ -40,6 +40,7 @@ export function TransactionReportPage() {
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />
+        <DataTable.ClearFilters />
       </DataTable.Toolbar>
       <DataTable.Grid />
       <TransactionReportTotal

@@ -65,6 +65,7 @@ export function VoidTransactionPage() {
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />
+        <DataTable.ClearFilters />
       </DataTable.Toolbar>
       <DataTable.Grid
         onRowClick={(row: TransactionListRow) =>

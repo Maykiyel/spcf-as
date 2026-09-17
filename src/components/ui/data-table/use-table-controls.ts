@@ -1,4 +1,10 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  startTransition,
+} from "react";
 import { useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { MAX_SORT_COLUMNS, type SortEntry, type TableFilters } from "./types";
@@ -363,9 +369,16 @@ function useUrlAdapter(
   // The draft is reset here rather than left to the debounce: emptying only
   // the draft would leave the old query in force for 400ms and then fire a
   // second refetch.
+  //
+  // Both in one transition because React Router commits a navigation in one
+  // of its own. A plain state update beside it lands a render earlier, and a
+  // table carrying both a filter and a search then fetches twice — once for
+  // the emptied search still holding the old filter, once for the rest.
   const clearFilters = () => {
-    setSearchDraft("");
-    updateParams(clearParamUpdates(initialFilters, paramName));
+    startTransition(() => {
+      setSearchDraft("");
+      updateParams(clearParamUpdates(initialFilters, paramName));
+    });
   };
 
   return {

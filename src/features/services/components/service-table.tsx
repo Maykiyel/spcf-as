@@ -38,6 +38,7 @@ export function ServiceTable({ onEdit }: ServiceTableProps) {
         <Divider orientation="vertical" visibleFrom="xs" />
         <ServiceFilterPanel />
         <DataTable.Search />
+        <DataTable.ClearFilters />
       </DataTable.Toolbar>
       <DataTable.Grid />
       <DataTable.Pagination />

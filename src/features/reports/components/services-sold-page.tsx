@@ -36,6 +36,7 @@ export function ServicesSoldPage() {
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />
+        <DataTable.ClearFilters />
       </DataTable.Toolbar>
       <DataTable.Grid />
       <DataTable.Pagination />
