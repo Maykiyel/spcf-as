@@ -3,6 +3,7 @@ import { schoolLogo, SCHOOL_ADDRESS, SCHOOL_NAME } from "../lib/school-info";
 import { formatDateTime } from "@/utils/date-time";
 import { TransactionItemsTable } from "./transaction-items-table";
 import type { TransactionDTO } from "../types";
+import { formatSeriesNumber } from "@/utils/series-number";
 
 type AcknowledgementReceiptCopyProps = {
   transaction: TransactionDTO;
@@ -34,7 +35,7 @@ export function AcknowledgementReceiptCopy({
       </Group>
 
       <Text fw={700} size="sm" c="danger">
-        ACKNOWLEDGEMENT RECEIPT: {transaction.series_number ?? "—"}
+        ACKNOWLEDGEMENT RECEIPT: {formatSeriesNumber(transaction.series_number)}
       </Text>
 
       <Group justify="space-between">

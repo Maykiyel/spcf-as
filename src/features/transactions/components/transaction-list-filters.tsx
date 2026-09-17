@@ -4,6 +4,7 @@ import { TableFilterText } from "@/components/ui/table-filter";
 import { CashierFilter, DateRangeTableFilter } from "@/components/filters";
 import { TRANSACTION_STATUS_LABEL } from "../lib/transaction-status";
 import { TRANSACTION_STATUSES } from "../types";
+import { stripSeriesNumberPadding } from "@/utils/series-number";
 
 /** Each control takes a value and reports a change, knowing nothing about
  * the URL or its own key; `useTableFilters` binds both. The panel is
@@ -26,10 +27,23 @@ function TransactionPayerFilter(props: FilterProps) {
 
 /** Text, not a number input: the endpoint validates it as a string, and a
  * spinner on a receipt number invites arrowing through unrelated numbers.
- * Registered as a bare string, so it is a **partial** match, not exact. */
-function TransactionSeriesNumberFilter(props: FilterProps) {
+ * Registered as a bare string, so it is a **partial** match, not exact.
+ *
+ * The screen shows `000123` and the wire stores `123`, so a copied number
+ * has its padding stripped here rather than in the fetcher. That is a
+ * departure from "wire conversion belongs in the fetcher", and deliberate:
+ * this corrects something the user typed, and a correction that changes
+ * their results should be visible in the box and in the URL. */
+function TransactionSeriesNumberFilter({ value, onChange }: FilterProps) {
   return (
-    <TableFilterText label="Series No." placeholder="Any series" {...props} />
+    <TableFilterText
+      label="Series No."
+      placeholder="Any series"
+      value={value}
+      onChange={(next) =>
+        onChange(next === null ? null : stripSeriesNumberPadding(next))
+      }
+    />
   );
 }
 

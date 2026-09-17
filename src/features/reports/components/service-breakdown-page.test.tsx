@@ -159,7 +159,7 @@ describe("ServiceBreakdownPage — the rows", () => {
 
     const row = tableRows().getByText("Anna Reyes").closest("tr")!;
     expect(within(row).getByText("Jaypee Pahayahay")).toBeInTheDocument();
-    expect(within(row).getByText("4501")).toBeInTheDocument();
+    expect(within(row).getByText("004501")).toBeInTheDocument();
     expect(within(row).getByText("₱1,500.00")).toBeInTheDocument();
   });
 

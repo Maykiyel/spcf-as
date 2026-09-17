@@ -4,6 +4,7 @@ import type { ColumnDef } from "@/components/ui/data-table";
 import type { TransactionScalars } from "@/api/transactions";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/date-time";
+import { formatSeriesNumber } from "@/utils/series-number";
 
 type ReportTransactionColumnsOptions = {
   /** `amount_paid` and `change_amount`, which the breakdown doesn't show at
@@ -41,7 +42,7 @@ export function reportTransactionColumns({
       // the table applies them.
       field: "series_number",
       header: "Series No.",
-      render: (row) => row.series_number ?? "—",
+      render: (row) => formatSeriesNumber(row.series_number),
     },
     {
       field: "customer_name",

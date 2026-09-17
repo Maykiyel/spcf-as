@@ -10,6 +10,7 @@ import { TransactionItemsTable } from "./transaction-items-table";
 import { TransactionStatusBadge } from "./transaction-status-badge";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
 import { TransactionDetailSkeleton } from "./transaction-detail-skeleton";
+import { formatSeriesNumber } from "@/utils/series-number";
 
 /** Where a Back with no history entry to pop goes instead. */
 const TRANSACTIONS_LIST_PATH = "/transactions/receipts";
@@ -93,7 +94,7 @@ export function ViewTransactionPage() {
                     Control ID: {transaction.control_id}
                   </Text>
                   <Text size="sm" c="dimmed">
-                    Series No.: {transaction.series_number ?? "—"}
+                    Series No.: {formatSeriesNumber(transaction.series_number)}
                   </Text>
                 </Stack>
               </Group>

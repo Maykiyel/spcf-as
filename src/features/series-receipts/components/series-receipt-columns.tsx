@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@/components/ui/data-table";
+import { formatSeriesNumber } from "@/utils/series-number";
 import type { SeriesReceipt } from "../types";
 
 export const seriesReceiptColumns: ColumnDef<SeriesReceipt>[] = [
@@ -10,8 +11,12 @@ export const seriesReceiptColumns: ColumnDef<SeriesReceipt>[] = [
     header: "Cashier",
     render: (row) => row.cashier.full_name,
   },
-  { field: "from", header: "From" },
-  { field: "to", header: "To" },
+  {
+    field: "from",
+    header: "From",
+    render: (row) => formatSeriesNumber(row.from),
+  },
+  { field: "to", header: "To", render: (row) => formatSeriesNumber(row.to) },
   {
     field: "remaining_sheets",
     header: "Remaining Sheets",

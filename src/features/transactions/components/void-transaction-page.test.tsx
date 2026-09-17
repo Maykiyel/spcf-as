@@ -205,7 +205,7 @@ describe("VoidTransactionPage", () => {
     await openConfirmFor(1201);
 
     expect(dialog().getByText("1201")).toBeInTheDocument();
-    expect(dialog().getByText("4501")).toBeInTheDocument();
+    expect(dialog().getByText("004501")).toBeInTheDocument();
     expect(dialog().getByText("Juan Dela Cruz")).toBeInTheDocument();
     expect(dialog().getByText("₱1,500.00")).toBeInTheDocument();
   });
@@ -214,7 +214,7 @@ describe("VoidTransactionPage", () => {
     renderPage();
     await openConfirmFor(1202);
 
-    expect(dialog().getByText("4502")).toBeInTheDocument();
+    expect(dialog().getByText("004502")).toBeInTheDocument();
     expect(dialog().getByText("Maria Santos")).toBeInTheDocument();
     expect(dialog().queryByText("Juan Dela Cruz")).not.toBeInTheDocument();
   });
