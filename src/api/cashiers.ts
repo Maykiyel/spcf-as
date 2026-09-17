@@ -17,7 +17,9 @@ export type CashiersOptions = {
 
 /** Distinct keys per variant. One key would let the narrower answer serve
  * the filter, which fails silently by offering fewer cashiers than exist. */
-export const cashiersQueryKey = ({ activeOnly = false }: CashiersOptions = {}) =>
+export const cashiersQueryKey = ({
+  activeOnly = false,
+}: CashiersOptions = {}) =>
   ["cashiers", activeOnly ? "active" : "all"] as const;
 
 /**

@@ -32,7 +32,8 @@ describe("getServerFieldErrors", () => {
     expect(
       getServerFieldErrors(
         axiosErrorWith(422, {
-          message: "User cannot be deleted because they have existing related records.",
+          message:
+            "User cannot be deleted because they have existing related records.",
         }),
       ),
     ).toEqual({});

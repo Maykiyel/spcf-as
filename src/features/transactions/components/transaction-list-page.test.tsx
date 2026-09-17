@@ -19,7 +19,9 @@ import { TransactionListPage } from "./transaction-list-page";
 vi.mock("../api/get-transactions", async () => {
   // A factory, not a bare `vi.mock`: automock empties exported arrays, so
   // this module's sort plan would silently become a table with no sort.
-  const actual = await vi.importActual<typeof import("../api/get-transactions")>("../api/get-transactions");
+  const actual = await vi.importActual<
+    typeof import("../api/get-transactions")
+  >("../api/get-transactions");
   return { ...actual, getTransactions: vi.fn() };
 });
 const mockGetTransactions = vi.mocked(getTransactions);
@@ -27,9 +29,8 @@ const mockGetTransactions = vi.mocked(getTransactions);
 vi.mock("@/api/cashiers", async () => {
   // The key builder is not a collaborator: mocking it would let the two
   // cashier-list variants share a key unnoticed.
-  const actual = await vi.importActual<typeof import("@/api/cashiers")>(
-    "@/api/cashiers",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/api/cashiers")>("@/api/cashiers");
   return { ...actual, getCashiers: vi.fn() };
 });
 const mockGetCashiers = vi.mocked(getCashiers);

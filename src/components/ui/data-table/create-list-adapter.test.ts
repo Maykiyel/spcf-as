@@ -181,9 +181,13 @@ describe("createListAdapter", () => {
       data: { widgets: [], pagination: { total: 0 } },
     } as any);
 
-    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets", {
-      pinnedFilters: { status: "completed" },
-    });
+    const getWidgets = createListAdapter<{ id: string }>(
+      "/widgets",
+      "widgets",
+      {
+        pinnedFilters: { status: "completed" },
+      },
+    );
     await getWidgets({ ...baseParams, filters: { customer: "ana" } });
 
     const [, config] = vi.mocked(apiClient.get).mock.calls[0];
@@ -194,9 +198,13 @@ describe("createListAdapter", () => {
   it("throws when a key is both pinned and declared", async () => {
     // A declared key reaches the URL and the pinned one overrides it, so the
     // control renders and does nothing. Same failure as an undeclared key.
-    const getWidgets = createListAdapter<{ id: string }>("/widgets", "widgets", {
-      pinnedFilters: { status: "completed" },
-    });
+    const getWidgets = createListAdapter<{ id: string }>(
+      "/widgets",
+      "widgets",
+      {
+        pinnedFilters: { status: "completed" },
+      },
+    );
 
     await expect(
       getWidgets({ ...baseParams, filters: { status: null } }),
@@ -220,7 +228,11 @@ describe("createListAdapter", () => {
     // `/reports/transactions` computes its period total server-side and
     // returns it as a sibling of the rows, not inside them.
     vi.mocked(apiClient.get).mockResolvedValue({
-      data: { widgets: [{ id: "1" }], total_earnings: 48250, pagination: { total: 42 } },
+      data: {
+        widgets: [{ id: "1" }],
+        total_earnings: 48250,
+        pagination: { total: 42 },
+      },
     } as any);
 
     const getWidgets = createListAdapter<

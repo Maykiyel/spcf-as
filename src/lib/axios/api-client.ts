@@ -97,8 +97,7 @@ export function handleResponseSuccess(response: AxiosResponse) {
 export async function handleResponseError(error: AxiosError) {
   const status = error.response?.status;
   const originalRequest = error.config as
-    | (InternalAxiosRequestConfig & { _retry?: boolean })
-    | undefined;
+    (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
   if (status === 401) {
     onUnauthorizedCallback?.();
     return Promise.reject(error);

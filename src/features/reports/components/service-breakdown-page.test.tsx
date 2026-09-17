@@ -15,7 +15,9 @@ import { ServiceBreakdownPage } from "./service-breakdown-page";
 vi.mock("../api/get-service-breakdown", async () => {
   // A factory, not a bare `vi.mock`: automock empties exported arrays, so
   // this module's sort plan would silently become a table with no sort.
-  const actual = await vi.importActual<typeof import("../api/get-service-breakdown")>("../api/get-service-breakdown");
+  const actual = await vi.importActual<
+    typeof import("../api/get-service-breakdown")
+  >("../api/get-service-breakdown");
   return { ...actual, getServiceBreakdown: vi.fn() };
 });
 vi.mock("../api/get-service");
@@ -28,10 +30,9 @@ const mockFetch = vi.fn();
 // A factory, not a bare `vi.mock`: automock would empty `toApiDate` and
 // `currentMonthRange`, and the default period is read through the latter.
 vi.mock("@/components/ui/date-range", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/components/ui/date-range")>(
-      "@/components/ui/date-range",
-    );
+  const actual = await vi.importActual<
+    typeof import("@/components/ui/date-range")
+  >("@/components/ui/date-range");
   return {
     ...actual,
     // Mantine's picker popover never opens under jsdom.
@@ -40,7 +41,9 @@ vi.mock("@/components/ui/date-range", async () => {
     }: {
       onChange: (value: { from: string | null; to: string | null }) => void;
     }) => (
-      <button onClick={() => onChange({ from: "2026-06-01", to: "2026-06-30" })}>
+      <button
+        onClick={() => onChange({ from: "2026-06-01", to: "2026-06-30" })}
+      >
         Pick range
       </button>
     ),
@@ -314,7 +317,9 @@ describe("ServiceBreakdownPage — getting back", () => {
     renderPage();
     await screen.findByText("Anna Reyes");
 
-    fireEvent.click(screen.getByRole("link", { name: /Back to Services Sold/ }));
+    fireEvent.click(
+      screen.getByRole("link", { name: /Back to Services Sold/ }),
+    );
 
     // Story 14: an admin checking several services in turn should not
     // re-pick the period each time.

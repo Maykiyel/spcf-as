@@ -83,7 +83,8 @@ export type TransactionDraftValue = {
 
 // Split out so transaction-builder-context.tsx only exports a component
 // (react-refresh constraint — same pattern as use-item-code-search.ts).
-export const CatalogBuilderContext =
-  createContext<CatalogBuilderValue | null>(null);
+export const CatalogBuilderContext = createContext<CatalogBuilderValue | null>(
+  null,
+);
 export const TransactionDraftContext =
   createContext<TransactionDraftValue | null>(null);

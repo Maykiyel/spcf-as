@@ -14,7 +14,9 @@ import { ActivityLogPage } from "./activity-log-page";
 vi.mock("../api/get-activity-logs", async () => {
   // A factory, not a bare `vi.mock`: automock empties exported arrays, so
   // this module's sort plan would silently become a table with no sort.
-  const actual = await vi.importActual<typeof import("../api/get-activity-logs")>("../api/get-activity-logs");
+  const actual = await vi.importActual<
+    typeof import("../api/get-activity-logs")
+  >("../api/get-activity-logs");
   return { ...actual, getActivityLogs: vi.fn() };
 });
 const mockGetActivityLogs = vi.mocked(getActivityLogs);
@@ -27,10 +29,9 @@ const mockGetDetail = vi.mocked(getActivityLogDetail);
 // bare `vi.mock`: automock would empty `toApiDate` too, and the
 // URL-restore tests below read dates through it.
 vi.mock("@/components/ui/date-range", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/components/ui/date-range")>(
-      "@/components/ui/date-range",
-    );
+  const actual = await vi.importActual<
+    typeof import("@/components/ui/date-range")
+  >("@/components/ui/date-range");
   return {
     ...actual,
     DateRangeFilter: ({
@@ -343,7 +344,9 @@ describe("ActivityLogPage — the detail drawer", () => {
     renderPage();
     await openFirstEntry();
 
-    expect(await drawer().findByText(/Series receipt #4501/)).toBeInTheDocument();
+    expect(
+      await drawer().findByText(/Series receipt #4501/),
+    ).toBeInTheDocument();
   });
 
   it("closes back to the list", async () => {

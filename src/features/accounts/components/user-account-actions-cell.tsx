@@ -58,7 +58,10 @@ export function UserAccountActionsCell({
       // it has any. Dressing the "has history" refusal as an error would
       // tell an admin something went wrong when nothing did.
       setRefusal(
-        getErrorMessage(error, "Couldn't delete this account. Please try again."),
+        getErrorMessage(
+          error,
+          "Couldn't delete this account. Please try again.",
+        ),
       );
     },
   });
@@ -170,7 +173,10 @@ export function UserAccountActionsCell({
         )}
 
         <Group justify="flex-end" mt="lg">
-          <DangerButton onClick={closeDelete} disabled={deleteMutation.isPending}>
+          <DangerButton
+            onClick={closeDelete}
+            disabled={deleteMutation.isPending}
+          >
             {refusal ? "Close" : "Cancel"}
           </DangerButton>
           {!refusal && (

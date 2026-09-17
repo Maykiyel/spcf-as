@@ -21,9 +21,8 @@ const mockGetTransaction = vi.mocked(getTransaction);
 
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>(
-    "react-router",
-  );
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
@@ -43,7 +42,9 @@ const fakeTransaction: TransactionDTO = {
 };
 
 function makeForbiddenError(): AxiosError {
-  const error = new AxiosError("You do not have permission to perform this action.");
+  const error = new AxiosError(
+    "You do not have permission to perform this action.",
+  );
   error.response = { status: 403 } as AxiosError["response"];
   return error;
 }
@@ -100,7 +101,9 @@ describe("ViewTransactionPage", () => {
     expect(
       screen.getByTestId("transaction-detail-skeleton"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Service" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Service" }),
+    ).toBeInTheDocument();
     // Nothing to print yet, and nothing claiming there is.
     expect(screen.queryByRole("button", { name: /print/i })).toBeNull();
   });
@@ -167,7 +170,9 @@ describe("ViewTransactionPage", () => {
 
     const printButton = await screen.findByRole("button", { name: /print/i });
     expect(printButton).toBeDisabled();
-    expect(screen.getByText(/only a completed transaction/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/only a completed transaction/i),
+    ).toBeInTheDocument();
   });
 
   it("still shows a voided transaction's contents, so it can be looked up", async () => {
@@ -234,7 +239,9 @@ describe("ViewTransactionPage", () => {
     });
     renderPage();
 
-    expect(await screen.findByRole("button", { name: /print/i })).toBeDisabled();
+    expect(
+      await screen.findByRole("button", { name: /print/i }),
+    ).toBeDisabled();
   });
   // #62 put the void action on its own page, and this is where its record
   // lands: the voiding user's name is available from `show` and nowhere

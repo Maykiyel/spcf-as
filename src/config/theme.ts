@@ -122,12 +122,7 @@ export const theme = createTheme({
 });
 
 type ExtendedCustomColors =
-  | "primary"
-  | "navy"
-  | "danger"
-  | "success"
-  | "dark"
-  | DefaultMantineColor;
+  "primary" | "navy" | "danger" | "success" | "dark" | DefaultMantineColor;
 
 declare module "@mantine/core" {
   export interface MantineThemeColorsOverride {

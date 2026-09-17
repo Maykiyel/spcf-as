@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { serviceToFeeCatalogItem, servicesToFeeCatalog } from "./service-mapping";
+import {
+  serviceToFeeCatalogItem,
+  servicesToFeeCatalog,
+} from "./service-mapping";
 import type { Service } from "@/api/services";
 
 const service: Service = {

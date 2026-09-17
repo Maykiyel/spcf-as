@@ -1,7 +1,4 @@
-import {
-  createListAdapter,
-  type SortPlan,
-} from "@/components/ui/data-table";
+import { createListAdapter, type SortPlan } from "@/components/ui/data-table";
 import type { CashierEarnings } from "../types";
 
 /** The row as `/reports/cashier-earnings` sends it. */

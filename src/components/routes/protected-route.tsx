@@ -49,13 +49,7 @@ export function ProtectedRoute() {
   }, [isForbidden, location.pathname]);
 
   if (isUnauthenticated) {
-    return (
-      <Navigate
-        to={LOGIN_PATH}
-        replace
-        state={{ from: location }}
-      />
-    );
+    return <Navigate to={LOGIN_PATH} replace state={{ from: location }} />;
   }
 
   // The dashboard, not the login page. The user *is* signed in, and

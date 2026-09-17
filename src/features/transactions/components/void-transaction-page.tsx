@@ -61,10 +61,7 @@ export function VoidTransactionPage() {
   return (
     <DataTable.Root title="Void Transactions" state={tableState}>
       {/* Same panel as the receipts list, one control lighter. */}
-      <TransactionListFilters
-        includeCashier
-        includeStatus={false}
-      />
+      <TransactionListFilters includeCashier includeStatus={false} />
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />

@@ -23,7 +23,9 @@ import type { UserAccount } from "../types";
 vi.mock("../api/get-user-accounts", async () => {
   // A factory, not a bare `vi.mock`: automock empties exported arrays, so
   // this module's sort plan would silently become a table with no sort.
-  const actual = await vi.importActual<typeof import("../api/get-user-accounts")>("../api/get-user-accounts");
+  const actual = await vi.importActual<
+    typeof import("../api/get-user-accounts")
+  >("../api/get-user-accounts");
   return { ...actual, getUserAccounts: vi.fn() };
 });
 const mockGetUserAccounts = vi.mocked(getUserAccounts);

@@ -58,7 +58,10 @@ describe("createWriteQueue — debounce and pending", () => {
 
   it("reports a key as pending from scheduling until its flush settles", async () => {
     const onPendingChange = vi.fn<(keys: ReadonlySet<number>) => void>();
-    const queue = createWriteQueue<number>({ debounceMs: 400, onPendingChange });
+    const queue = createWriteQueue<number>({
+      debounceMs: 400,
+      onPendingChange,
+    });
     const response = deferred();
 
     queue.schedule(1, () => response.promise);
@@ -74,7 +77,10 @@ describe("createWriteQueue — debounce and pending", () => {
 
   it("keeps a key pending when a later flush no-ops because the caller is still busy", async () => {
     const onPendingChange = vi.fn<(keys: ReadonlySet<number>) => void>();
-    const queue = createWriteQueue<number>({ debounceMs: 400, onPendingChange });
+    const queue = createWriteQueue<number>({
+      debounceMs: 400,
+      onPendingChange,
+    });
     const response = deferred();
     const flush = busyGuardedFlush(response);
 
@@ -298,7 +304,10 @@ describe("createWriteQueue — cancel and reset", () => {
 
   it("clears scheduled work and pending keys on reset", async () => {
     const onPendingChange = vi.fn<(keys: ReadonlySet<number>) => void>();
-    const queue = createWriteQueue<number>({ debounceMs: 400, onPendingChange });
+    const queue = createWriteQueue<number>({
+      debounceMs: 400,
+      onPendingChange,
+    });
     const flush = vi.fn(async () => {});
 
     queue.schedule(1, flush);

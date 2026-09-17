@@ -12,8 +12,7 @@ export function getServerFieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof AxiosError)) return {};
 
   const data = error.response?.data as
-    | { errors?: Record<string, unknown> }
-    | undefined;
+    { errors?: Record<string, unknown> } | undefined;
   const errors = data?.errors;
   if (!errors || typeof errors !== "object") return {};
 

@@ -26,7 +26,9 @@ function createWrapper(initialEntries: string[] = ["/"]) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MemoryRouter initialEntries={initialEntries}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
       </MemoryRouter>
     );
   };
@@ -39,7 +41,10 @@ function renderTable<TMeta = undefined>(
   initialEntries?: string[],
 ) {
   return renderHook(
-    () => ({ table: useServerTableState(options), search: useLocation().search }),
+    () => ({
+      table: useServerTableState(options),
+      search: useLocation().search,
+    }),
     { wrapper: createWrapper(initialEntries) },
   );
 }
@@ -94,15 +99,15 @@ describe("useServerTableState filters", () => {
       { wrapper: createWrapper() },
     );
 
-    await waitFor(() => expect(result.current.rows).toEqual([
-      { id: "active-1", name: "Row" },
-    ]));
+    await waitFor(() =>
+      expect(result.current.rows).toEqual([{ id: "active-1", name: "Row" }]),
+    );
 
     act(() => result.current.setFilters({ status: "inactive" }));
 
-    await waitFor(() => expect(result.current.rows).toEqual([
-      { id: "inactive-1", name: "Row" },
-    ]));
+    await waitFor(() =>
+      expect(result.current.rows).toEqual([{ id: "inactive-1", name: "Row" }]),
+    );
   });
 
   it("resets to the first page when a filter changes", async () => {
@@ -314,10 +319,9 @@ describe("useServerTableState filter guards", () => {
   // emits a half-picked range, but a restored URL can still carry one, so the
   // guard has to exist here as well as in the control.
   it("fires no request while the range is half-restored", async () => {
-    const { result } = renderTable(
-      options({ urlKey: "tx", dateRange: {} }),
-      ["/?tx_from_date=2026-08-01"],
-    );
+    const { result } = renderTable(options({ urlKey: "tx", dateRange: {} }), [
+      "/?tx_from_date=2026-08-01",
+    ]);
 
     await waitFor(() => expect(result.current.table.isLoading).toBe(false));
     expect(queryFn).not.toHaveBeenCalled();
@@ -325,10 +329,9 @@ describe("useServerTableState filter guards", () => {
   });
 
   it("fires once the range is completed", async () => {
-    const { result } = renderTable(
-      options({ urlKey: "tx", dateRange: {} }),
-      ["/?tx_from_date=2026-08-01"],
-    );
+    const { result } = renderTable(options({ urlKey: "tx", dateRange: {} }), [
+      "/?tx_from_date=2026-08-01",
+    ]);
 
     await waitFor(() => expect(result.current.table.isLoading).toBe(false));
     expect(queryFn).not.toHaveBeenCalled();

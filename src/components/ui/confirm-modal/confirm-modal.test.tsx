@@ -48,7 +48,6 @@ describe("ConfirmModal", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
-
 });
 
 // A Mantine Modal has four ways out: the two buttons, Escape, the close

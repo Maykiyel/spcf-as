@@ -96,18 +96,14 @@ describe("sortsToExtend", () => {
   it("keeps the declared sort when the clicked column is the declared one", () => {
     // Only what a click extends; where it lands is `sortsAfterClick`'s.
     const declared = [asc("service_name")];
-    expect(sortsToExtend(declared, "service_name", declared)).toEqual(
-      declared,
-    );
+    expect(sortsToExtend(declared, "service_name", declared)).toEqual(declared);
     expect(nextSorts(declared, "service_name")).toEqual([desc("service_name")]);
   });
 
   it("keeps a selection the user has already changed, so a second column joins", () => {
     const declared = [asc("service_name")];
     const chosen = [asc("subtotal")];
-    expect(sortsToExtend(chosen, "total_quantity", declared)).toEqual(
-      chosen,
-    );
+    expect(sortsToExtend(chosen, "total_quantity", declared)).toEqual(chosen);
     expect(nextSorts(chosen, "total_quantity")).toEqual([
       asc("subtotal"),
       asc("total_quantity"),
@@ -116,9 +112,7 @@ describe("sortsToExtend", () => {
 
   it("leaves a table that declares no sort alone", () => {
     expect(sortsToExtend([], "name", [])).toEqual([]);
-    expect(sortsToExtend([asc("name")], "price", [])).toEqual([
-      asc("name"),
-    ]);
+    expect(sortsToExtend([asc("name")], "price", [])).toEqual([asc("name")]);
   });
 
   it("keeps an unsorted table unsorted rather than treating it as the default", () => {
@@ -159,9 +153,9 @@ describe("sortsAfterClick", () => {
 
   it("lands any other column's third click on the declared sort", () => {
     const declared = [asc("service_name")];
-    expect(
-      sortsAfterClick([desc("subtotal")], "subtotal", declared),
-    ).toEqual(declared);
+    expect(sortsAfterClick([desc("subtotal")], "subtotal", declared)).toEqual(
+      declared,
+    );
   });
 
   it("restores a declared tiebreaker the removal would have stranded", () => {
@@ -172,7 +166,8 @@ describe("sortsAfterClick", () => {
       sortsAfterClick(
         [desc("subtotal"), asc("created_at")],
         "subtotal",
-        declared),
+        declared,
+      ),
     ).toEqual(declared);
   });
 
@@ -183,8 +178,6 @@ describe("sortsAfterClick", () => {
 
   it("adds a declared column back from unsorted like any other", () => {
     const declared = [asc("service_name")];
-    expect(sortsAfterClick([], "service_name", declared)).toEqual(
-      declared,
-    );
+    expect(sortsAfterClick([], "service_name", declared)).toEqual(declared);
   });
 });
