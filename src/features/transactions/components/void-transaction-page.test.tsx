@@ -31,9 +31,8 @@ const mockVoidTransaction = vi.mocked(voidTransaction);
 vi.mock("@/api/cashiers", async () => {
   // The key builder is not a collaborator: mocking it would let the two
   // cashier-list variants share a key unnoticed.
-  const actual = await vi.importActual<typeof import("@/api/cashiers")>(
-    "@/api/cashiers",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/api/cashiers")>("@/api/cashiers");
   return { ...actual, getCashiers: vi.fn() };
 });
 const mockGetCashiers = vi.mocked(getCashiers);
@@ -257,9 +256,7 @@ describe("VoidTransactionPage", () => {
     fireEvent.click(dialog().getByRole("button", { name: "Void Transaction" }));
 
     await waitFor(() =>
-      expect(mockApiGet.mock.calls.length).toBeGreaterThan(
-        requestsBefore,
-      ),
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(requestsBefore),
     );
     expect(queryClient.getQueryData(detailKey)).toBeUndefined();
   });
@@ -304,7 +301,9 @@ describe("VoidTransactionPage", () => {
     // them isn't, which means the list is out of date — leaving it up
     // would leave a Void button that can only fail the same way again.
     mockVoidTransaction.mockRejectedValue(
-      conflict("Invalid Action. Cannot void a transaction with status 'returned'."),
+      conflict(
+        "Invalid Action. Cannot void a transaction with status 'returned'.",
+      ),
     );
 
     renderPage();
@@ -313,9 +312,7 @@ describe("VoidTransactionPage", () => {
     fireEvent.click(dialog().getByRole("button", { name: "Void Transaction" }));
 
     await waitFor(() =>
-      expect(mockApiGet.mock.calls.length).toBeGreaterThan(
-        requestsBefore,
-      ),
+      expect(mockApiGet.mock.calls.length).toBeGreaterThan(requestsBefore),
     );
   });
 

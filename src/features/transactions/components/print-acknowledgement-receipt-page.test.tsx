@@ -63,9 +63,7 @@ describe("PrintAcknowledgementReceiptPage", () => {
     renderPage();
 
     expect(screen.getByText(/loading transaction/i)).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("transaction-detail-skeleton"),
-    ).toBeNull();
+    expect(screen.queryByTestId("transaction-detail-skeleton")).toBeNull();
   });
 
   afterEach(() => {
@@ -87,9 +85,12 @@ describe("PrintAcknowledgementReceiptPage", () => {
     renderPage();
 
     await screen.findByText("ACCOUNTING OFFICE'S COPY");
-    await waitFor(() => expect(window.print).toHaveBeenCalledExactlyOnceWith(), {
-      timeout: 2000,
-    });
+    await waitFor(
+      () => expect(window.print).toHaveBeenCalledExactlyOnceWith(),
+      {
+        timeout: 2000,
+      },
+    );
   });
 
   it("does not call window.print() before the transaction has loaded", () => {
@@ -131,9 +132,12 @@ describe("PrintAcknowledgementReceiptPage", () => {
     );
 
     await screen.findByText("ACCOUNTING OFFICE'S COPY");
-    await waitFor(() => expect(window.print).toHaveBeenCalledExactlyOnceWith(), {
-      timeout: 2000,
-    });
+    await waitFor(
+      () => expect(window.print).toHaveBeenCalledExactlyOnceWith(),
+      {
+        timeout: 2000,
+      },
+    );
   });
 
   it("shows a back link excluded from the printed output", async () => {

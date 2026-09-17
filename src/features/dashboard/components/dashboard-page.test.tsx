@@ -24,7 +24,9 @@ const mockGetDashboardToday = vi.mocked(getDashboardToday);
 vi.mock("../api/get-cashier-earnings", async () => {
   // A factory, not a bare `vi.mock`: automock empties exported arrays, so
   // this module's sort plan would silently become a table with no sort.
-  const actual = await vi.importActual<typeof import("../api/get-cashier-earnings")>("../api/get-cashier-earnings");
+  const actual = await vi.importActual<
+    typeof import("../api/get-cashier-earnings")
+  >("../api/get-cashier-earnings");
   return { ...actual, getCashierEarnings: vi.fn() };
 });
 const mockGetCashierEarnings = vi.mocked(getCashierEarnings);
@@ -46,9 +48,7 @@ const mockGetTransactions = vi.mocked(getTransactions);
 // zero by zero, so the real chart renders empty whatever it is handed.
 // Standing in for it is the only way to assert on the series.
 vi.mock("@mantine/charts", () => ({
-  BarChart: (props: {
-    data: { month: string; total_earnings: number }[];
-  }) => (
+  BarChart: (props: { data: { month: string; total_earnings: number }[] }) => (
     <div
       data-testid="bar-chart"
       data-months={props.data.map((point) => point.month).join(",")}
@@ -176,9 +176,7 @@ function lastEarningsParams() {
  * `selector: "input"`; and it keeps `display: none` even when expanded,
  * hence `hidden: true` and `fireEvent`. */
 async function openYearSelect(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(
-    await screen.findByLabelText("Year", { selector: "input" }),
-  );
+  await user.click(await screen.findByLabelText("Year", { selector: "input" }));
   return screen.findAllByRole("option", { hidden: true });
 }
 
@@ -229,7 +227,9 @@ describe("DashboardPage", () => {
       renderPage();
 
       expect(
-        await screen.findByText("Couldn't load today's figures. Please try again."),
+        await screen.findByText(
+          "Couldn't load today's figures. Please try again.",
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -464,7 +464,9 @@ describe("DashboardPage", () => {
       renderPage();
 
       expect(
-        await screen.findByText("Couldn't load monthly earnings. Please try again."),
+        await screen.findByText(
+          "Couldn't load monthly earnings. Please try again.",
+        ),
       ).toBeInTheDocument();
       expect(screen.getByText("₱1,250.00")).toBeInTheDocument();
       expect(screen.getByText("Jaypee Pahayahay")).toBeInTheDocument();

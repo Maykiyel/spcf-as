@@ -33,7 +33,12 @@ const cashier: AuthUser = {
   role: "cashier",
 };
 
-const admin: AuthUser = { ...cashier, id: 2, user_name: "admin1", role: "admin" };
+const admin: AuthUser = {
+  ...cashier,
+  id: 2,
+  user_name: "admin1",
+  role: "admin",
+};
 
 function renderSidebarAs(user: AuthUser) {
   useAuthStore.setState({ user, status: "authenticated" });

@@ -1,0 +1,9 @@
+# The repository stores LF. Checkouts convert per the contributor's
+# `core.autocrlf`, which is what keeps a CRLF working tree on Windows from
+# reaching a commit. Prettier is pinned to `lf` for the same reason: without
+# both halves, formatting a CRLF working tree rewrites every file.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.svg text eol=lf

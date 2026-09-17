@@ -58,7 +58,9 @@ describe("TableFilterSegments", () => {
     renderControl("0");
 
     expect(screen.getByRole("radio", { name: "Inactive" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "All Statuses" })).not.toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: "All Statuses" }),
+    ).not.toBeChecked();
   });
 
   it("reports an option's own value when it is chosen", () => {

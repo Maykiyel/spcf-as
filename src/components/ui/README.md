@@ -92,15 +92,17 @@ the `Modal`, the footer, and both buttons — so a caller supplies only the body
   onConfirm={() => deleteMutation.mutate()}
   loading={deleteMutation.isPending}
 >
-  <Text size="sm">Delete <strong>{itemCode.name}</strong>? This can't be undone.</Text>
+  <Text size="sm">
+    Delete <strong>{itemCode.name}</strong>? This can't be undone.
+  </Text>
 </ConfirmModal>
 ```
 
-| Prop | Does |
-| --- | --- |
-| `loading` | The mutation is out. Disables both buttons and **blocks every route out of the dialog** — overlay click, Escape, and the close button. |
-| `confirmLabel` | Names the action, not "OK". It is the last thing read before something irreversible. |
-| `onConfirm` | Fires the mutation. The component does not close on confirm; the caller closes from its own `onSuccess`/`onError`, which is what keeps the dialog up while the request is out. |
+| Prop           | Does                                                                                                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `loading`      | The mutation is out. Disables both buttons and **blocks every route out of the dialog** — overlay click, Escape, and the close button.                                         |
+| `confirmLabel` | Names the action, not "OK". It is the last thing read before something irreversible.                                                                                           |
+| `onConfirm`    | Fires the mutation. The component does not close on confirm; the caller closes from its own `onSuccess`/`onError`, which is what keeps the dialog up while the request is out. |
 
 **Why it owns the `Modal` rather than just the footer.** A footer-only component
 would cover more call sites — including the form modals — but `closeOnClickOutside`
@@ -176,14 +178,14 @@ function SupplierTable() {
 
 ### Pieces
 
-| Piece                  | Purpose                                                                                                  |
-| ---------------------- | -------------------------------------------------------------------------------------------------------- |
-| `DataTable.Root`       | Provides context, wraps children in `Card`. Takes `title` and `state`.                                   |
-| `DataTable.Toolbar`    | A row of controls, composed from the pieces below. Omit entirely for a table with no controls at all.    |
-| `DataTable.PageSize`   | The "Show N entries" select. Omit for a table that doesn't let the user change the page size.            |
-| `DataTable.Search`     | The search input. Right-aligns itself. **On a server-backed table, only compose this on an endpoint that accepts a search filter** — see below. Always safe on a client-side one. |
+| Piece                  | Purpose                                                                                                                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DataTable.Root`       | Provides context, wraps children in `Card`. Takes `title` and `state`.                                                                                                                                     |
+| `DataTable.Toolbar`    | A row of controls, composed from the pieces below. Omit entirely for a table with no controls at all.                                                                                                      |
+| `DataTable.PageSize`   | The "Show N entries" select. Omit for a table that doesn't let the user change the page size.                                                                                                              |
+| `DataTable.Search`     | The search input. Right-aligns itself. **On a server-backed table, only compose this on an endpoint that accepts a search filter** — see below. Always safe on a client-side one.                          |
 | `DataTable.Grid`       | The actual `<table>` — headers (with a sort toggle where the endpoint's plan allows one), rows, loading/error/empty states. Takes an optional `onRowClick`; see [Rows that navigate](#rows-that-navigate). |
-| `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging.       |
+| `DataTable.Pagination` | "Showing X to Y of Z entries" + page control. Omit for a table that shows all rows with no paging.                                                                                                         |
 
 ### Composing the toolbar
 
@@ -216,7 +218,7 @@ want a third.
 
 **Every table here is server-backed.** There was a `useClientTableState`
 for tables holding their rows in the browser, where `DataTable.Search`
-could always be shown because searching the loaded array *is* searching the
+could always be shown because searching the loaded array _is_ searching the
 whole dataset. Manage Accounts was its last consumer, and backend `4955f19`
 paginated `/users` underneath it. The hook was deleted once it had none:
 a whole parallel filter-sort-paginate implementation kept for nobody, and
@@ -234,12 +236,12 @@ together.
 `createListAdapter<TWire, TRow, TMeta>` takes four options, and `TRow`
 defaults to `TWire` so a call site that renames nothing declares one type:
 
-| Option | Purpose |
-| --- | --- |
-| `supportsSearch` | Whether the endpoint accepts `filter[search]`, as above. |
-| `selectMeta` | Reads a value sitting beside the rows in the envelope, such as the transactions report's server-computed `total_earnings`. |
-| `selectRow` | Renames a wire row to the shape the table reads. A column's sort key has to be a word the endpoint allow-lists, so a field the wire and the UI name differently is renamed here rather than at the column. `/users` (`user_name` to `username`), `/reports/cashier-earnings` (`full_name` to `cashier_name`) and `/series-receipts` (`account` to `cashier`) each use it. All three previously hand-wrote the mapping and rebuilt the envelope around it, which dropped `meta` on the way. |
-| `pinnedFilters` | Filters applied past the point the URL reaches, for a list whose scope is the page's own rather than the user's. `getVoidableTransactions` pins `status: "completed"`, because `status` as a declared filter defaulting to `completed` would leave `?void_status=pending` a working way to fill the page with rows that can only 409. |
+| Option           | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `supportsSearch` | Whether the endpoint accepts `filter[search]`, as above.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `selectMeta`     | Reads a value sitting beside the rows in the envelope, such as the transactions report's server-computed `total_earnings`.                                                                                                                                                                                                                                                                                                                                                                 |
+| `selectRow`      | Renames a wire row to the shape the table reads. A column's sort key has to be a word the endpoint allow-lists, so a field the wire and the UI name differently is renamed here rather than at the column. `/users` (`user_name` to `username`), `/reports/cashier-earnings` (`full_name` to `cashier_name`) and `/series-receipts` (`account` to `cashier`) each use it. All three previously hand-wrote the mapping and rebuilt the envelope around it, which dropped `meta` on the way. |
+| `pinnedFilters`  | Filters applied past the point the URL reaches, for a list whose scope is the page's own rather than the user's. `getVoidableTransactions` pins `status: "completed"`, because `status` as a declared filter defaulting to `completed` would leave `?void_status=pending` a working way to fill the page with rows that can only 409.                                                                                                                                                      |
 
 **A key may be pinned or declared, not both.** The adapter throws on the
 first request if it is. A declared key reaches the URL and the pinned one
@@ -340,7 +342,7 @@ and the table always requests, which is right for a table that has none.
 
 **`required` is the stricter guard.**
 `GET /reports/services-sold/{service}` validates both ends as `required`
-rather than `nullable`, so an *absent* range is a 422 there, not an
+rather than `nullable`, so an _absent_ range is a 422 there, not an
 unfiltered request. The default guard waves that case through, since neither
 end being set is a matched pair. Set `required: true` where the endpoint
 demands a range, and also where the page's own rows link somewhere that
@@ -366,7 +368,7 @@ a filter equal to its declared value is the one dropped from the URL, so a
 moving default would erase the period a user had just picked.
 
 Note what follows. Clearing the range in the picker writes `null`, which
-differs from the default and so deletes the param, which reads back *as* the
+differs from the default and so deletes the param, which reads back _as_ the
 default: clearing snaps to the current month rather than to an unfiltered
 view. That is right where a range is required and wrong where it is
 optional, so give a `default` only to a table that needs one.
@@ -507,7 +509,7 @@ The plan carried a third part, `unique`, until #126: the replace only
 happened where the default ended in a unique key, on the grounds that
 nothing appended behind a total order can reorder anything. The other half
 of that rule — joining behind a default that ties — made a header's
-behaviour depend on whether the *default's* key happened to tie, which a
+behaviour depend on whether the _default's_ key happened to tie, which a
 user cannot see, and left Status on the transactions list and Username on
 Manage Accounts lighting a caret and moving no rows. Backend `7fb5fc1`
 separately ended the question `unique` answered, by terminating every
@@ -571,11 +573,20 @@ here does.
 ```typescript
 type ColumnDef<T> =
   // a column that reads a field off the row
-  | { field: keyof T & string; id?: string; header: string;
-      sortKey?: string; render?: (row: T) => ReactNode }
+  | {
+      field: keyof T & string;
+      id?: string;
+      header: string;
+      sortKey?: string;
+      render?: (row: T) => ReactNode;
+    }
   // a column that renders something no single field holds
-  | { id: string; header: string; render: (row: T) => ReactNode;
-      sortKey?: string };
+  | {
+      id: string;
+      header: string;
+      render: (row: T) => ReactNode;
+      sortKey?: string;
+    };
 ```
 
 **Three names, three jobs.** `field` is what the cell reads, `id` is what
@@ -617,7 +628,9 @@ column's header has always been free (`header: "Cashier"` over `field:
 renders exactly as before — no pointer cursor, no handler:
 
 ```tsx
-<DataTable.Grid onRowClick={(row) => navigate(`/transactions/${row.control_id}`)} />
+<DataTable.Grid
+  onRowClick={(row) => navigate(`/transactions/${row.control_id}`)}
+/>
 ```
 
 It's a prop on the piece rather than part of the shared state because the
@@ -726,7 +739,7 @@ before the mechanism existed, and it does not survive contact with the fact
 that one function writes every control.
 
 The reasoning is search. Every control goes through one function, so making
-a filter click a place you have been makes a *keystroke* one too, and Back
+a filter click a place you have been makes a _keystroke_ one too, and Back
 after typing "graduation" would walk back a letter at a time. Nobody wants
 that version, and splitting the behaviour per control — push for filters,
 replace for typing — buys an undo nobody asked for at the price of two
@@ -775,7 +788,6 @@ not a filter-only one.
 | Paging/sorting/searching after data has loaded | Existing rows stay visible, dimmed to 60% opacity, instead of flashing empty |
 | Query succeeds with 0 results                  | "No entries found"                                                           |
 | Query fails before any data has loaded         | The error message in place of rows                                           |
-
 
 **A client-side table whose data comes from a query still has both
 states** — they just belong to the page, not to the hook. No table does
@@ -906,7 +918,9 @@ export function TransactionPayerFilter(props: {
   value: string | null;
   onChange: (value: string | null) => void;
 }) {
-  return <TableFilterText label="Payer Name" placeholder="Any payer" {...props} />;
+  return (
+    <TableFilterText label="Payer Name" placeholder="Any payer" {...props} />
+  );
 }
 ```
 
@@ -953,13 +967,13 @@ const [range, setRange] = useState(EMPTY_DATE_RANGE);
 <DateRangeFilter value={range} onChange={setRange} />;
 ```
 
-| Export             | Purpose                                                                                     |
-| ------------------ | ------------------------------------------------------------------------------------------- |
+| Export             | Purpose                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
 | `DateRangeFilter`  | The control. Controlled — takes `value` / `onChange`, plus optional `label` and `placeholder`. |
-| `DateRangeValue`   | `{ from: ApiDate \| null; to: ApiDate \| null }`. Each end is either an `ApiDate` or absent. |
-| `EMPTY_DATE_RANGE` | The "no date filter" value. Use it as the initial value.                                     |
-| `toApiDate`        | Converts a `Date` or a response timestamp to `Y-m-d`. The only producer of `ApiDate`.        |
-| `nextDateRange`    | The pure emit rule the control uses. Exported for testing, not for call sites.               |
+| `DateRangeValue`   | `{ from: ApiDate \| null; to: ApiDate \| null }`. Each end is either an `ApiDate` or absent.   |
+| `EMPTY_DATE_RANGE` | The "no date filter" value. Use it as the initial value.                                       |
+| `toApiDate`        | Converts a `Date` or a response timestamp to `Y-m-d`. The only producer of `ApiDate`.          |
+| `nextDateRange`    | The pure emit rule the control uses. Exported for testing, not for call sites.                 |
 
 ### Why the wire format is a type
 
@@ -992,7 +1006,7 @@ lives in `nextDateRange` as a pure function, and the half-picked state stays
 as draft state inside the control rather than being pushed up and filtered
 back out by every consumer.
 
-Clearing both ends *does* emit `EMPTY_DATE_RANGE`. That is a real value
+Clearing both ends _does_ emit `EMPTY_DATE_RANGE`. That is a real value
 meaning "no date filter", and it is how a user gets back to the unfiltered
 view.
 

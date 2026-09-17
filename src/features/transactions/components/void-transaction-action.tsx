@@ -102,8 +102,8 @@ export function VoidTransactionAction({
       >
         <Stack gap="sm">
           <Text size="sm">
-            This reverses a completed payment record and can't be undone.
-            Check it against the receipt before continuing.
+            This reverses a completed payment record and can't be undone. Check
+            it against the receipt before continuing.
           </Text>
 
           <Stack gap={4}>

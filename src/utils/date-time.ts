@@ -24,9 +24,7 @@ const TIME_FORMAT = new Intl.DateTimeFormat("en-US", {
 // A calendar date, not an instant: `new Date("2026-08-24")` is UTC
 // midnight, which renders as a fabricated clock time and rolls back a day
 // west of UTC. Building it from parts keeps the date in every timezone.
-function parseDateTime(
-  date: string,
-): { value: Date; hasTime: boolean } | null {
+function parseDateTime(date: string): { value: Date; hasTime: boolean } | null {
   if (DATE_ONLY.test(date)) {
     const [year, month, day] = date.split("-").map(Number);
     return { value: new Date(year, month - 1, day), hasTime: false };

@@ -172,13 +172,12 @@ describe("what each table offers a sort on", () => {
     expect(sortableColumnIds(plan, columns)).toEqual(sortable);
   });
 
-  it.each(CASES)("$endpoint — allow-listed but unreachable", ({
-    plan,
-    columns,
-    unreachable,
-  }) => {
-    expect(unreachableSortKeys(plan, columns)).toEqual(unreachable);
-  });
+  it.each(CASES)(
+    "$endpoint — allow-listed but unreachable",
+    ({ plan, columns, unreachable }) => {
+      expect(unreachableSortKeys(plan, columns)).toEqual(unreachable);
+    },
+  );
 
   it("drops Status with the column, on the Void page", () => {
     // Same endpoint, one column lighter, because every row there is already

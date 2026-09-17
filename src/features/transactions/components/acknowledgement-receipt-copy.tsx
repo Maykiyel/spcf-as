@@ -46,9 +46,7 @@ export function AcknowledgementReceiptCopy({
             {transaction.customer_name ?? "—"}
           </Text>
         </Group>
-        <Text size="xs">
-          Date: {formatDateTime(transaction.date)}
-        </Text>
+        <Text size="xs">Date: {formatDateTime(transaction.date)}</Text>
       </Group>
 
       <TransactionItemsTable

@@ -7,9 +7,7 @@ describe("encodeSortsForApi", () => {
   });
 
   it("encodes an ascending sort as the bare key", () => {
-    expect(encodeSortsForApi([{ key: "name", direction: "asc" }])).toBe(
-      "name",
-    );
+    expect(encodeSortsForApi([{ key: "name", direction: "asc" }])).toBe("name");
   });
 
   it("encodes a descending sort with a leading dash", () => {

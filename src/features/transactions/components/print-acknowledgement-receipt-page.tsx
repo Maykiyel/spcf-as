@@ -108,7 +108,11 @@ export function PrintAcknowledgementReceiptPage() {
         onClick={() => navigate(`/transactions/${controlId}`)}
         mb="xs"
       >
-        <Text size="sm" c="dimmed" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <Text
+          size="sm"
+          c="dimmed"
+          style={{ display: "flex", alignItems: "center", gap: 4 }}
+        >
           <IconArrowLeft size={14} /> Back to Transaction
         </Text>
       </UnstyledButton>

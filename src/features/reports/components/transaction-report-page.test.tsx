@@ -15,7 +15,9 @@ import { TransactionReportPage } from "./transaction-report-page";
 vi.mock("../api/get-transaction-report", async () => {
   // A factory, not a bare `vi.mock`: automock empties exported arrays, so
   // this module's sort plan would silently become a table with no sort.
-  const actual = await vi.importActual<typeof import("../api/get-transaction-report")>("../api/get-transaction-report");
+  const actual = await vi.importActual<
+    typeof import("../api/get-transaction-report")
+  >("../api/get-transaction-report");
   return { ...actual, getTransactionReport: vi.fn() };
 });
 const mockGetReport = vi.mocked(getTransactionReport);
@@ -33,10 +35,9 @@ const mockGetCashiers = vi.mocked(getCashiers);
 // stood in for by a button emitting one fixed range. A factory again, since
 // automock would empty `toApiDate` and the URL-restore test reads through it.
 vi.mock("@/components/ui/date-range", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/components/ui/date-range")>(
-      "@/components/ui/date-range",
-    );
+  const actual = await vi.importActual<
+    typeof import("@/components/ui/date-range")
+  >("@/components/ui/date-range");
   return {
     ...actual,
     DateRangeFilter: ({
@@ -307,7 +308,9 @@ describe("TransactionReportPage — the filters", () => {
   it("asks for nothing while a restored date range has only one end", async () => {
     // `to_date` carries `after_or_equal:from_date`, so half a range is a 422
     // rather than a looser filter.
-    renderPage("/reports/transactions?transactions_report_from_date=2026-08-01");
+    renderPage(
+      "/reports/transactions?transactions_report_from_date=2026-08-01",
+    );
     await flush();
 
     expect(mockGetReport).not.toHaveBeenCalled();

@@ -33,13 +33,14 @@ export type ServerTableResponse<T, TMeta = undefined> = {
 
 type UseServerTableStateOptions<T, TMeta> = {
   queryKey: unknown[];
-  queryFn: (params: ServerTableParams) => Promise<ServerTableResponse<T, TMeta>>;
+  queryFn: (
+    params: ServerTableParams,
+  ) => Promise<ServerTableResponse<T, TMeta>>;
   /** A function when a cell needs the period the table is on, which is
    * resolved after this hook is called: the Services Sold row link carries
    * it to the breakdown. */
   columns:
-    | ColumnDef<T>[]
-    | ((context: { period: DateRangePeriod }) => ColumnDef<T>[]);
+    ColumnDef<T>[] | ((context: { period: DateRangePeriod }) => ColumnDef<T>[]);
   initialPageSize?: number;
   urlKey?: string;
   /** The filters this table has, with their unfiltered values. Declared

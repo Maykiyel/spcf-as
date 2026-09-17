@@ -49,7 +49,9 @@ describe("useTransactionDetail", () => {
       wrapper,
     });
 
-    await waitFor(() => expect(result.current.transaction).toEqual(savedTransaction));
+    await waitFor(() =>
+      expect(result.current.transaction).toEqual(savedTransaction),
+    );
     expect(mockGetTransaction).toHaveBeenCalledWith(62598);
   });
 

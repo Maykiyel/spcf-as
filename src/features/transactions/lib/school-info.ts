@@ -7,5 +7,6 @@ import schoolLogo from "@/assets/logo.png";
 // consumer needs the same header (see CONTEXT.md's `src/api/` entry for
 // the same promotion rule applied to API calls).
 export const SCHOOL_NAME = "SYSTEMS PLUS COLLEGE FOUNDATION";
-export const SCHOOL_ADDRESS = "Mc Arthur Hi-Way Balibago, Angeles City, Pampanga";
+export const SCHOOL_ADDRESS =
+  "Mc Arthur Hi-Way Balibago, Angeles City, Pampanga";
 export { schoolLogo };

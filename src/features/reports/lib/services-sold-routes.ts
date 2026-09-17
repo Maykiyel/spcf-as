@@ -24,10 +24,7 @@ const withPeriod = (path: string, urlKey: string, period: ReportPeriod) => {
 /** Both dates are written even when they match the target's own default: a
  * link sent in October has to still open the September figures it was sent
  * to explain, and the endpoint requires them. */
-export const serviceBreakdownPath = (
-  serviceId: number,
-  period: ReportPeriod,
-) =>
+export const serviceBreakdownPath = (serviceId: number, period: ReportPeriod) =>
   withPeriod(
     `${SERVICES_SOLD_PATH}/${serviceId}`,
     SERVICE_BREAKDOWN_URL_KEY,

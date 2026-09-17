@@ -18,9 +18,9 @@ export type { CreateSeriesReceiptPayload };
 export const createSeriesReceipt = async (
   data: CreateSeriesReceiptPayload,
 ): Promise<SeriesReceipt> => {
-  const response = await apiClient.post<SeriesReceipt, CreateSeriesReceiptPayload>(
-    "/series-receipts",
-    data,
-  );
+  const response = await apiClient.post<
+    SeriesReceipt,
+    CreateSeriesReceiptPayload
+  >("/series-receipts", data);
   return response.data;
 };

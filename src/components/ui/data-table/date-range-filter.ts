@@ -39,5 +39,6 @@ export const dateRangeInitialFilters = (
   period: DateRangePeriod,
 ): TableFilters => ({ from_date: period.from, to_date: period.to });
 
-export const resolveDateRangeDefault = (spec: DateRangeSpec): DateRangePeriod =>
-  spec.default ? spec.default() : NO_PERIOD;
+export const resolveDateRangeDefault = (
+  spec: DateRangeSpec,
+): DateRangePeriod => (spec.default ? spec.default() : NO_PERIOD);

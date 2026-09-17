@@ -35,11 +35,20 @@ enforces, per endpoint.
 npx tsc -p tsconfig.app.json --noEmit
 npx oxlint src
 npx vitest run
+pnpm format:check
 ```
 
-The suite takes roughly four minutes. There is no formatter in the toolchain
-and `prettier` is not a dependency, so match the surrounding style by hand
-rather than running one.
+The suite takes roughly four minutes.
+
+Prettier owns whitespace, on its defaults — the only thing configured is
+`endOfLine: "lf"`, and `.gitattributes` pins the same, because formatting a
+CRLF working tree without both halves rewrites every file. `pnpm format`
+writes, `pnpm format:check` verifies. Oxlint carries no stylistic rules, so
+the two never disagree.
+
+It does **not** reflow comment prose, which is deliberate: `CONTEXT.md`'s
+Comments section is enforced in review and its hand-wrapped block comments
+are meant to stay as written.
 
 ## Where the code lives
 

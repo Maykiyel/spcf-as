@@ -23,13 +23,7 @@ export const Component = () => {
   const location = useLocation();
 
   if (status === "authenticated" && user) {
-    return (
-      <Navigate
-        to={DASHBOARD_PATH}
-        replace
-        state={{ from: location }}
-      />
-    );
+    return <Navigate to={DASHBOARD_PATH} replace state={{ from: location }} />;
   }
 
   return (

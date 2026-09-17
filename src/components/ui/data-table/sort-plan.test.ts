@@ -79,9 +79,12 @@ describe("isColumnSortable", () => {
 
   it("is false for a field the endpoint doesn't allow-list", () => {
     expect(
-      isColumnSortable<Row>({ field: "total", header: "T" }, {
-        allowed: ["name"],
-      }),
+      isColumnSortable<Row>(
+        { field: "total", header: "T" },
+        {
+          allowed: ["name"],
+        },
+      ),
     ).toBe(false);
   });
 

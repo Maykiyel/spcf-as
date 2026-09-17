@@ -15,7 +15,9 @@ import { ServicesSoldPage } from "./services-sold-page";
 vi.mock("../api/get-services-sold", async () => {
   // A factory, not a bare `vi.mock`: automock empties exported arrays, so
   // this module's sort plan would silently become a table with no sort.
-  const actual = await vi.importActual<typeof import("../api/get-services-sold")>("../api/get-services-sold");
+  const actual = await vi.importActual<
+    typeof import("../api/get-services-sold")
+  >("../api/get-services-sold");
   return { ...actual, getServicesSold: vi.fn() };
 });
 const mockGetSummary = vi.mocked(getServicesSold);
@@ -23,10 +25,9 @@ const mockGetSummary = vi.mocked(getServicesSold);
 // A factory, not a bare `vi.mock`: automock would empty `toApiDate` and
 // `currentMonthRange`, and the default period is read through the latter.
 vi.mock("@/components/ui/date-range", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/components/ui/date-range")>(
-      "@/components/ui/date-range",
-    );
+  const actual = await vi.importActual<
+    typeof import("@/components/ui/date-range")
+  >("@/components/ui/date-range");
   return {
     ...actual,
     // Mantine's picker popover never opens under jsdom, so the shared
@@ -345,7 +346,9 @@ describe("ServicesSoldPage — the drill-down link", () => {
 
     // Story 11: the detail has to match the summary it was reached from.
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Athletic Fee" })).toHaveAttribute(
+      expect(
+        screen.getByRole("link", { name: "Athletic Fee" }),
+      ).toHaveAttribute(
         "href",
         "/reports/services-sold/31?breakdown_from_date=2026-08-01&breakdown_to_date=2026-08-31",
       ),

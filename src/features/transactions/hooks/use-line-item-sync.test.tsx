@@ -25,7 +25,9 @@ vi.mock("@/lib/notifications/notifications");
 const mockInitiateTransaction = vi.mocked(initiateTransaction);
 const mockAddTransactionItem = vi.mocked(addTransactionItem);
 const mockDeleteTransactionItem = vi.mocked(deleteTransactionItem);
-const mockUpdateTransactionItemQuantity = vi.mocked(updateTransactionItemQuantity);
+const mockUpdateTransactionItemQuantity = vi.mocked(
+  updateTransactionItemQuantity,
+);
 const mockCancelTransaction = vi.mocked(cancelTransaction);
 const mockNotifyMutationError = vi.mocked(notifyMutationError);
 
@@ -130,13 +132,19 @@ describe("useLineItemSync — initial state", () => {
 
 describe("useLineItemSync — addFeeItem", () => {
   it("bumps the draft optimistically, before the debounce fires or any network call happens", () => {
-    mockAddTransactionItem.mockReturnValue(deferred<TransactionItemDTO>().promise);
+    mockAddTransactionItem.mockReturnValue(
+      deferred<TransactionItemDTO>().promise,
+    );
 
     const { result } = renderHook(() => useLineItemSync());
     act(() => result.current.addFeeItem(parkingFee));
 
     expect(result.current.lineItems).toEqual([
-      expect.objectContaining({ id: "optimistic-2", feeItemId: parkingFee.id, quantity: 1 }),
+      expect.objectContaining({
+        id: "optimistic-2",
+        feeItemId: parkingFee.id,
+        quantity: 1,
+      }),
     ]);
     expect(mockAddTransactionItem).not.toHaveBeenCalled();
   });
@@ -156,7 +164,10 @@ describe("useLineItemSync — addFeeItem", () => {
       quantity: 1,
     });
     expect(result.current.transactionId).toBe(1);
-    expect(result.current.lineItems[0]).toMatchObject({ id: "501", quantity: 1 });
+    expect(result.current.lineItems[0]).toMatchObject({
+      id: "501",
+      quantity: 1,
+    });
   });
 
   it("reverts the optimistic bump and notifies on a failed add", async () => {
@@ -262,7 +273,9 @@ describe("useLineItemSync — addFeeItem", () => {
 
 describe("useLineItemSync — setLineItemQuantity", () => {
   it("reflects the new quantity immediately, then PATCHes it once the debounce fires", async () => {
-    mockUpdateTransactionItemQuantity.mockResolvedValue(resolvedItem({ quantity: 5, subtotal: 1000 }));
+    mockUpdateTransactionItemQuantity.mockResolvedValue(
+      resolvedItem({ quantity: 5, subtotal: 1000 }),
+    );
 
     const { result } = await renderWithSettledLine();
     act(() => result.current.setLineItemQuantity("501", 5));
@@ -276,7 +289,9 @@ describe("useLineItemSync — setLineItemQuantity", () => {
   });
 
   it("notifies when the PATCH fails", async () => {
-    mockUpdateTransactionItemQuantity.mockRejectedValue(new Error("network error"));
+    mockUpdateTransactionItemQuantity.mockRejectedValue(
+      new Error("network error"),
+    );
 
     const { result } = await renderWithSettledLine();
     act(() => result.current.setLineItemQuantity("501", 5));
@@ -338,7 +353,9 @@ describe("useLineItemSync — removeLineItem", () => {
 // replays once the add resolves with a real id.
 describe("useLineItemSync — deferred intent on a locked line", () => {
   it("queues a remove clicked before the add's debounce has even fired", () => {
-    mockAddTransactionItem.mockReturnValue(deferred<TransactionItemDTO>().promise);
+    mockAddTransactionItem.mockReturnValue(
+      deferred<TransactionItemDTO>().promise,
+    );
 
     const { result } = renderHook(() => useLineItemSync());
     act(() => result.current.addFeeItem(parkingFee));
@@ -347,7 +364,9 @@ describe("useLineItemSync — deferred intent on a locked line", () => {
     // its "!transactionId" guard, not after.
     act(() => result.current.removeLineItem("optimistic-2"));
 
-    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(true);
+    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(
+      true,
+    );
     expect(result.current.lineItems[0]?.id).toBe("optimistic-2");
     expect(mockDeleteTransactionItem).not.toHaveBeenCalled();
   });
@@ -370,12 +389,16 @@ describe("useLineItemSync — deferred intent on a locked line", () => {
 
     // Replayed against the real id (501), not Number("optimistic-2") (NaN).
     expect(mockDeleteTransactionItem).toHaveBeenCalledWith(1, 501);
-    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(false);
+    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(
+      false,
+    );
   });
 
   it("queues a quantity change clicked while the add is in flight, then replays it against the real id and target quantity", async () => {
     mockInitiateTransaction.mockResolvedValue(initiatedTransaction());
-    mockUpdateTransactionItemQuantity.mockResolvedValue(resolvedItem({ quantity: 5, subtotal: 1000 }));
+    mockUpdateTransactionItemQuantity.mockResolvedValue(
+      resolvedItem({ quantity: 5, subtotal: 1000 }),
+    );
     const add = deferred<TransactionItemDTO>();
     mockAddTransactionItem.mockReturnValue(add.promise);
 
@@ -406,10 +429,14 @@ describe("useLineItemSync — deferred intent on a locked line", () => {
     await advance(400);
 
     act(() => result.current.removeLineItem("optimistic-2"));
-    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(true);
+    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(
+      true,
+    );
 
     act(() => result.current.addFeeItem(parkingFee)); // changed their mind
-    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(false);
+    expect(result.current.pendingRemovalFeeItemIds.has(parkingFee.id)).toBe(
+      false,
+    );
 
     add.resolve(resolvedItem());
     await flush();
@@ -559,7 +586,9 @@ describe("useLineItemSync — unmount cleanup", () => {
   });
 
   it("clears a pending quantity-debounce timer on unmount", async () => {
-    mockUpdateTransactionItemQuantity.mockResolvedValue(resolvedItem({ quantity: 5, subtotal: 1000 }));
+    mockUpdateTransactionItemQuantity.mockResolvedValue(
+      resolvedItem({ quantity: 5, subtotal: 1000 }),
+    );
 
     const { result, unmount } = await renderWithSettledLine();
     act(() => result.current.setLineItemQuantity("501", 5));

@@ -3,11 +3,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { NumberInput, Select, Group, SimpleGrid, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { Card } from "@/components/ui/card";
 import { PrimaryButton, DangerButton } from "@/components/ui/button";
@@ -66,7 +62,7 @@ export function SeriesReceiptForm() {
   const sheets = watch("sheets") as number;
   const from = latestFromQuery.data;
 
-// "to" is display-only; editing it writes the derived sheet count back into the real field.
+  // "to" is display-only; editing it writes the derived sheet count back into the real field.
   const [toDraft, setToDraft] = useState<number | null>(null);
   const [pendingFields, setPendingFields] =
     useState<SeriesReceiptInputFields | null>(null);
@@ -182,12 +178,7 @@ export function SeriesReceiptForm() {
                 )}
               />
 
-              <NumberInput
-                label="From"
-                value={from ?? ""}
-                disabled
-                readOnly
-              />
+              <NumberInput label="From" value={from ?? ""} disabled readOnly />
 
               <NumberInput
                 label="To"

@@ -23,8 +23,7 @@ const LOGIN_DEACTIVATED_MESSAGE =
   "User account is deactivated. Please ask an admin to activate your account.";
 
 /** What a policy or role denial returns on the same status code. */
-const PER_RECORD_MESSAGE =
-  "You do not have permission to perform this action.";
+const PER_RECORD_MESSAGE = "You do not have permission to perform this action.";
 
 /** An admin assigning a series receipt to a cashier who is switched off.
  * A 403 about somebody else's account being inactive, on the admin's own

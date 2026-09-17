@@ -66,10 +66,7 @@ export function TransactionListPage() {
     <DataTable.Root title="Transactions" state={tableState}>
       {/* The page leads with the filter panel; the toolbar below carries
           the page-size control and nothing else. */}
-      <TransactionListFilters
-        includeCashier={isAdmin}
-        includeStatus
-      />
+      <TransactionListFilters includeCashier={isAdmin} includeStatus />
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />

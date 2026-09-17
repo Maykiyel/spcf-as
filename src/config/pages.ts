@@ -182,8 +182,7 @@ export const pages: TopLevelPage[] = [
       {
         key: "seriesReceipts",
         path: "/accounts/series-receipts",
-        lazyImport: () =>
-          import("@/app/routes/app/accounts/series-receipts"),
+        lazyImport: () => import("@/app/routes/app/accounts/series-receipts"),
         label: "Series Receipts",
         icon: IconEye,
       },

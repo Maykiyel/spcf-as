@@ -2,11 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { MAX_SORT_COLUMNS, type SortEntry, type TableFilters } from "./types";
-import {
-  allowedSorts,
-  sortPlanDefault,
-  type SortPlan,
-} from "./sort-plan";
+import { allowedSorts, sortPlanDefault, type SortPlan } from "./sort-plan";
 
 export type TableControls = {
   page: number;
@@ -352,9 +348,7 @@ function useLocalAdapter(
   };
 
   const onSort = (key: string) => {
-    setSorts((prev) =>
-      sortsAfterClick(prev, key, initialSorts),
-    );
+    setSorts((prev) => sortsAfterClick(prev, key, initialSorts));
     setPage(1);
   };
 

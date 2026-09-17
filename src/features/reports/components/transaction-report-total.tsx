@@ -20,7 +20,11 @@ export function TransactionReportTotal({
         Total earnings for this period
       </Text>
       <Text fw={700} size="lg" data-testid="report-total">
-        {isError ? "Unavailable" : total === undefined ? "—" : formatCurrency(total)}
+        {isError
+          ? "Unavailable"
+          : total === undefined
+            ? "—"
+            : formatCurrency(total)}
       </Text>
     </Group>
   );

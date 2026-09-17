@@ -30,7 +30,11 @@ function leaf(key: string, roles?: Role[]): PageLeaf {
   };
 }
 
-function group(key: string, roles: Role[] | undefined, children: PageLeaf[]): PageGroup {
+function group(
+  key: string,
+  roles: Role[] | undefined,
+  children: PageLeaf[],
+): PageGroup {
   return { key, label: key, icon: IconEye as Icon, roles, children };
 }
 
@@ -83,29 +87,30 @@ describe("getVisiblePages — what a role sees", () => {
   ];
 
   it("hides a leaf restricted to the other role", () => {
-    expect(childKeysOf(getVisiblePages("admin", registry), "transactions")).toEqual([
-      "receipts",
-    ]);
+    expect(
+      childKeysOf(getVisiblePages("admin", registry), "transactions"),
+    ).toEqual(["receipts"]);
   });
 
   it("shows that leaf to the role it names", () => {
-    expect(childKeysOf(getVisiblePages("cashier", registry), "transactions")).toEqual([
-      "new",
-      "receipts",
-    ]);
+    expect(
+      childKeysOf(getVisiblePages("cashier", registry), "transactions"),
+    ).toEqual(["new", "receipts"]);
   });
 
   it("keeps the group's other children visible to both roles", () => {
-    expect(childKeysOf(getVisiblePages("admin", registry), "transactions")).toContain(
-      "receipts",
-    );
-    expect(childKeysOf(getVisiblePages("cashier", registry), "transactions")).toContain(
-      "receipts",
-    );
+    expect(
+      childKeysOf(getVisiblePages("admin", registry), "transactions"),
+    ).toContain("receipts");
+    expect(
+      childKeysOf(getVisiblePages("cashier", registry), "transactions"),
+    ).toContain("receipts");
   });
 
   it("drops a group whose children a role can all reach nothing of", () => {
-    expect(keysOf(getVisiblePages("cashier", registry))).not.toContain("accounts");
+    expect(keysOf(getVisiblePages("cashier", registry))).not.toContain(
+      "accounts",
+    );
     expect(keysOf(getVisiblePages("admin", registry))).toContain("accounts");
   });
 
@@ -126,16 +131,17 @@ describe("getVisiblePages — what a role sees", () => {
       "dashboard",
       "transactions",
     ]);
-    expect(childKeysOf(getVisiblePages(undefined, registry), "transactions")).toEqual([
-      "receipts",
-    ]);
+    expect(
+      childKeysOf(getVisiblePages(undefined, registry), "transactions"),
+    ).toEqual(["receipts"]);
   });
 });
 
 describe("the app's own registry", () => {
   it("restricts New Transaction to cashiers without touching the rest of its group", () => {
     const routes = getLeafRoutes();
-    const byPath = (path: string) => routes.find((route) => route.path === path);
+    const byPath = (path: string) =>
+      routes.find((route) => route.path === path);
 
     expect(byPath("/transactions/new")?.roles).toEqual(["cashier"]);
     expect(byPath("/transactions/receipts")?.roles).toBeUndefined();

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useSetState } from "@/hooks/use-set-state";
 import { initiateTransaction } from "../api/initiate-transaction";
 import { addTransactionItem } from "../api/add-transaction-item";
@@ -286,7 +292,10 @@ export function useLineItemSync() {
       setLineItemQuantityInList(current, lineItemId, clamped),
     );
 
-    if (existingLineItem && isLineItemLocked(existingLineItem, pendingFeeItemIds)) {
+    if (
+      existingLineItem &&
+      isLineItemLocked(existingLineItem, pendingFeeItemIds)
+    ) {
       // No real backend id yet, or the fee's repeat-add hasn't settled —
       // remember the target quantity; applyQueuedIntent replays it later.
       pendingIntentsRef.current[existingLineItem.feeItemId] = {
@@ -317,7 +326,10 @@ export function useLineItemSync() {
     try {
       await deleteTransactionItem(currentTransactionId, Number(lineItemId));
     } catch (error) {
-      notifyMutationError(error, "Couldn't remove that item. Please try again.");
+      notifyMutationError(
+        error,
+        "Couldn't remove that item. Please try again.",
+      );
       if (removedItem) {
         setLineItems((current) => {
           const next = [...current];

@@ -23,7 +23,9 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * truncated rather than reparsed. `null` for anything unusable, so a bad
  * value drops the filter instead of sending a 422.
  */
-export function toApiDate(value: Date | string | null | undefined): ApiDate | null {
+export function toApiDate(
+  value: Date | string | null | undefined,
+): ApiDate | null {
   if (value === null || value === undefined || value === "") return null;
 
   if (typeof value === "string") {

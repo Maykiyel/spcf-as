@@ -40,7 +40,9 @@ export default function MonthlyEarningsChart({
       h={height}
       data={data}
       dataKey="month"
-      series={[{ name: "total_earnings", label: "Earnings", color: "primary.6" }]}
+      series={[
+        { name: "total_earnings", label: "Earnings", color: "primary.6" },
+      ]}
       // The tooltip keeps the exact figure. Only the axis is abbreviated,
       // because that is the one that has to fit in a fixed gutter.
       valueFormatter={formatCurrency}

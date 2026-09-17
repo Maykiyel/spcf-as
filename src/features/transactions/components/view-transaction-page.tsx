@@ -39,7 +39,7 @@ export function ViewTransactionPage() {
    * already been reset and there is nothing behind this page to go back
    * to. Everything else gets one, including a refresh that lost the state
    * above: an unnecessary Back is a smaller failure than a missing one. */
-  const backTo = state?.from === "new" ? null : state?.from ?? "unknown";
+  const backTo = state?.from === "new" ? null : (state?.from ?? "unknown");
 
   return (
     <>

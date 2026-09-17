@@ -37,7 +37,6 @@ export function useTransactionDetail(controlId: number) {
     isForbidden,
     // "Nothing to render yet", derived once. All three consumers branch on
     // this rather than re-deriving the same four-term condition.
-    isUnavailable:
-      resolvedIsLoading || isForbidden || resolvedIsError || !data,
+    isUnavailable: resolvedIsLoading || isForbidden || resolvedIsError || !data,
   };
 }

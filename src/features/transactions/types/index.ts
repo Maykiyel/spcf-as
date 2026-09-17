@@ -54,8 +54,7 @@ export type TransactionItemDTO = {
 // its fee settles rather than blocking the input. One intent per fee: a
 // newer action supersedes an older queued one, never merges with it.
 export type PendingLineItemIntent =
-  | { type: "setQuantity"; quantity: number }
-  | { type: "remove" };
+  { type: "setQuantity"; quantity: number } | { type: "remove" };
 
 // As the *index* endpoint sends it: a name and nothing else, because that
 // query never selects `price`. Deliberate, since per-item money is what

@@ -75,9 +75,7 @@ function Harness({
 
   return (
     <div>
-      <button onClick={() => catalogActions.addFeeItem(parkingFee)}>
-        add
-      </button>
+      <button onClick={() => catalogActions.addFeeItem(parkingFee)}>add</button>
       <button onClick={() => actions.setPayerName("Juan Dela Cruz")}>
         set-payer
       </button>

@@ -8,9 +8,9 @@ export const updateTransactionItemQuantity = async (
   itemId: number,
   quantity: number,
 ): Promise<TransactionItemDTO> => {
-  const response = await apiClient.patch<TransactionItemDTO, { quantity: number }>(
-    `/transactions/${transactionId}/items/${itemId}`,
-    { quantity },
-  );
+  const response = await apiClient.patch<
+    TransactionItemDTO,
+    { quantity: number }
+  >(`/transactions/${transactionId}/items/${itemId}`, { quantity });
   return response.data;
 };

@@ -153,7 +153,9 @@ export function DataTableGrid<T extends Record<string, any>>({
               >
                 {columns.map((col) => (
                   <Table.Td key={columnId(col)}>
-                    {col.render ? col.render(row) : String(col.field ? (row[col.field] ?? "") : "")}
+                    {col.render
+                      ? col.render(row)
+                      : String(col.field ? (row[col.field] ?? "") : "")}
                   </Table.Td>
                 ))}
               </Table.Tr>

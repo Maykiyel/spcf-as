@@ -1,7 +1,4 @@
-import {
-  createListAdapter,
-  type SortPlan,
-} from "@/components/ui/data-table";
+import { createListAdapter, type SortPlan } from "@/components/ui/data-table";
 import type { UserAccount } from "../types";
 
 /** The directory's cache prefix, which every mutation here invalidates.
@@ -23,11 +20,12 @@ type UserAccountWireRow = Omit<UserAccount, "username"> & {
  * `user_name` to `username` so the column's sort key is the word the
  * endpoint allow-lists. See the note on `UserAccount`.
  */
-export const getUserAccounts = createListAdapter<UserAccountWireRow, UserAccount>(
-  "/users",
-  "users",
-  { selectRow: ({ user_name, ...row }) => ({ ...row, username: user_name }) },
-);
+export const getUserAccounts = createListAdapter<
+  UserAccountWireRow,
+  UserAccount
+>("/users", "users", {
+  selectRow: ({ user_name, ...row }) => ({ ...row, username: user_name }),
+});
 
 /** `BACKEND_NOTES.md`: sorts are `first_name`, `last_name`, `full_name`,
  * `username`; `email` and `created_at` left the allow-list with the index
