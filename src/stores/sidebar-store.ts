@@ -18,7 +18,10 @@ export const useSidebarStore = create<SidebarState>()(
         set((state) => ({ mobileOpened: !state.mobileOpened })),
       toggleDesktop: () =>
         set((state) => ({ desktopOpened: !state.desktopOpened })),
-      closeMobile: () => set({ mobileOpened: false }),
+      // Every sidebar link calls this, desktop included, and returning the
+      // same state is what stops zustand notifying on a no-op close.
+      closeMobile: () =>
+        set((state) => (state.mobileOpened ? { mobileOpened: false } : state)),
     }),
     {
       name: "spcf-as-sidebar-state",

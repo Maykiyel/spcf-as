@@ -11,7 +11,7 @@ import {
 import { IconChevronRight, type Icon } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import SidebarSubItem from "./sidebar-sub-item";
-import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSidebarExpanded } from "../use-sidebar-expanded";
 import { AppTooltip } from "@/components/ui/tooltip";
 
 type SidebarItemCollapsibleProps = {
@@ -25,7 +25,7 @@ function SidebarItemCollapsible({
   icon: Icon,
   collapsible,
 }: SidebarItemCollapsibleProps) {
-  const { desktopOpened } = useSidebarStore();
+  const expanded = useSidebarExpanded();
   const [opened, { open, close, toggle }] = useDisclosure(false);
 
   const subItemsContent = (
@@ -38,19 +38,19 @@ function SidebarItemCollapsible({
 
   return (
     <Popover
-      key={String(desktopOpened)} // resets `opened` on collapse/expand instead of an effect
+      key={String(expanded)} // resets `opened` on collapse/expand instead of an effect
       position="right-start"
       offset={5}
       withinPortal
       shadow="md"
-      disabled={desktopOpened}
-      opened={!desktopOpened && opened}
+      disabled={expanded}
+      opened={!expanded && opened}
       onChange={(v) => (v ? open() : close())}
       transitionProps={{ transition: "fade-right", duration: 150 }}
     >
-      <AppTooltip disabled={desktopOpened} position="right" label={label}>
+      <AppTooltip disabled={expanded} position="right" label={label}>
         <Popover.Target>
-          <div onClick={() => !desktopOpened && toggle()}>
+          <div onClick={() => !expanded && toggle()}>
             <Accordion.Item
               value={label}
               bg="transparent"
@@ -83,13 +83,13 @@ function SidebarItemCollapsible({
                       fz={14}
                       className={[
                         "sidebar-link",
-                        !desktopOpened ? "hidden" : "",
+                        !expanded ? "hidden" : "",
                       ].join(" ")}
                     >
                       {label}
                     </Text>
                   </Flex>
-                  {desktopOpened && (
+                  {expanded && (
                     <IconChevronRight
                       size={18}
                       className="collapsible-chevron"
@@ -100,7 +100,7 @@ function SidebarItemCollapsible({
               <Accordion.Panel
                 pl="lg"
                 styles={{ content: { padding: 0 } }}
-                display={!desktopOpened ? "none" : undefined}
+                display={!expanded ? "none" : undefined}
               >
                 <Card
                   bg="transparent"
