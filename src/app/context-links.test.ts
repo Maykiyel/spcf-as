@@ -30,8 +30,12 @@ const slugify = (term: string): string =>
     .toLowerCase()
     .replace(/\s+/g, "-");
 
+const ENTRY = /^\*\*(.+?)\*\*:$/;
+
 const terms = [...CONTEXT.matchAll(/^\*\*(.+?)\*\*:/gm)].map((m) => m[1]);
 const links = [...CONTEXT.matchAll(/\[\[([^\]]+)\]\]/g)].map((m) => m[1]);
+/** Anything that reads as an entry heading, collected or not. */
+const headings = [...CONTEXT.matchAll(/^\*\*.*:$/gm)].map((m) => m[0]);
 
 describe("CONTEXT.md's glossary links", () => {
   it("found the entries and the links to check", () => {
@@ -40,12 +44,20 @@ describe("CONTEXT.md's glossary links", () => {
     // reports nothing wrong.
     expect(terms.length).toBeGreaterThan(20);
     expect(links.length).toBeGreaterThan(0);
+    expect(headings.length).toBeGreaterThanOrEqual(terms.length);
   });
 
   it("points every link at an entry that exists", () => {
     const known = new Set(terms.map(slugify));
 
     expect(links.filter((link) => !known.has(link))).toEqual([]);
+  });
+
+  it("collects every line that reads as an entry heading", () => {
+    // `**Actor** (on an activity entry):` read as an entry to everyone but
+    // the pattern above, so no link could resolve to it — the same silent
+    // gap, one step earlier. The qualifier goes inside the asterisks.
+    expect(headings.filter((h) => !ENTRY.test(h))).toEqual([]);
   });
 
   it("gives every entry a slug of its own", () => {
