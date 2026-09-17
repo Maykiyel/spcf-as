@@ -115,15 +115,21 @@ export function useServerTableState<
   // in `useTableControls`, so URL sync isn't gated on request timing.
   const debouncedSearch = useDebouncedValue(searchQuery, 400);
 
+  // An empty box is the unfiltered state rather than a prefix on the way to
+  // one, so it takes effect at once. That is also what keeps a clear to a
+  // single request: it empties the draft while this debounce is still
+  // holding the old word, and the two values would key two fetches.
+  const search = searchQuery === "" ? "" : debouncedSearch;
+
   // `filters` is in the key, not just the request: a filter that misses the
   // key serves the previous filter's cached rows with no error at all.
   const { data, isLoading, isFetching, isError, error } = useQuery({
-    queryKey: [...queryKey, page, pageSize, debouncedSearch, sorts, filters],
+    queryKey: [...queryKey, page, pageSize, search, sorts, filters],
     queryFn: () =>
       queryFn({
         page,
         per_page: pageSize,
-        search: debouncedSearch || undefined,
+        search: search || undefined,
         sorts,
         filters,
       }),

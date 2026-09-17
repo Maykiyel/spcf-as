@@ -243,3 +243,55 @@ describe("ServiceTable", () => {
     );
   });
 });
+
+describe("ServiceTable — clearing", () => {
+  beforeEach(() => {
+    mockGetServices.mockReset();
+    mockGetServices.mockResolvedValue(page(services));
+  });
+
+  it("offers no clear control on an untouched catalog", async () => {
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    expect(
+      screen.queryByRole("button", { name: "Clear filters" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears a filter and a search term together, in one request", async () => {
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    chooseStatus("Inactive");
+    fireEvent.change(screen.getByPlaceholderText("Search"), {
+      target: { value: "rent" },
+    });
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        search: "rent",
+        filters: { is_active: "0" },
+      }),
+    );
+    // Settled before counting, so the two debounces still in flight from
+    // the setup are not mistaken for the clear's own requests.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    const before = mockGetServices.mock.calls.length;
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // The only table in the app carrying both halves, so it is where a
+    // per-key clear would show up as two requests instead of one.
+    await waitFor(() =>
+      expect(mockGetServices.mock.calls.length).toBe(before + 1),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(mockGetServices.mock.calls.length).toBe(before + 1);
+    expect(lastRequest()).toMatchObject({
+      search: undefined,
+      filters: { is_active: null },
+    });
+    expect(screen.getByPlaceholderText("Search")).toHaveValue("");
+  });
+});

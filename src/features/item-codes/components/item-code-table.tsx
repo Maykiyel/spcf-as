@@ -21,6 +21,7 @@ export function ItemCodeTable({ onEdit }: ItemCodeTableProps) {
       <DataTable.Toolbar>
         <DataTable.PageSize />
         <DataTable.Search />
+        <DataTable.ClearFilters />
       </DataTable.Toolbar>
       <DataTable.Grid />
       <DataTable.Pagination />

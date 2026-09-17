@@ -365,3 +365,32 @@ describe("ServicesSoldPage — the drill-down link", () => {
     );
   });
 });
+
+describe("ServicesSoldPage — clearing", () => {
+  it("offers no clear control while the period is the declared default", async () => {
+    renderPage();
+    await screen.findByText("Guidance Fee");
+
+    expect(
+      screen.queryByRole("button", { name: "Clear filters" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears to the current month rather than to no dates", async () => {
+    renderPage(
+      "/reports/services-sold?services_sold_from_date=2026-07-01&services_sold_to_date=2026-07-31",
+    );
+    await screen.findByText("Guidance Fee");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // The range is `required` here, so clearing to an empty one would
+    // disable the query and leave an empty table with no explanation.
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { from_date: "2026-09-01", to_date: "2026-09-30" },
+      }),
+    );
+    expect(await screen.findByText("Guidance Fee")).toBeInTheDocument();
+  });
+});

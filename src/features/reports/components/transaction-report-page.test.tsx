@@ -331,3 +331,23 @@ describe("TransactionReportPage — the filters", () => {
     );
   });
 });
+
+describe("TransactionReportPage — clearing", () => {
+  it("returns the period to unfiltered and still loads rows", async () => {
+    renderPage(
+      "/reports/transactions?transactions_report_from_date=2026-08-01&transactions_report_to_date=2026-08-31",
+    );
+    await screen.findByText("Anna Reyes");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // Its range is optional, unlike the two Services Sold pages, so the
+    // unfiltered state here really is no dates.
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { from_date: null, to_date: null },
+      }),
+    );
+    expect(await screen.findByText("Anna Reyes")).toBeInTheDocument();
+  });
+});

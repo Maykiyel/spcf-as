@@ -56,6 +56,7 @@ export function ManageAccountsPage() {
           <DataTable.PageSize />
           <Divider orientation="vertical" visibleFrom="xs" />
           <UserAccountFilterPanel />
+          <DataTable.ClearFilters />
         </DataTable.Toolbar>
         <DataTable.Grid />
         <DataTable.Pagination />

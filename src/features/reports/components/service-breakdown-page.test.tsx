@@ -328,3 +328,23 @@ describe("ServiceBreakdownPage — getting back", () => {
     );
   });
 });
+
+describe("ServiceBreakdownPage — clearing", () => {
+  it("clears to the current month rather than to no dates", async () => {
+    renderPage(
+      "/reports/services-sold/12?breakdown_from_date=2026-07-01&breakdown_to_date=2026-07-31",
+    );
+    await screen.findByText("Anna Reyes");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // The only page in the app whose range is mandatory: an empty one
+    // disables the query outright.
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { from_date: "2026-09-01", to_date: "2026-09-30" },
+      }),
+    );
+    expect(await screen.findByText("Anna Reyes")).toBeInTheDocument();
+  });
+});

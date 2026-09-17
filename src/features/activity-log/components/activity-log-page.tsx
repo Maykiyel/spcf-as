@@ -36,6 +36,7 @@ export function ActivityLogPage() {
       <Divider />
       <DataTable.Toolbar>
         <DataTable.PageSize />
+        <DataTable.ClearFilters />
       </DataTable.Toolbar>
       {/* Annotated: the grid's row type isn't inferred from the state. */}
       <DataTable.Grid

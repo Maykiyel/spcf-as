@@ -338,3 +338,22 @@ function seedDetail(
 ) {
   queryClient.setQueryData(key, { control_id: key[1], status: "completed" });
 }
+
+describe("VoidTransactionPage — clearing", () => {
+  it("keeps the status pinned through a clear", async () => {
+    renderPage("/void?void_customer=santos");
+    await screen.findByText("Juan Dela Cruz");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // `status` is not a filter this page declares, so a clear cannot reach
+    // it — the pin is applied past where the URL goes. A cleared list that
+    // widened to pending rows would offer a Void that can only 409.
+    await waitFor(() =>
+      expect(lastParams()).toMatchObject({
+        "filter[status]": "completed",
+      }),
+    );
+    expect(lastParams()).not.toHaveProperty("filter[customer]");
+  });
+});
