@@ -114,7 +114,7 @@ const CASES: Case[] = [
     endpoint: "GET /activity-logs",
     plan: ACTIVITY_LOGS_SORT_PLAN,
     columns: activityLogColumns as ColumnDef<never>[],
-    // `created_at` is the endpoint's only allow-listed sort, so When is the
+    // `created_at` is the endpoint's only allow-listed sort, so Date is the
     // only header that may carry a caret.
     sortable: ["created_at"],
     unreachable: [],

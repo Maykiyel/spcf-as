@@ -322,8 +322,9 @@ instants of 31 December fall outside it.
   characters client-side, which does nothing for anything calling the
   API directly.
 - **No `search` filter** on `/activity-logs`, `/reports/*`, `/users` or
-  `/cashiers`. Activity logs remain date-only with `created_at` as the
-  sole sort.
+  `/cashiers`. Activity logs filter by date and actor only, with
+  `created_at` as the sole sort. **No filter by event type**, which is the
+  one still worth asking for.
 
 ## `GET /reports/transactions`
 
@@ -614,6 +615,21 @@ sent as-is rather than omitted when null. `role` is the one exception: it
 is `whenLoaded('roles')`, so it is present only where the caller eager-
 loaded the relation. Every endpoint does today; see the note above for
 how narrowly.
+
+### `GET /activity-logs` — `filter[user_id]`
+
+Landed in `aea3432`. Resolves through the entry's `actor` relation and
+takes **any user's** id, not just a cashier's — which is what the
+Activity Log's Performed By picker needs, since most entries are an
+admin's.
+
+**Validated `['sometimes', 'required', 'exists:users,id']`.** Present-but-
+empty is a 422, so clearing the filter has to drop the key from the
+request rather than send it blank. `createListAdapter` already omits a
+null filter, so declaring the default as `null` is the whole of it.
+
+**A system-authored entry cannot be selected.** Those carry `actor_id`
+null, and the filter matches on a user id, so no value reaches them.
 
 ### `ActivityLogListResource`
 

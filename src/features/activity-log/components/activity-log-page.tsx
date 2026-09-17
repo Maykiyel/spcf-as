@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Divider } from "@mantine/core";
-import { DataTable, useServerTableState } from "@/components/ui/data-table";
+import {
+  DataTable,
+  useServerTableState,
+  type TableFilters,
+} from "@/components/ui/data-table";
 import {
   getActivityLogs,
   ACTIVITY_LOGS_SORT_PLAN,
@@ -12,6 +16,10 @@ import { ActivityLogDrawer } from "./activity-log-drawer";
 import { activityLogColumns } from "./activity-log-columns";
 
 const URL_KEY = "activity";
+
+/** `user_id` is the wire's name for Performed By; see CONTEXT.md. Module
+ * scope, not rebuilt per render: the query key includes it. */
+const FILTERS: TableFilters = { user_id: null };
 
 /**
  * The Activity Log. Page pagination rather than the cursor mode the
@@ -27,6 +35,7 @@ export function ActivityLogPage() {
     columns: activityLogColumns,
     urlKey: URL_KEY,
     sortPlan: ACTIVITY_LOGS_SORT_PLAN,
+    initialFilters: FILTERS,
     dateRange: {},
   });
 
