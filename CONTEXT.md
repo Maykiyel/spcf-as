@@ -335,6 +335,16 @@ _Avoid_: log line, audit record, history item
 Who performed an entry's action. Always renderable: an action no person performed arrives named "System" with a null id, so nothing here invents copy for an absent user. Distinct from **Cashier**, which is a role a person holds, and from the `account` field on a Series receipt.
 _Avoid_: user, author, performer
 
+**Performed By (filter)**:
+The Activity Log's actor picker, and the one thing in this app carrying three names at once. The label above it and the column beside it both read **Performed By**; the code calls it an **actor**, after the Actor an entry carries; the wire calls it `filter[user_id]`. The screen takes the user-facing words because "actor" is a word no admin uses, and the module keeps `actor` because that is what the field it filters is called — renaming either to match the other breaks the link between the filter and the thing filtered. The wire's own word survives only as the declared filter key and the URL parameter it produces, the same containment the Series receipt Cashier column's `sortKey: "account"` gets.
+
+**It lists every account, not just cashiers.** Most entries are an admin's — every account change, every service edit, every void, every series receipt — so a picker backed by `/cashiers` would make the majority of the log unreachable through the very filter meant to reach it. Its options come from `getActors` in the shared API tier, a flat id-and-name read of `/users` mirroring `getCashiers`. That endpoint is already fetched by Manage Accounts, but through the paginated list adapter, whose rows carry role and active status and whose page, sorts and filters belong to that table — the same split `services.ts` makes, where two features share a type and fetch it differently. The control itself stays in the Activity Log feature rather than `src/components/filters/`: that tier is for a control a *second* feature needs, and one consumer is not enough.
+
+**It offers no System option.** A system-authored entry arrives with a null actor id and the name "System", and the filter takes a user id, so no value would select those rows; the picker does not offer what it could not honour. **Clearing it removes the parameter rather than emptying it**, because the key is `sometimes|required` on the wire and an empty value is a 422 — which follows from declaring its default as `null`, since `createListAdapter` drops a null filter from the request.
+
+**It truncates silently past one hundred**, the endpoint's `max_per_page`. The school has seven accounts; the failure mode at a hundred and one is a missing name in a dropdown rather than a broken page, and the fix would be a flat actors endpoint from the backend mirroring the cashiers one.
+_Avoid_: performer, user filter, Account (the column was considered and rejected — this codebase already gave that word to the Accounts nav group, and the cell renders a person's name); cashier filter (the shared control on the transactions tables, which this deliberately is not)
+
 **Subject** (on an activity entry):
 The record an entry acted on, as a type, an identifier, and whether it still exists. Named and shown whatever its state: it becomes a link only when the record exists *and* its type has a page in this app, which today means transactions alone. A deleted subject says so rather than becoming a dead link.
 _Avoid_: target, resource, related record
@@ -348,7 +358,7 @@ An entry's field-by-field specifics, as a flat list of label/value pairs. Values
 _Avoid_: metadata (the backend's raw column, which this is derived from and which never reaches the client), payload, changes
 
 **Activity Log (page)**:
-The admin-only page at `/activity-log`: a server-paginated table of activity entries, newest first, with a drawer for one entry's detail. It is the app's only window onto the audit trail. **Its filter surface is a date range and nothing else** — the endpoint allow-lists no others and an unknown filter key is a 400 — so there is no search box, no filter by event type and none by actor. The type filter is the one worth asking the backend for. `created_at` is likewise the only allow-listed sort, so it is the only column that may be marked sortable.
+The admin-only page at `/activity-log`: a server-paginated table of activity entries, newest first, with a [[detail-drawer]] for one entry's detail. It is the app's only window onto the audit trail. Its columns read **Date**, **Type**, **Context** and **Performed By**, the last two taking the wire's own word for the readable sentence and the filter's own two words for the actor. **Its filter surface is a date range and a [[performed-by-filter]]** — the endpoint allow-lists no others and an unknown filter key is a 400 — so there is no search box and no filter by event type. The type filter is the one still worth asking the backend for. `created_at` is likewise the only allow-listed sort, so Date is the only column that may be marked sortable.
 _Avoid_: audit log, history, system log (all fine in conversation; the page, the route and the sidebar entry all say "Activity Log")
 
 **Detail drawer**:

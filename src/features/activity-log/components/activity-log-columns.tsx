@@ -2,13 +2,13 @@ import type { ColumnDef } from "@/components/ui/data-table";
 import { formatDateTime } from "@/utils/date-time";
 import type { ActivityLogListRow } from "../types";
 
-/** Only When is `sortable`: `created_at` is the sole key
+/** Only Date is `sortable`: `created_at` is the sole key
  * `ACTIVITY_LOGS_SORT_PLAN` allow-lists, so any other header click would be
  * a 400. */
 export const activityLogColumns: ColumnDef<ActivityLogListRow>[] = [
   {
     field: "created_at",
-    header: "When",
+    header: "Date",
     render: (row) => formatDateTime(row.created_at),
   },
   {
@@ -16,12 +16,16 @@ export const activityLogColumns: ColumnDef<ActivityLogListRow>[] = [
     header: "Type",
   },
   {
+    // The wire's own word for the readable sentence, kept rather than
+    // translated. See CONTEXT.md.
     field: "context",
-    header: "What happened",
+    header: "Context",
   },
   {
     field: "actor",
-    header: "Who",
+    // The two words the filter above the table uses, not "Account", which
+    // this codebase already gave to the Accounts nav group.
+    header: "Performed By",
     // Never null: a system-generated entry arrives named "System".
     render: (row) => row.actor.name,
   },

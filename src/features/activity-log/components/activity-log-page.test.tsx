@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router";
 import { notifications } from "@mantine/notifications";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import { screen, renderWithQueryClient } from "@/test/render";
+import { getActors } from "@/api/actors";
 import { getActivityLogs } from "../api/get-activity-logs";
 import { getActivityLogDetail } from "../api/get-activity-log-detail";
 import type { ActivityLogDetail, ActivityLogListRow } from "../types";
@@ -23,6 +24,15 @@ const mockGetActivityLogs = vi.mocked(getActivityLogs);
 
 vi.mock("../api/get-activity-log-detail");
 const mockGetDetail = vi.mocked(getActivityLogDetail);
+
+// A factory again: the real `actorsQueryKey` is what keys the picker's
+// query, and automock would stub that out along with the fetcher.
+vi.mock("@/api/actors", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/api/actors")>("@/api/actors");
+  return { ...actual, getActors: vi.fn() };
+});
+const mockGetActors = vi.mocked(getActors);
 
 // Mantine's picker popover never opens under jsdom, so the shared control
 // is stood in for by a button emitting one fixed range. A factory, not a
@@ -89,10 +99,29 @@ const voidDetail: ActivityLogDetail = {
   ],
 };
 
+/** An admin and a cashier: `/cashiers` could not have returned the first,
+ * which is the whole reason this picker reads the directory instead. */
+const actors = [
+  { id: 99, full_name: "Mike Bautista" },
+  { id: 7, full_name: "Jaypee Pahayahay" },
+];
+
 const page = (data: ActivityLogListRow[]) => ({ data, total: data.length });
 
 const lastRequest = () =>
   mockGetActivityLogs.mock.calls[mockGetActivityLogs.mock.calls.length - 1][0];
+
+function openSelect(label: string) {
+  const combobox = screen.getByRole("combobox", { name: label });
+  fireEvent.click(combobox);
+  return within(
+    document.getElementById(combobox.getAttribute("aria-controls")!)!,
+  );
+}
+
+function chooseFromSelect(label: string, optionText: string) {
+  fireEvent.click(openSelect(label).getByText(optionText));
+}
 
 function renderPage(initialEntry = "/activity-log") {
   return renderWithQueryClient(
@@ -122,6 +151,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 600));
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetActivityLogs.mockResolvedValue(page(rows));
+  mockGetActors.mockResolvedValue(actors);
   mockGetDetail.mockResolvedValue(voidDetail);
 });
 
@@ -177,6 +207,17 @@ describe("ActivityLogPage — the list", () => {
     expect(screen.queryByPlaceholderText("Search")).not.toBeInTheDocument();
   });
 
+  it("names its columns Date, Type, Context and Performed By", async () => {
+    renderPage();
+    await screen.findByText(rows[0].context);
+
+    // "Performed By" appearing on both the column and the picker above it
+    // is the point: the page names one thing once.
+    expect(
+      screen.getAllByRole("columnheader").map((h) => h.textContent?.trim()),
+    ).toEqual(["Date", "Type", "Context", "Performed By"]);
+  });
+
   it("restores a date range from the URL and sends both ends", async () => {
     renderPage(
       "/activity-log?activity_from_date=2026-08-01&activity_to_date=2026-08-31",
@@ -220,7 +261,7 @@ describe("ActivityLogPage — the list", () => {
 
     // `created_at` is the sole allow-listed sort; a click on any other
     // header would be a 422 on arrival.
-    expect(screen.getByRole("columnheader", { name: /When/ })).toHaveAttribute(
+    expect(screen.getByRole("columnheader", { name: /Date/ })).toHaveAttribute(
       "aria-sort",
       "descending",
     );
@@ -233,8 +274,8 @@ describe("ActivityLogPage — the list", () => {
     renderPage();
     await screen.findByText(rows[0].context);
 
-    const when = screen.getByRole("columnheader", { name: /When/ });
-    fireEvent.click(within(when).getByText("When"));
+    const date = screen.getByRole("columnheader", { name: /Date/ });
+    fireEvent.click(within(date).getByText("Date"));
 
     // With no second sortable column, cycling this one off would leave the
     // page in the endpoint's own order with no way back to a lit caret.
@@ -243,7 +284,7 @@ describe("ActivityLogPage — the list", () => {
         sorts: [{ key: "created_at", direction: "asc" }],
       }),
     );
-    expect(screen.getByRole("columnheader", { name: /When/ })).toHaveAttribute(
+    expect(screen.getByRole("columnheader", { name: /Date/ })).toHaveAttribute(
       "aria-sort",
       "ascending",
     );
@@ -371,5 +412,64 @@ describe("ActivityLogPage — the detail drawer", () => {
     ).toBeInTheDocument();
     // What the row already knew is still worth showing.
     expect(drawer().getByText(rows[0].context)).toBeInTheDocument();
+  });
+});
+
+describe("ActivityLogPage — the Performed By filter", () => {
+  /** The picker holds its own query, so the options land after the rows. */
+  async function renderWithPicker(initialEntry?: string) {
+    renderPage(initialEntry);
+    await screen.findByText(rows[0].context);
+    await waitFor(() => expect(mockGetActors).toHaveBeenCalled());
+  }
+
+  it("offers every account, not just cashiers", async () => {
+    await renderWithPicker();
+
+    const options = openSelect("Performed By");
+
+    // Most entries are an admin's, so a cashiers-only picker would leave
+    // the majority of the log unreachable through its own filter.
+    expect(options.getByText("Mike Bautista")).toBeInTheDocument();
+    expect(options.getByText("Jaypee Pahayahay")).toBeInTheDocument();
+  });
+
+  it("offers no System option", async () => {
+    await renderWithPicker();
+
+    // A system entry carries a null actor id and the filter takes a user
+    // id, so the option could select nothing.
+    expect(openSelect("Performed By").queryByText("System")).toBeNull();
+  });
+
+  it("narrows the log to the person picked", async () => {
+    await renderWithPicker();
+
+    chooseFromSelect("Performed By", "Mike Bautista");
+
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({ filters: { user_id: "99" } }),
+    );
+  });
+
+  it("drops the actor key rather than emptying it on a clear", async () => {
+    await renderWithPicker();
+    chooseFromSelect("Performed By", "Mike Bautista");
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({ filters: { user_id: "99" } }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // The key is `sometimes|required` on the wire, so an empty value is a
+    // 422. Null is what `createListAdapter` drops from the request, and its
+    // own test covers that half; the picker's own clear takes this path too.
+    await waitFor(() => expect(lastRequest().filters?.user_id).toBeNull());
+  });
+
+  it("restores a picked person from the URL", async () => {
+    await renderWithPicker("/activity-log?activity_user_id=99");
+
+    expect(lastRequest()).toMatchObject({ filters: { user_id: "99" } });
   });
 });
