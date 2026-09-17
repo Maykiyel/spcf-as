@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { AppShell } from "@mantine/core";
 import { MemoryRouter } from "react-router";
 import { render, screen } from "@/test/render";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import type { AuthUser } from "@/features/auth/types";
 import SidebarLinksContainer from "./sidebar-links-container";
 
@@ -54,6 +56,7 @@ function renderSidebarAs(user: AuthUser) {
 describe("SidebarLinksContainer", () => {
   afterEach(() => {
     useAuthStore.setState({ user: null, status: "idle" });
+    useSidebarStore.setState({ mobileOpened: false });
   });
 
   it("offers New Transaction to a cashier", () => {
@@ -108,5 +111,27 @@ describe("SidebarLinksContainer", () => {
     renderSidebarAs(cashier);
 
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
+  });
+
+  // On a phone the sidebar overlays the page, so a link that navigated
+  // without closing it would hide the page it just opened.
+  it("closes the mobile sidebar when a top-level destination is chosen", async () => {
+    const user = userEvent.setup();
+    useSidebarStore.setState({ mobileOpened: true });
+    renderSidebarAs(cashier);
+
+    await user.click(screen.getByText("Dashboard"));
+
+    expect(useSidebarStore.getState().mobileOpened).toBe(false);
+  });
+
+  it("closes the mobile sidebar when a page inside a group is chosen", async () => {
+    const user = userEvent.setup();
+    useSidebarStore.setState({ mobileOpened: true });
+    renderSidebarAs(cashier);
+
+    await user.click(screen.getByText("View Transactions (Per Receipt)"));
+
+    expect(useSidebarStore.getState().mobileOpened).toBe(false);
   });
 });

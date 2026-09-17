@@ -32,6 +32,15 @@ html {
   transform: translateY(3px);
 }
 
+/* Mantine pins the navbar to 100% below the AppShell breakpoint, which
+   leaves no page beside it to tap and buries the burger under it. The
+   width is the shell's own, published by AppLayout. */
+@media (max-width: 47.99em) {
+  nav.mantine-AppShell-navbar {
+    --app-shell-navbar-width: var(--sidebar-width);
+  }
+}
+
 .sidebar-toggle:hover {
   color: white !important;
 }
