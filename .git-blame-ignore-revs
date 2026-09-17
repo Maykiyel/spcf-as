@@ -1,0 +1,9 @@
+# Revisions to skip when running `git blame`.
+#
+# Enable it once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only whitespace-only commits belong here.
+
+# style: format src with prettier
+c4cd7e9b3ab9f5659ed2f8ce22dc90c4ee624b4e
