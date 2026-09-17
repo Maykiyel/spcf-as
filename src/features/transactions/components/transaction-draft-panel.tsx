@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import {
   Badge,
+  Button,
   Divider,
   Group,
   NumberInput,
@@ -135,6 +136,24 @@ export function TransactionDraftPanel() {
               actions.setAmountPaid(Number.isFinite(parsed) ? parsed : 0);
             }}
             leftSection={<IconCash size={16} />}
+            // Most payments here are exact, so the common case was reading
+            // the total off the line above and typing it back in. Fills on
+            // request and never on its own: the amount paid is printed on
+            // the Acknowledgement Receipt the payer keeps, so a figure that
+            // reached that paper unread would be nobody's decision.
+            rightSection={
+              <Button
+                type="button"
+                size="compact-xs"
+                variant="subtle"
+                onClick={() => actions.setAmountPaid(meta.total)}
+                disabled={state.lineItems.length === 0}
+                aria-label="Fill Amount Paid with the exact total"
+              >
+                Exact
+              </Button>
+            }
+            rightSectionWidth={64}
             min={0}
             decimalScale={2}
             fixedDecimalScale
