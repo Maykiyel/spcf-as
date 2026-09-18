@@ -29,6 +29,34 @@ if (typeof window !== "undefined") {
     }),
   });
 
+  // Node 24's undici brand-checks `RequestInit.signal` against its own
+  // AbortSignal. jsdom's passes `instanceof` but fails that check, so
+  // react-router throws building the Request for any redirect — which is
+  // every ProtectedRoute test. Drop the signal only where it is rejected,
+  // so this is a no-op on a Node that accepts it.
+  const BaseRequest = globalThis.Request;
+  let signalAccepted = true;
+  try {
+    new BaseRequest("http://localhost/", {
+      signal: new AbortController().signal,
+    });
+  } catch {
+    signalAccepted = false;
+  }
+
+  if (!signalAccepted) {
+    globalThis.Request = class extends BaseRequest {
+      constructor(input: RequestInfo | URL, init?: RequestInit) {
+        if (init?.signal) {
+          const { signal: _unusable, ...rest } = init;
+          super(input, rest);
+        } else {
+          super(input, init);
+        }
+      }
+    };
+  }
+
   // This project doesn't use vitest's `globals: true` (tests import
   // describe/it/expect explicitly — see any existing *.test.ts), so RTL's
   // auto-cleanup-on-afterEach-detection doesn't fire automatically either.
