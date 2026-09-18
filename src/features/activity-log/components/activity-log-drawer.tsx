@@ -19,6 +19,7 @@ import type {
   ActivityLogSubject,
 } from "../types";
 import { ActivityDetailsSkeleton } from "./activity-details-skeleton";
+import { ActivityTypeBadge } from "./activity-type-badge";
 
 type ActivityLogDrawerProps = {
   /** The clicked row, not an id: holding it is what lets the drawer open
@@ -36,7 +37,7 @@ export function ActivityLogDrawer({ entry, onClose }: ActivityLogDrawerProps) {
       onClose={onClose}
       position="right"
       size="md"
-      title={entry?.type}
+      title={entry && <ActivityTypeBadge type={entry.type} />}
       closeButtonProps={{ "aria-label": "Close" }}
     >
       {entry && <ActivityLogDrawerBody entry={entry} />}
