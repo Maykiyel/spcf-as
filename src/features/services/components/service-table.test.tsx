@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { AxiosError } from "axios";
 import { MemoryRouter, useLocation } from "react-router";
 import { fireEvent, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getServices } from "../api/get-services";
+import { deleteService } from "../api/delete-service";
+import { notifySuccess } from "@/lib/notifications/notifications";
 import { ServiceTable } from "./service-table";
 import type { Service } from "@/api/services";
 
@@ -23,6 +27,28 @@ vi.mock("../api/get-services", async () => {
   return { ...actual, getServices: vi.fn() };
 });
 const mockGetServices = vi.mocked(getServices);
+
+vi.mock("../api/delete-service", async () => {
+  // A factory, not a bare automock, for the same reason as above — this
+  // module has no arrays today, but a bare automock would silently start
+  // hiding that fact if one were ever added.
+  const actual = await vi.importActual<typeof import("../api/delete-service")>(
+    "../api/delete-service",
+  );
+  return { ...actual, deleteService: vi.fn() };
+});
+const mockDeleteService = vi.mocked(deleteService);
+
+vi.mock("@/lib/notifications/notifications", async () => {
+  // Only `notifySuccess` is replaced: the refusal cases read the server's
+  // message through the real `getErrorMessage`, which an automock would
+  // reduce to undefined.
+  const actual = await vi.importActual<
+    typeof import("@/lib/notifications/notifications")
+  >("@/lib/notifications/notifications");
+  return { ...actual, notifySuccess: vi.fn() };
+});
+const mockNotifySuccess = vi.mocked(notifySuccess);
 
 // jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
 // to one on mount.
@@ -77,13 +103,20 @@ function LocationProbe() {
   return <div data-testid="search">{useLocation().search}</div>;
 }
 
-function renderTable() {
+function renderTable({ onDeleted = vi.fn() } = {}) {
   return renderWithQueryClient(
     <MemoryRouter>
-      <ServiceTable onEdit={vi.fn()} />
+      <ServiceTable onEdit={vi.fn()} onDeleted={onDeleted} />
       <LocationProbe />
     </MemoryRouter>,
   );
+}
+
+/** Scoped to the row so two rows both offering "Delete" can't collide. */
+async function openDeleteConfirmation(serviceName: string) {
+  const row = screen.getByText(serviceName).closest("tr")!;
+  fireEvent.click(within(row).getByRole("button", { name: /^delete$/i }));
+  await screen.findByRole("button", { name: /delete service/i });
 }
 
 describe("ServiceTable", () => {
@@ -293,5 +326,145 @@ describe("ServiceTable — clearing", () => {
       filters: { is_active: null },
     });
     expect(screen.getByPlaceholderText("Search")).toHaveValue("");
+  });
+});
+
+describe("ServiceTable — deleting", () => {
+  beforeEach(() => {
+    mockGetServices.mockReset();
+    mockGetServices.mockResolvedValue(page(services));
+    mockDeleteService.mockReset();
+    mockDeleteService.mockResolvedValue(undefined);
+    mockNotifySuccess.mockReset();
+  });
+
+  it("offers Delete on a row, and opens a dialog naming that service", async () => {
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+
+    expect(
+      within(screen.getByRole("dialog")).getByText(/SHS GRADUATION FEE/),
+    ).toBeInTheDocument();
+  });
+
+  it("sends a delete for that service's identifier and no other", async () => {
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /delete service/i }));
+
+    await waitFor(() => expect(mockDeleteService).toHaveBeenCalledOnce());
+    expect(mockDeleteService).toHaveBeenCalledWith(1);
+  });
+
+  it("holds the dialog open while the delete is in flight", async () => {
+    // Escape mid-request would close the dialog before the server answers,
+    // and the refusal it carries is the whole reason this dialog waits.
+    const user = userEvent.setup();
+    mockDeleteService.mockReturnValue(new Promise(() => {}));
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /delete service/i }));
+    await user.keyboard("{Escape}");
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close dialog" })).toBeDisabled();
+  });
+
+  it("sends nothing when the confirmation is cancelled", async () => {
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(mockDeleteService).not.toHaveBeenCalled();
+  });
+
+  it("reports success naming the service, and refetches the catalog", async () => {
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+    const before = mockGetServices.mock.calls.length;
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /delete service/i }));
+
+    await waitFor(() =>
+      expect(mockGetServices.mock.calls.length).toBeGreaterThan(before),
+    );
+    // Naming it is the point: a bare "Deleted" leaves an admin deleting
+    // several rows unsure which one just went.
+    expect(mockNotifySuccess).toHaveBeenCalledWith(
+      expect.stringContaining("SHS GRADUATION FEE"),
+    );
+  });
+
+  it("reports the deleted service upward, which is how the page clears a stale edit form", async () => {
+    const onDeleted = vi.fn();
+    renderTable({ onDeleted });
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /delete service/i }));
+
+    await waitFor(() =>
+      expect(onDeleted).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 1 }),
+      ),
+    );
+  });
+
+  it("shows the server's refusal inside the dialog, leaves the row, and swaps the confirm button for Close", async () => {
+    // The server's actual shape: a conflict carrying its own message. A
+    // generic rejection here would pass against a UI that discarded it.
+    const refusal = new AxiosError("Conflict");
+    refusal.response = {
+      status: 409,
+      data: {
+        message:
+          "This service has been charged on a transaction and can't be deleted.",
+      },
+    } as AxiosError["response"];
+    mockDeleteService.mockRejectedValue(refusal);
+
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /delete service/i }));
+
+    expect(
+      await screen.findByText(
+        "This service has been charged on a transaction and can't be deleted.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("SHS GRADUATION FEE")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /delete service/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^close$/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to generic wording when a failure carries no server message", async () => {
+    mockDeleteService.mockRejectedValue(new Error("Network down"));
+
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /delete service/i }));
+
+    expect(
+      await screen.findByText(
+        "Couldn't delete this service. Please try again.",
+      ),
+    ).toBeInTheDocument();
   });
 });

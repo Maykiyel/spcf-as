@@ -5,13 +5,16 @@ import { ServiceActionsCell } from "./service-actions-cell";
 
 type ServiceColumnsOptions = {
   onEdit: (service: Service) => void;
+  onDeleted: (service: Service) => void;
 };
 
 /** A builder rather than a constant only because the Actions cell closes
- * over `onEdit`. Description shows without a sort: `/services` allow-lists
- * `item_code`, `name` and `price`, and will not order by anything else. */
+ * over `onEdit`/`onDeleted`. Description shows without a sort: `/services`
+ * allow-lists `item_code`, `name` and `price`, and will not order by
+ * anything else. */
 export function serviceColumns({
   onEdit,
+  onDeleted,
 }: ServiceColumnsOptions): ColumnDef<Service>[] {
   return [
     {
@@ -38,7 +41,13 @@ export function serviceColumns({
     {
       id: "actions",
       header: "Actions",
-      render: (row) => <ServiceActionsCell service={row} onEdit={onEdit} />,
+      render: (row) => (
+        <ServiceActionsCell
+          service={row}
+          onEdit={onEdit}
+          onDeleted={onDeleted}
+        />
+      ),
     },
   ];
 }

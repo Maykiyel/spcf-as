@@ -141,7 +141,10 @@ const CASES: Case[] = [
   {
     endpoint: "GET /services",
     plan: SERVICES_SORT_PLAN,
-    columns: serviceColumns({ onEdit: () => {} }) as ColumnDef<never>[],
+    columns: serviceColumns({
+      onEdit: () => {},
+      onDeleted: () => {},
+    }) as ColumnDef<never>[],
     // Description is shown and not sortable, unlike the item code catalog
     // below: `/services` allow-lists `description` on neither.
     sortable: ["item_code", "name", "price"],
