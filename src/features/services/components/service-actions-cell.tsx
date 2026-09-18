@@ -1,13 +1,9 @@
 import { useState } from "react";
-import { Alert, Group, Modal, Text } from "@mantine/core";
+import { Group, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { IconInfoCircle } from "@tabler/icons-react";
-import {
-  EditButton,
-  DangerButton,
-  PrimaryButton,
-} from "@/components/ui/button";
+import { EditButton, DangerButton } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   notifySuccess,
   getErrorMessage,
@@ -30,12 +26,11 @@ export function ServiceActionsCell({
   onDeleted,
 }: ServiceActionsCellProps) {
   const [confirmDeleteOpen, confirmDelete] = useDisclosure(false);
-  // The server's own words when it won't delete this service. Held rather
-  // than toasted: a refusal answers the question just asked, in the dialog
-  // that asked it.
   const [refusal, setRefusal] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
+  // Clearing here, not on open: a stale refusal would otherwise greet the
+  // next open of this dialog.
   const closeDelete = () => {
     confirmDelete.close();
     setRefusal(null);
@@ -82,57 +77,21 @@ export function ServiceActionsCell({
         </DangerButton>
       </Group>
 
-      <Modal
+      <ConfirmModal
         opened={confirmDeleteOpen}
         onClose={closeDelete}
         title="Delete service"
-        centered
-        // All three routes out are held while the request is in flight:
-        // an Escape or a close click mid-delete would take the server's
-        // refusal with it, and the refusal is the answer being waited for.
-        closeOnClickOutside={!deleteMutation.isPending}
-        closeOnEscape={!deleteMutation.isPending}
-        // Not "Close": the footer's own button takes that word once a
-        // refusal is held, and two controls with one name in a single
-        // dialog is what a screen reader has to tell apart.
-        closeButtonProps={{
-          disabled: deleteMutation.isPending,
-          "aria-label": "Close dialog",
-        }}
+        confirmLabel="Delete Service"
+        onConfirm={() => deleteMutation.mutate()}
+        loading={deleteMutation.isPending}
+        refusal={refusal}
       >
-        {refusal ? (
-          <Alert
-            color="tertiary"
-            variant="light"
-            icon={<IconInfoCircle size={18} />}
-          >
-            {refusal}
-          </Alert>
-        ) : (
-          <Text size="sm">
-            Delete <strong>{service.name}</strong>? This can't be undone. Use
-            the Active toggle instead if you want a way back — it's the
-            reversible option.
-          </Text>
-        )}
-
-        <Group justify="flex-end" mt="lg">
-          <DangerButton
-            onClick={closeDelete}
-            disabled={deleteMutation.isPending}
-          >
-            {refusal ? "Close" : "Cancel"}
-          </DangerButton>
-          {!refusal && (
-            <PrimaryButton
-              loading={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate()}
-            >
-              Delete Service
-            </PrimaryButton>
-          )}
-        </Group>
-      </Modal>
+        <Text size="sm">
+          Delete <strong>{service.name}</strong>? This can't be undone. Use the
+          Active toggle instead if you want a way back — it's the reversible
+          option.
+        </Text>
+      </ConfirmModal>
     </>
   );
 }

@@ -50,6 +50,45 @@ describe("ConfirmModal", () => {
   });
 });
 
+// The server said no, and said why. Both delete flows hand-rolled a
+// `Modal` to render this, which is how they lost the dismissal guards
+// above — so it belongs here.
+describe("ConfirmModal — holding a refusal", () => {
+  it("shows the server's words in place of the body", () => {
+    renderModal({ refusal: "It is referenced by existing transactions." });
+
+    expect(
+      screen.getByText("It is referenced by existing transactions."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Body copy")).not.toBeInTheDocument();
+  });
+
+  it("drops the confirm and offers only a way out", async () => {
+    const user = userEvent.setup();
+    const { onClose, onConfirm } = renderModal({ refusal: "No." });
+
+    // Retrying fails identically until the underlying fact changes, so
+    // the button that failed is taken away rather than left to be hit.
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("leaves the header's close button a distinct name from the footer's", () => {
+    renderModal({ refusal: "No." });
+
+    // Both would answer to "Close" otherwise, and a screen reader would
+    // have two controls it could not tell apart.
+    expect(
+      screen.getByRole("button", { name: "Close dialog" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+  });
+});
+
 // A Mantine Modal has four ways out: the two buttons, Escape, the close
 // button, and a click on the overlay. While the mutation is out, none of
 // them may fire — a dialog that vanishes mid-request takes the outcome

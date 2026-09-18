@@ -1,4 +1,5 @@
-import { Group, Modal } from "@mantine/core";
+import { Alert, Group, Modal } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
 
 type ConfirmModalProps = {
@@ -11,6 +12,10 @@ type ConfirmModalProps = {
    * would otherwise close it, so the outcome is read here rather than
    * behind a dialog that vanished. */
   loading?: boolean;
+  /** The server's own words for why it won't do this, held here instead
+   * of toasted: it answers the question just asked. Takes over the body
+   * and drops the confirm, since retrying fails identically. */
+  refusal?: string | null;
   children: React.ReactNode;
 };
 
@@ -23,6 +28,9 @@ type ConfirmModalProps = {
  * footer component. Three of those six let a click outside close them
  * mid-request, three did not, and nothing decided the split. Only
  * something owning the `Modal` can settle it for every caller.
+ *
+ * `refusal` is the same argument a second time: two delete dialogs each
+ * hand-rolled a `Modal` to get it, and so re-opened the split above.
  */
 export function ConfirmModal({
   opened,
@@ -31,6 +39,7 @@ export function ConfirmModal({
   confirmLabel,
   onConfirm,
   loading = false,
+  refusal = null,
   children,
 }: ConfirmModalProps) {
   return (
@@ -43,17 +52,30 @@ export function ConfirmModal({
       closeOnEscape={!loading}
       // Mantine leaves this button unnamed; every dialog this replaced
       // shipped it that way, so a screen reader announced only "button".
-      closeButtonProps={{ disabled: loading, "aria-label": "Close" }}
+      // Not "Close": the footer takes that word once a refusal is held.
+      closeButtonProps={{ disabled: loading, "aria-label": "Close dialog" }}
     >
-      {children}
+      {refusal ? (
+        <Alert
+          color="tertiary"
+          variant="light"
+          icon={<IconInfoCircle size={18} />}
+        >
+          {refusal}
+        </Alert>
+      ) : (
+        children
+      )}
 
       <Group justify="flex-end" mt="lg">
         <DangerButton onClick={onClose} disabled={loading}>
-          Cancel
+          {refusal ? "Close" : "Cancel"}
         </DangerButton>
-        <PrimaryButton loading={loading} onClick={onConfirm}>
-          {confirmLabel}
-        </PrimaryButton>
+        {!refusal && (
+          <PrimaryButton loading={loading} onClick={onConfirm}>
+            {confirmLabel}
+          </PrimaryButton>
+        )}
       </Group>
     </Modal>
   );
