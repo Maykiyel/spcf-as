@@ -306,6 +306,7 @@ describe("ViewTransactionPage — the way back", () => {
     { from: "dashboard", label: "Back to Dashboard" },
     { from: "void", label: "Back to Void" },
     { from: "report", label: "Back to Transactions Report" },
+    { from: "serviceBreakdown", label: "Back to Service Breakdown" },
     { from: "activityLog", label: "Back to Activity Log" },
     { from: "print", label: "Back to Receipt" },
   ];

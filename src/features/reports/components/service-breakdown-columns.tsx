@@ -4,4 +4,5 @@ import { reportTransactionColumns } from "./report-transaction-columns";
  * amounts, and its plan allows `series_number` where the report's does not. */
 export const serviceBreakdownColumns = reportTransactionColumns({
   includeAmounts: false,
+  controlIdOrigin: "serviceBreakdown",
 });

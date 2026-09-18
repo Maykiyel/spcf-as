@@ -29,6 +29,7 @@ const BACK_LABEL: Record<Exclude<TransactionOrigin, "new">, string> = {
   dashboard: "Back to Dashboard",
   void: "Back to Void",
   report: "Back to Transactions Report",
+  serviceBreakdown: "Back to Service Breakdown",
   activityLog: "Back to Activity Log",
   print: "Back to Receipt",
 };

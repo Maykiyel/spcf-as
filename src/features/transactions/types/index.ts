@@ -150,4 +150,11 @@ export function isSortByValue(value: string): value is SortByValue {
 // is a compile error, not a silent generic label. "new" renders no
 // control at all (see ViewTransactionPage).
 export type TransactionOrigin =
-  "list" | "dashboard" | "void" | "report" | "activityLog" | "print" | "new";
+  | "list"
+  | "dashboard"
+  | "void"
+  | "report"
+  | "serviceBreakdown"
+  | "activityLog"
+  | "print"
+  | "new";
