@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, configDefaults } from "vitest/config";
 import path from "node:path";
 
 export default defineConfig({
@@ -15,6 +15,10 @@ export default defineConfig({
     // instead of paying jsdom's setup cost project-wide. See
     // fee-catalog-item-card.test.tsx for the pattern.
     environment: "node",
+    // Task-chip worktrees are created at `.claude/worktrees/*`, inside the
+    // repo, so the default sweep collects their tests too and every file
+    // runs twice against two checkouts. CI runs no tests; this is the gate.
+    exclude: [...configDefaults.exclude, "**/.claude/**"],
     setupFiles: ["./vitest.setup.ts"],
     // Vitest's own per-test budget, which defaults to 5000ms. It has to
     // sit above RTL's `asyncUtilTimeout` (5000ms, set in the setup file),
