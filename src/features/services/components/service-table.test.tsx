@@ -6,6 +6,7 @@ import { fireEvent, waitFor, within } from "@testing-library/react";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getServices } from "../api/get-services";
 import { deleteService } from "../api/delete-service";
+import { notifySuccess } from "@/lib/notifications/notifications";
 import { ServiceTable } from "./service-table";
 import type { Service } from "@/api/services";
 
@@ -36,6 +37,17 @@ vi.mock("../api/delete-service", async () => {
   return { ...actual, deleteService: vi.fn() };
 });
 const mockDeleteService = vi.mocked(deleteService);
+
+vi.mock("@/lib/notifications/notifications", async () => {
+  // Only `notifySuccess` is replaced: the refusal cases read the server's
+  // message through the real `getErrorMessage`, which an automock would
+  // reduce to undefined.
+  const actual = await vi.importActual<
+    typeof import("@/lib/notifications/notifications")
+  >("@/lib/notifications/notifications");
+  return { ...actual, notifySuccess: vi.fn() };
+});
+const mockNotifySuccess = vi.mocked(notifySuccess);
 
 // jsdom implements no ResizeObserver; Mantine's ScrollArea subscribes
 // to one on mount.
@@ -322,6 +334,7 @@ describe("ServiceTable — deleting", () => {
     mockGetServices.mockResolvedValue(page(services));
     mockDeleteService.mockReset();
     mockDeleteService.mockResolvedValue(undefined);
+    mockNotifySuccess.mockReset();
   });
 
   it("offers Delete on a row, and opens a dialog naming that service", async () => {
@@ -356,7 +369,7 @@ describe("ServiceTable — deleting", () => {
     expect(mockDeleteService).not.toHaveBeenCalled();
   });
 
-  it("refetches the catalog once a deletion succeeds", async () => {
+  it("reports success naming the service, and refetches the catalog", async () => {
     renderTable();
     await screen.findByText("SHS GRADUATION FEE");
     const before = mockGetServices.mock.calls.length;
@@ -366,6 +379,11 @@ describe("ServiceTable — deleting", () => {
 
     await waitFor(() =>
       expect(mockGetServices.mock.calls.length).toBeGreaterThan(before),
+    );
+    // Naming it is the point: a bare "Deleted" leaves an admin deleting
+    // several rows unsure which one just went.
+    expect(mockNotifySuccess).toHaveBeenCalledWith(
+      expect.stringContaining("SHS GRADUATION FEE"),
     );
   });
 

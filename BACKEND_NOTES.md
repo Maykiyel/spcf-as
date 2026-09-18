@@ -37,6 +37,7 @@ return Laravel's own `{ "message": ... }` shape, and 422 adds `errors`.
 | 409 | Action not allowed for the current transaction status | `{"message": ...}` |
 | 409 | No active series receipt, or series exhausted | `{"message": ...}` |
 | 409 | Saving a transaction that has no items | envelope |
+| 409 | Deleting a service that has been charged | `{"message": ...}` |
 | 419 | Expired CSRF token | Laravel default |
 | 422 | Validation failure | `{"message", "errors"}` |
 | 400 | Unknown `filter[]` or `sort` key | `{"message": ...}` |
@@ -207,6 +208,24 @@ PATCH  /users/{user}/toggle-status    (admin)  body: {"is_active": bool}
 - Returns the updated `UserResource`, which now includes `is_active`.
 - There is still **no update endpoint** — no rename, no role change, no
   password reset.
+
+## Services: delete
+
+```
+DELETE /services/{service}            (cashier or admin)
+```
+
+- **Delete is conditional, and refused with a 409** — not the 422 that
+  `DELETE /users` uses for the same class of refusal. The guard is whether
+  the service has ever been charged on a transaction; the body is the plain
+  shape, e.g.
+  `{"message": "Service cannot be deleted because it is being referenced by existing transactions."}`
+  Observed against the running API, not inferred.
+- **Both roles may delete.** Unlike `DELETE /users`, this is not admin-only.
+- **Update and delete guard differently.** The server refuses to *update* a
+  service while any pending transaction exists anywhere, but only checks
+  "ever been charged" on *delete* — so a service can be deletable while not
+  being editable. Looks unintended; recorded rather than relied on.
 
 ## Users: the index was rewritten (`4955f19` through `0d81988`)
 

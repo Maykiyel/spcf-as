@@ -21,13 +21,9 @@ type ServiceActionsCellProps = {
   onDeleted: (service: Service) => void;
 };
 
-/**
- * Mirrors the Manage Accounts delete flow: Edit stays the routine action,
- * Delete is the subtle destructive one, and a server refusal is held in
- * this dialog rather than toasted. The Active toggle (a switch in another
- * column) is this catalog's reversible alternative, so it's named rather
- * than offered as a button here.
- */
+/** Mirrors the Manage Accounts delete flow; see #140. This catalog's
+ * reversible alternative is the Active toggle, a switch in another
+ * column, so the dialog copy names it rather than offering a button. */
 export function ServiceActionsCell({
   service,
   onEdit,
