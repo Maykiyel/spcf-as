@@ -24,6 +24,7 @@ export function RecentTransactionsTable() {
     includeCashier: false,
     includeStatus: true,
     includeItems: false,
+    controlIdOrigin: "dashboard",
   });
 
   // No `urlKey`: nothing here changes the page, so a `recent_page` off a

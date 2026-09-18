@@ -5,18 +5,23 @@ import type { TransactionScalars } from "@/api/transactions";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/date-time";
 import { formatSeriesNumber } from "@/utils/series-number";
+import type { TransactionOrigin } from "@/features/transactions/types";
 
 type ReportTransactionColumnsOptions = {
   /** `amount_paid` and `change_amount`, which the breakdown doesn't show at
    * all. The only difference left: which of these columns sort is the two
    * endpoints' plans' business, not this builder's. */
   includeAmounts: boolean;
+  /** The control-id link's own Back origin. Required because this builder
+   * serves two pages, and a shared default would name the wrong one. */
+  controlIdOrigin: TransactionOrigin;
 };
 
 /** The columns of a report over `TransactionScalars`, shared by the
  * Transactions Report and the Service Breakdown. */
 export function reportTransactionColumns({
   includeAmounts,
+  controlIdOrigin,
 }: ReportTransactionColumnsOptions): ColumnDef<TransactionScalars>[] {
   const columns: ColumnDef<TransactionScalars>[] = [
     {
@@ -32,7 +37,11 @@ export function reportTransactionColumns({
       // A real link, not just a clickable row: it is what a keyboard
       // reaches, a screen reader announces, and middle-click opens.
       render: (row) => (
-        <Anchor component={Link} to={`/transactions/${row.control_id}`}>
+        <Anchor
+          component={Link}
+          to={`/transactions/${row.control_id}`}
+          state={{ from: controlIdOrigin }}
+        >
           {row.control_id}
         </Anchor>
       ),

@@ -6,7 +6,7 @@ import { fireEvent } from "@testing-library/react";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getTransaction } from "../api/get-transaction";
 import { ViewTransactionPage } from "./view-transaction-page";
-import type { TransactionDTO } from "../types";
+import type { TransactionDTO, TransactionOrigin } from "../types";
 
 // Seam: the page's own public interface — what it renders given a mocked
 // getTransaction response, keyed off the :controlId route param. Not
@@ -55,15 +55,18 @@ function makeServerError(): AxiosError {
   return error;
 }
 
-/** `state` is what the four call sites use to say where they sent the
- * user from; absent is a bookmark, a pasted link, or a refresh. */
+/** `state` is what a caller uses to say where it sent the user from;
+ * absent is a bookmark, a pasted link, or a refresh. `hasHistory` seeds a
+ * leading entry, so only the no-history fallback case passes `false`. */
 function renderPage(
   controlId = "62598",
-  state?: { from: "list" | "new" | "dashboard" },
+  state?: { from: TransactionOrigin },
+  hasHistory = true,
 ) {
+  const current = { pathname: `/transactions/${controlId}`, state };
   const router = createMemoryRouter(
     [{ path: "/transactions/:controlId", element: <ViewTransactionPage /> }],
-    { initialEntries: [{ pathname: `/transactions/${controlId}`, state }] },
+    { initialEntries: hasHistory ? ["/somewhere", current] : [current] },
   );
   return renderWithQueryClient(<RouterProvider router={router} />);
 }
@@ -283,9 +286,9 @@ describe("ViewTransactionPage", () => {
   });
 });
 
-// The three call sites into this page disagree on purpose about whether
-// there is anything to go back to, and `location.state` is the only thing
-// that tells them apart. See #129.
+// Where Back goes is decided by the router's own history, never by the
+// origin marker below — a caller that forgets it degrades the label, not
+// the destination. See #138.
 describe("ViewTransactionPage — the way back", () => {
   beforeEach(() => {
     mockGetTransaction.mockReset();
@@ -293,7 +296,29 @@ describe("ViewTransactionPage — the way back", () => {
     mockGetTransaction.mockResolvedValue(fakeTransaction);
   });
 
-  const backControl = () => screen.queryByText("Back to Transactions");
+  const origins: { from: TransactionOrigin; label: string }[] = [
+    { from: "list", label: "Back to Transactions" },
+    { from: "dashboard", label: "Back to Dashboard" },
+    { from: "void", label: "Back to Void" },
+    { from: "report", label: "Back to Transactions Report" },
+    { from: "serviceBreakdown", label: "Back to Service Breakdown" },
+    { from: "activityLog", label: "Back to Activity Log" },
+    { from: "print", label: "Back to Receipt" },
+  ];
+
+  it.each(origins)(
+    "names it $label and pops exactly once for $from",
+    async ({ from, label }) => {
+      renderPage("62598", { from });
+
+      await screen.findByText("asdfsf");
+      fireEvent.click(screen.getByText(label));
+
+      // -1, not a hard-coded path: only popping brings the caller's page
+      // back with the state (sort, filters, period) the user left it in.
+      expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(-1);
+    },
+  );
 
   it("offers none on the post-confirm arrival", async () => {
     renderPage("62598", { from: "new" });
@@ -301,41 +326,28 @@ describe("ViewTransactionPage — the way back", () => {
     await screen.findByText("asdfsf");
     // The draft is reset by then, so there is nothing behind this page —
     // "back" would land on a blank New Transaction.
-    expect(backControl()).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Back/)).not.toBeInTheDocument();
   });
 
-  it("pops history for a row clicked on a list", async () => {
-    renderPage("62598", { from: "list" });
-
-    await screen.findByText("asdfsf");
-    fireEvent.click(backControl()!);
-
-    // -1, not the list's path: only popping brings the list back on the
-    // page, sort and filters the user left it on.
-    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(-1);
-  });
-
-  it("names the dashboard when the row was clicked there", async () => {
-    renderPage("62598", { from: "dashboard" });
-
-    await screen.findByText("asdfsf");
-    // The label is the promise the control makes, and popping lands on
-    // /dashboard: "Back to Transactions" there would be a lie.
-    fireEvent.click(screen.getByText("Back to Dashboard"));
-
-    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(-1);
-  });
-
-  it("falls back to the list when it was not told where it came from", async () => {
-    // A bookmark, a pasted link, or a refresh, which loses `state`. There
-    // is no history entry to pop, and this is the arrival most in need of
-    // a way out, so it gets the list's own path.
+  it("still pops for an arrival with no origin, labelled generically", async () => {
+    // A caller that never got wired up. The old default lied about the
+    // destination; the only thing left for it to get wrong is the word.
     renderPage("62598");
 
     await screen.findByText("asdfsf");
-    expect(backControl()).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Back"));
 
-    fireEvent.click(backControl()!);
+    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(-1);
+  });
+
+  it("falls back to the list when there is no history entry to pop", async () => {
+    // A bookmark, a pasted link, or a fresh tab — the one arrival the
+    // memory router's own entries can represent as truly history-less.
+    renderPage("62598", undefined, false);
+
+    await screen.findByText("asdfsf");
+    fireEvent.click(screen.getByText("Back to Transactions"));
+
     expect(mockNavigate).toHaveBeenCalledExactlyOnceWith(
       "/transactions/receipts",
     );

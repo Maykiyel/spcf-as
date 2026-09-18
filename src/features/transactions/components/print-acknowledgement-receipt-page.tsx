@@ -105,7 +105,11 @@ export function PrintAcknowledgementReceiptPage() {
 
       <UnstyledButton
         className="no-print"
-        onClick={() => navigate(`/transactions/${controlId}`)}
+        onClick={() =>
+          navigate(`/transactions/${controlId}`, {
+            state: { from: "print" },
+          })
+        }
         mb="xs"
       >
         <Text

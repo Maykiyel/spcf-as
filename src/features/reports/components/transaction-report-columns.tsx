@@ -4,4 +4,5 @@ import { reportTransactionColumns } from "./report-transaction-columns";
  * from `TRANSACTION_REPORT_SORT_PLAN`, applied by the table. */
 export const transactionReportColumns = reportTransactionColumns({
   includeAmounts: true,
+  controlIdOrigin: "report",
 });

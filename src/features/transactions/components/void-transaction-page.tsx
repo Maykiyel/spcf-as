@@ -46,6 +46,7 @@ export function VoidTransactionPage() {
     includeStatus: false,
     includeItems: true,
     actions: (row) => <VoidTransactionAction transaction={row} />,
+    controlIdOrigin: "void",
   });
 
   const tableState = useServerTableState({
@@ -72,7 +73,7 @@ export function VoidTransactionPage() {
           // `from` is what gives the detail page a Back control that
           // returns here with this page, sort and filters intact.
           navigate(`/transactions/${row.control_id}`, {
-            state: { from: "list" },
+            state: { from: "void" },
           })
         }
       />

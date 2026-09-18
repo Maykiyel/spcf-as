@@ -144,3 +144,16 @@ export function isPriceRangeValue(value: string): value is PriceRangeValue {
 export function isSortByValue(value: string): value is SortByValue {
   return isOneOf(SORT_BY_VALUES, value);
 }
+
+// Where View Transaction was opened from, for its Back control's wording
+// only — never its destination. Closed so a new caller with no label is a
+// compile error; "new" renders no control at all.
+export type TransactionOrigin =
+  | "list"
+  | "dashboard"
+  | "void"
+  | "report"
+  | "serviceBreakdown"
+  | "activityLog"
+  | "print"
+  | "new";

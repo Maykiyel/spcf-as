@@ -3,16 +3,13 @@ import {
   IconUserFilled,
   IconLogout,
   IconChevronDown,
-  IconHeartRateMonitor,
 } from "@tabler/icons-react";
-import { useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/auth-store";
 import { authSession } from "@/features/auth/session";
 import { notifyMutationError } from "@/lib/notifications/notifications";
 
 function UserMenu() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
 
@@ -66,18 +63,6 @@ function UserMenu() {
           },
         }}
       >
-        <Menu.Item
-          className="dark-dropdown-item"
-          leftSection={<IconHeartRateMonitor size={18} opacity={0.6} />}
-          onClick={() => navigate("/temp")}
-        >
-          Activity Log
-        </Menu.Item>
-        <Menu.Divider mb={0} style={{ borderColor: "rgba(0,0,0,0.2)" }} />
-        <Menu.Divider
-          mt={0}
-          style={{ borderColor: "rgba(255,255,255,0.15)" }}
-        />
         <Menu.Item
           className="dark-dropdown-item danger"
           leftSection={<IconLogout size={18} opacity={0.6} />}
