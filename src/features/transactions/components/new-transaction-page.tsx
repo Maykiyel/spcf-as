@@ -24,7 +24,7 @@ export function NewTransactionPage() {
       >
         <Grid.Col span={{ base: 12, md: 2 }} style={colStyle}>
           <Paper h={isSideBySide ? "100%" : undefined} style={paperStyle}>
-            <FiltersPanel />
+            <FiltersPanel collapsible={!isSideBySide} />
           </Paper>
         </Grid.Col>
 
