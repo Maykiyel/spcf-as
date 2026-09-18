@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@/components/ui/data-table";
 import { formatDateTime } from "@/utils/date-time";
+import { ActivityTypeBadge } from "./activity-type-badge";
 import type { ActivityLogListRow } from "../types";
 
 /** Only Date is `sortable`: `created_at` is the sole key
@@ -14,6 +15,7 @@ export const activityLogColumns: ColumnDef<ActivityLogListRow>[] = [
   {
     field: "type",
     header: "Type",
+    render: (row) => <ActivityTypeBadge type={row.type} />,
   },
   {
     field: "context",

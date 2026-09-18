@@ -1,5 +1,6 @@
 import type { ColumnDef } from "@/components/ui/data-table";
 import { formatSeriesNumber } from "@/utils/series-number";
+import { SeriesReceiptStatusBadge } from "./series-receipt-status-badge";
 import type { SeriesReceipt } from "../types";
 
 export const seriesReceiptColumns: ColumnDef<SeriesReceipt>[] = [
@@ -20,5 +21,13 @@ export const seriesReceiptColumns: ColumnDef<SeriesReceipt>[] = [
   {
     field: "remaining_sheets",
     header: "Remaining Sheets",
+  },
+  {
+    // No `field`, no `sortKey`: the endpoint offers no status filter or
+    // sort at all, so this is unsortable by construction rather than by
+    // omission.
+    id: "status",
+    header: "Status",
+    render: (row) => <SeriesReceiptStatusBadge status={row.status} />,
   },
 ];

@@ -82,6 +82,45 @@ const dark: MantineColorsTuple = [
   "#1a1b1f",
 ];
 
+const warning: MantineColorsTuple = [
+  "#ffffff",
+  "#fdf0e2",
+  "#fce1c4",
+  "#fad2a7",
+  "#f9c389",
+  "#f7b46c",
+  "#e8871e",
+  "#bd6d18",
+  "#925412",
+  "#683b0c",
+];
+
+const neutral: MantineColorsTuple = [
+  "#ffffff",
+  "#f1f2f4",
+  "#e2e4e8",
+  "#d3d6dc",
+  "#c4c8d0",
+  "#b5bac4",
+  "#98a0ad",
+  "#7c8290",
+  "#616572",
+  "#454952",
+];
+
+const accent: MantineColorsTuple = [
+  "#ffffff",
+  "#efe7fb",
+  "#dfd0f7",
+  "#cfb8f3",
+  "#bfa1ef",
+  "#af89eb",
+  "#8854d0",
+  "#6d43a8",
+  "#523280",
+  "#372258",
+];
+
 export const theme = createTheme({
   primaryColor: "primary",
   primaryShade: 6,
@@ -95,6 +134,9 @@ export const theme = createTheme({
     tertiary,
     success,
     dark,
+    warning,
+    neutral,
+    accent,
   },
 
   defaultRadius: "md",
@@ -121,8 +163,20 @@ export const theme = createTheme({
   },
 });
 
+// `tertiary` was missing here despite being a real key of `colors` above —
+// a pre-existing gap, fixed alongside the three tones this augmentation
+// exists to add.
 type ExtendedCustomColors =
-  "primary" | "navy" | "danger" | "success" | "dark" | DefaultMantineColor;
+  | "primary"
+  | "navy"
+  | "danger"
+  | "tertiary"
+  | "success"
+  | "dark"
+  | "warning"
+  | "neutral"
+  | "accent"
+  | DefaultMantineColor;
 
 declare module "@mantine/core" {
   export interface MantineThemeColorsOverride {

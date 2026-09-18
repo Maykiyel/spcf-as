@@ -185,6 +185,27 @@ describe("ActivityLogPage — the list", () => {
     expect(tableRows().getByText("System")).toBeInTheDocument();
   });
 
+  it("still renders an activity type the frontend has never seen", async () => {
+    // Prefix derivation, not a per-type map: an area this frontend has no
+    // entry for must still render, in a neutral badge, rather than break.
+    mockGetActivityLogs.mockResolvedValue(
+      page([
+        {
+          id: 503,
+          type: "Report - Generated",
+          context: "Generated the Services Sold report",
+          created_at: "2026-08-26T03:00:00.000000Z",
+          actor: { id: 99, name: "Mike Bautista", role: "admin" },
+        },
+      ]),
+    );
+    renderPage();
+
+    expect(
+      await tableRows().findByText("Report - Generated"),
+    ).toBeInTheDocument();
+  });
+
   it("asks for the newest activity first on a fresh visit", async () => {
     renderPage();
     await screen.findByText(rows[0].context);

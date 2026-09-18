@@ -126,6 +126,53 @@ Revisit the first if the refusal pattern turns up a second time.
 
 ---
 
+## StatusBadge
+
+A label plus a `tone`, rendered as Mantine's `Badge` in the `light` variant.
+Knows no domain concept — every call site supplies its own status-to-tone
+lookup.
+
+```tsx
+import { StatusBadge, type Tone } from "@/components/ui/status-badge";
+
+const STATUS_TONE: Record<MyStatus, Tone> = {
+  open: "tertiary",
+  closed: "success",
+};
+
+<StatusBadge label={STATUS_LABEL[status]} tone={STATUS_TONE[status]} />;
+```
+
+`Tone` is one of `primary`, `tertiary`, `success`, `warning`, `neutral`,
+`accent` or `danger` — the app's semantic colour names, minus `navy` and
+`dark`, which style chrome rather than a status. **`danger` means a
+reversal, nowhere else.** A voided transaction is the only thing in this
+app allowed to be the red badge; a component reaching for `danger` to mean
+"this row needs attention" would dilute the one case it has to mean
+unambiguously.
+
+**Why this takes a `tone` prop instead of following `Button`'s
+"explicit named variants" convention above.** That convention exists
+because a _button's_ colour is a design choice made at the call site —
+`PrimaryButton` versus `DangerButton` is a decision a developer makes once,
+in JSX, and a named component documents it. A status badge's colour is not
+a call-site decision at all: it is _derived from data_, by a lookup keyed
+on a status the row already carries. Forcing that through named variants
+would mean branching in JSX at every call site —
+`status === "completed" ? <SuccessBadge /> : status === "pending" ? ... `
+— which is strictly worse than the `Record<Status, Tone>` lookup this
+replaces, and is the opposite of what the named-variant convention is
+for. The tone prop is correct here, not a violation of the rule above it.
+
+**The colour map itself stays out of this component**, and out of
+`components/ui` entirely. Each feature owns its own exhaustive
+`Record<Status, Tone>` beside the status union it describes — see
+`TransactionStatusBadge` in `features/transactions` and
+`SeriesReceiptStatusBadge` in `features/series-receipts` — so this tier
+never has to import a feature's status type to render one.
+
+---
+
 ## DataTable
 
 A compound component for tabular data: card wrapper, toolbar (composed from

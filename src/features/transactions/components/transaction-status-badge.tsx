@@ -1,18 +1,18 @@
-import { Badge } from "@mantine/core";
+import { StatusBadge, type Tone } from "@/components/ui/status-badge";
 import { TRANSACTION_STATUS_LABEL } from "../lib/transaction-status";
 import type { TransactionStatus } from "../types";
 
-// Green only for the status that means the payment stands. Total over the
-// union, like `TRANSACTION_STATUS_LABEL`: a partial map with a fallback
-// would give a sixth status a plausible badge in the wrong colour.
+// Total over the union, like `TRANSACTION_STATUS_LABEL`: a partial map
+// with a fallback would give a sixth status a plausible tone in the wrong
+// colour. `pending` is cyan, not amber — see the commit message.
 //
 // Colour lives here rather than beside the label in `lib/`, so the print
 // page needn't import a palette to render no badge at all.
-const STATUS_COLOR: Record<TransactionStatus, string> = {
+const STATUS_TONE: Record<TransactionStatus, Tone> = {
   pending: "tertiary",
-  abandoned: "tertiary",
   completed: "success",
-  cancelled: "tertiary",
+  cancelled: "warning",
+  abandoned: "neutral",
   returned: "danger",
 };
 
@@ -26,8 +26,9 @@ export function TransactionStatusBadge({
   status: TransactionStatus;
 }) {
   return (
-    <Badge color={STATUS_COLOR[status]} variant="light">
-      {TRANSACTION_STATUS_LABEL[status]}
-    </Badge>
+    <StatusBadge
+      label={TRANSACTION_STATUS_LABEL[status]}
+      tone={STATUS_TONE[status]}
+    />
   );
 }
