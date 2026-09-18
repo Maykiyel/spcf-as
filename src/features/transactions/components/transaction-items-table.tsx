@@ -2,6 +2,9 @@ import { Group, Stack, Table, Text } from "@mantine/core";
 import { formatCurrency } from "@/utils/currency";
 import type { TransactionItemDTO } from "../types";
 
+// What the four columns need before a peso figure wraps mid-amount.
+const ITEMS_MIN_WIDTH = 360;
+
 type TransactionItemsTableProps = {
   items: TransactionItemDTO[];
   /** Null until the transaction is saved — the backend computes it at save
@@ -33,33 +36,46 @@ export function TransactionItemsTable({
 }: TransactionItemsTableProps) {
   const textSize = compact ? "xs" : "sm";
 
+  const itemsTable = (
+    <Table
+      withTableBorder
+      withColumnBorders
+      verticalSpacing={compact ? 2 : undefined}
+      fz={textSize}
+    >
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Service</Table.Th>
+          <Table.Th>Qty</Table.Th>
+          <Table.Th>Price</Table.Th>
+          <Table.Th>Subtotal</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {items.map((item) => (
+          <Table.Tr key={item.id}>
+            <Table.Td>{item.name}</Table.Td>
+            <Table.Td>{item.quantity} pc(s)</Table.Td>
+            <Table.Td>{formatCurrency(item.price)}</Table.Td>
+            <Table.Td>{formatCurrency(item.subtotal)}</Table.Td>
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+    </Table>
+  );
+
   return (
     <Stack gap={compact ? 4 : "xs"}>
-      <Table
-        withTableBorder
-        withColumnBorders
-        verticalSpacing={compact ? 2 : undefined}
-        fz={textSize}
-      >
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Service</Table.Th>
-            <Table.Th>Qty</Table.Th>
-            <Table.Th>Price</Table.Th>
-            <Table.Th>Subtotal</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {items.map((item) => (
-            <Table.Tr key={item.id}>
-              <Table.Td>{item.name}</Table.Td>
-              <Table.Td>{item.quantity} pc(s)</Table.Td>
-              <Table.Td>{formatCurrency(item.price)}</Table.Td>
-              <Table.Td>{formatCurrency(item.subtotal)}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      {/* The print copy gets none: it renders on fixed-width paper, which
+          clips what it cannot scroll. `type="native"` because Mantine's
+          ScrollArea subscribes to a ResizeObserver jsdom does not have. */}
+      {compact ? (
+        itemsTable
+      ) : (
+        <Table.ScrollContainer type="native" minWidth={ITEMS_MIN_WIDTH}>
+          {itemsTable}
+        </Table.ScrollContainer>
+      )}
 
       <Group justify="flex-end">
         <Text fw={700} size={textSize}>
