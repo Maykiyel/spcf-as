@@ -2,8 +2,7 @@ import { Group, Stack, Table, Text } from "@mantine/core";
 import { formatCurrency } from "@/utils/currency";
 import type { TransactionItemDTO } from "../types";
 
-// What the four columns need before a peso figure wraps mid-amount; at
-// 375px the card leaves 301, so the table scrolls within itself there.
+// What the four columns need before a peso figure wraps mid-amount.
 const ITEMS_MIN_WIDTH = 360;
 
 type TransactionItemsTableProps = {
