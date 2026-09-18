@@ -56,13 +56,8 @@ function makeServerError(): AxiosError {
 }
 
 /** `state` is what a caller uses to say where it sent the user from;
- * absent is a bookmark, a pasted link, or a refresh.
- *
- * `hasHistory` defaults to true — a leading entry ahead of the page's own,
- * so this tab has something to pop. The one case that needs `false` is
- * exercising the no-history fallback itself; every other case is really
- * asserting on the origin label, and needs a history entry behind it to
- * do that honestly. */
+ * absent is a bookmark, a pasted link, or a refresh. `hasHistory` seeds a
+ * leading entry, so only the no-history fallback case passes `false`. */
 function renderPage(
   controlId = "62598",
   state?: { from: TransactionOrigin },

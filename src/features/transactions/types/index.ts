@@ -146,9 +146,8 @@ export function isSortByValue(value: string): value is SortByValue {
 }
 
 // Where View Transaction was opened from, for its Back control's wording
-// only — never its destination. Closed so a new caller with no case here
-// is a compile error, not a silent generic label. "new" renders no
-// control at all (see ViewTransactionPage).
+// only — never its destination. Closed so a new caller with no label is a
+// compile error; "new" renders no control at all.
 export type TransactionOrigin =
   | "list"
   | "dashboard"

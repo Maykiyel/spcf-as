@@ -71,9 +71,7 @@ export function VoidTransactionPage() {
       <DataTable.Grid
         onRowClick={(row: TransactionListRow) =>
           // `from` is what gives the detail page a Back control that
-          // returns here with this page, sort and filters intact. Was
-          // `"list"` — a copy-paste from the receipts list that mislabelled
-          // this page's own Back control.
+          // returns here with this page, sort and filters intact.
           navigate(`/transactions/${row.control_id}`, {
             state: { from: "void" },
           })

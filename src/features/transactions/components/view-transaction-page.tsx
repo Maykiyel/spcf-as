@@ -34,10 +34,8 @@ const BACK_LABEL: Record<Exclude<TransactionOrigin, "new">, string> = {
   print: "Back to Receipt",
 };
 
-/** `null` renders no control. `hasHistory` false means a bookmark, a
- * pasted link, or a fresh tab: nothing behind this page, so the origin
- * (whatever it claims) is moot and the label names the fallback's real
- * destination instead. */
+/** `null` renders no control. Without history the origin is moot, so the
+ * label names the fallback's own destination instead of the caller's. */
 function backLabel(
   origin: TransactionOrigin | undefined,
   hasHistory: boolean,
@@ -56,11 +54,9 @@ export function ViewTransactionPage() {
   const location = useLocation();
   const { state } = location as { state: ViewTransactionState | null };
 
-  // React Router keys the first location of a session's history "default"
-  // (browser and memory router alike); any other key means a real entry
-  // sits behind this one. That, not the origin marker, decides where Back
-  // goes — a caller that forgot to set `state` no longer sends the user to
-  // the wrong list, only to a plainer label.
+  // React Router keys a session's first location "default" (browser and
+  // memory router alike); any other key means a real entry sits behind
+  // this one. See #138 for why this, not the origin marker, decides.
   const hasHistory = location.key !== "default";
   const label = backLabel(state?.from, hasHistory);
 
