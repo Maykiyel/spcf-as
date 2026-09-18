@@ -19,7 +19,16 @@ import { useTransactionDraft } from "./use-transaction-draft";
 import { TransactionLineItemRow } from "./transaction-line-item-row";
 import { formatCurrency } from "@/utils/currency";
 
-export function TransactionDraftPanel() {
+type TransactionDraftPanelProps = {
+  // True in the side-by-side desktop layout, where this panel fills its
+  // column and scrolls internally. False when stacked, where it must size
+  // to its own content instead so the page scrolls as one document.
+  fillHeight?: boolean;
+};
+
+export function TransactionDraftPanel({
+  fillHeight = true,
+}: TransactionDraftPanelProps) {
   const { state, actions, meta } = useTransactionDraft();
   const navigate = useNavigate();
 
@@ -37,8 +46,15 @@ export function TransactionDraftPanel() {
   };
 
   return (
-    <form onSubmit={handleFormSubmit} style={{ height: "100%" }}>
-      <Stack gap="sm" h="100%" style={{ minHeight: 0 }}>
+    <form
+      onSubmit={handleFormSubmit}
+      style={fillHeight ? { height: "100%" } : undefined}
+    >
+      <Stack
+        gap="sm"
+        h={fillHeight ? "100%" : undefined}
+        style={fillHeight ? { minHeight: 0 } : undefined}
+      >
         <Group justify="space-between" align="center">
           <Group gap="xs">
             <IconReceipt size={24} />
@@ -62,12 +78,19 @@ export function TransactionDraftPanel() {
           size="sm"
         />
 
-        <Table.ScrollContainer minWidth={0} style={{ flex: 1, minHeight: 0 }}>
+        <Table.ScrollContainer
+          minWidth={0}
+          type="native"
+          style={fillHeight ? { flex: 1, minHeight: 0 } : undefined}
+        >
           <Table
             layout="fixed"
             verticalSpacing={4}
             horizontalSpacing="xs"
-            stickyHeader
+            // Sticky is only meaningful against this container's own
+            // scroll; stacked, the page scrolls instead and a sticky
+            // header would pin to the viewport as it passed.
+            stickyHeader={fillHeight}
           >
             <Table.Thead>
               <Table.Tr>
