@@ -9,7 +9,10 @@ type CardHeaderProps = {
 export function CardHeader({ title, actions }: CardHeaderProps) {
   return (
     <Group justify="space-between" p="md" bg="navy.0">
-      <Title order={5} c="primary">
+      {/* `anywhere`: the Service Breakdown's title carries a free-form,
+          admin-entered service name, which can be one long unbroken token
+          normal wrapping would not break. */}
+      <Title order={5} c="primary" style={{ overflowWrap: "anywhere" }}>
         {title}
       </Title>
       {actions}
