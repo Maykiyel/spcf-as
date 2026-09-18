@@ -42,6 +42,9 @@ export function TableFilterSegments({
       value={value ?? ALL}
       onChange={(next) => onChange(next === ALL ? null : next)}
       data={[{ label: allLabel, value: ALL }, ...options]}
+      // Content width from `xs` up rather than a number: the segments size
+      // themselves from their labels, and those differ per call site.
+      w={{ base: "100%", xs: "auto" }}
     />
   );
 }

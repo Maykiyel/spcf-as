@@ -27,7 +27,9 @@ export function DataTablePageSize() {
   const { pageSize, onPageSizeChange } = useDataTableContext();
 
   return (
-    <Group gap="xs">
+    // The shape is declared on the row, not on the `Select`: stretching
+    // the select itself breaks "Show N entries" onto three lines.
+    <Group gap="xs" w={{ base: "100%", xs: "auto" }}>
       <Text size="sm">Show</Text>
       <Select
         w={80}
