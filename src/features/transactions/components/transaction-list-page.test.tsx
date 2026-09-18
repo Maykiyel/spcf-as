@@ -428,8 +428,15 @@ describe("TransactionListPage", () => {
       target: { value: "santos" },
     });
 
+    // Waited for at the endpoint first, then asserted in the DOM: both come
+    // from the same filter state, and the request fires in an effect after
+    // it commits, so the control is already rendered once the call lands.
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({ filters: { customer: "santos" } }),
+    );
+
     expect(
-      await screen.findByRole("button", { name: "Clear filters" }),
+      screen.getByRole("button", { name: "Clear filters" }),
     ).toBeInTheDocument();
   });
 
