@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AxiosError } from "axios";
 import { MemoryRouter, useLocation } from "react-router";
 import { fireEvent, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { screen, renderWithQueryClient } from "@/test/render";
 import { getServices } from "../api/get-services";
 import { deleteService } from "../api/delete-service";
@@ -357,6 +358,22 @@ describe("ServiceTable — deleting", () => {
 
     await waitFor(() => expect(mockDeleteService).toHaveBeenCalledOnce());
     expect(mockDeleteService).toHaveBeenCalledWith(1);
+  });
+
+  it("holds the dialog open while the delete is in flight", async () => {
+    // Escape mid-request would close the dialog before the server answers,
+    // and the refusal it carries is the whole reason this dialog waits.
+    const user = userEvent.setup();
+    mockDeleteService.mockReturnValue(new Promise(() => {}));
+    renderTable();
+    await screen.findByText("SHS GRADUATION FEE");
+
+    await openDeleteConfirmation("SHS GRADUATION FEE");
+    fireEvent.click(screen.getByRole("button", { name: /delete service/i }));
+    await user.keyboard("{Escape}");
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close dialog" })).toBeDisabled();
   });
 
   it("sends nothing when the confirmation is cancelled", async () => {

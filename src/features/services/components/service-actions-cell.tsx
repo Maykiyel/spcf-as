@@ -87,7 +87,18 @@ export function ServiceActionsCell({
         onClose={closeDelete}
         title="Delete service"
         centered
+        // All three routes out are held while the request is in flight:
+        // an Escape or a close click mid-delete would take the server's
+        // refusal with it, and the refusal is the answer being waited for.
         closeOnClickOutside={!deleteMutation.isPending}
+        closeOnEscape={!deleteMutation.isPending}
+        // Not "Close": the footer's own button takes that word once a
+        // refusal is held, and two controls with one name in a single
+        // dialog is what a screen reader has to tell apart.
+        closeButtonProps={{
+          disabled: deleteMutation.isPending,
+          "aria-label": "Close dialog",
+        }}
       >
         {refusal ? (
           <Alert
