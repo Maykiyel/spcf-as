@@ -7,6 +7,7 @@ import type { Service } from "@/api/services";
 
 type ServiceTableProps = {
   onEdit: (service: Service) => void;
+  onDeleted: (service: Service) => void;
 };
 
 const URL_KEY = "services";
@@ -16,7 +17,7 @@ const URL_KEY = "services";
  * `useServerTableState` keys its query on this object. */
 const INITIAL_FILTERS = { is_active: null };
 
-export function ServiceTable({ onEdit }: ServiceTableProps) {
+export function ServiceTable({ onEdit, onDeleted }: ServiceTableProps) {
   // `["services"]` is a prefix, not the whole key — the hook appends the
   // page, size, search, sorts and filters. The filter is no longer named
   // here by hand, which is the point: it was in the request but not in the
@@ -25,7 +26,7 @@ export function ServiceTable({ onEdit }: ServiceTableProps) {
   const tableState = useServerTableState({
     queryKey: ["services"],
     queryFn: getServices,
-    columns: serviceColumns({ onEdit }),
+    columns: serviceColumns({ onEdit, onDeleted }),
     urlKey: URL_KEY,
     sortPlan: SERVICES_SORT_PLAN,
     initialFilters: INITIAL_FILTERS,
