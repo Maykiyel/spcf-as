@@ -3,53 +3,40 @@ import { TransactionBuilderProvider } from "./transaction-builder-context";
 import { TransactionDraftPanel } from "./transaction-draft-panel";
 import { FeeCatalogPanel } from "./fee-catalog-panel";
 import { FiltersPanel } from "./filters-panel";
+import { useSideBySidePanels } from "./use-side-by-side-panels";
 
 export function NewTransactionPage() {
+  const isSideBySide = useSideBySidePanels();
+
+  const colStyle = isSideBySide ? { height: "100%" } : undefined;
+  const paperStyle = isSideBySide
+    ? { display: "flex", flexDirection: "column" as const, overflow: "hidden" }
+    : undefined;
+
   return (
     <TransactionBuilderProvider>
       <Grid
         gap="xl"
         p="sm"
         align="stretch"
-        style={{ flex: 1, minHeight: 0 }}
-        styles={{ inner: { height: "100%" } }}
+        style={isSideBySide ? { flex: 1, minHeight: 0 } : undefined}
+        styles={isSideBySide ? { inner: { height: "100%" } } : undefined}
       >
-        <Grid.Col span={{ base: 12, md: 2 }} style={{ height: "100%" }}>
-          <Paper
-            h="100%"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            <FiltersPanel />
+        <Grid.Col span={{ base: 12, md: 2 }} style={colStyle}>
+          <Paper h={isSideBySide ? "100%" : undefined} style={paperStyle}>
+            <FiltersPanel collapsible={!isSideBySide} />
           </Paper>
         </Grid.Col>
 
-        <Grid.Col span={{ base: 12, md: 4 }} style={{ height: "100%" }}>
-          <Paper
-            h="100%"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            <FeeCatalogPanel />
+        <Grid.Col span={{ base: 12, md: 4 }} style={colStyle}>
+          <Paper h={isSideBySide ? "100%" : undefined} style={paperStyle}>
+            <FeeCatalogPanel fillHeight={isSideBySide} />
           </Paper>
         </Grid.Col>
 
-        <Grid.Col span={{ base: 12, md: 6 }} style={{ height: "100%" }}>
-          <Paper
-            h="100%"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            <TransactionDraftPanel />
+        <Grid.Col span={{ base: 12, md: 6 }} style={colStyle}>
+          <Paper h={isSideBySide ? "100%" : undefined} style={paperStyle}>
+            <TransactionDraftPanel fillHeight={isSideBySide} />
           </Paper>
         </Grid.Col>
       </Grid>
