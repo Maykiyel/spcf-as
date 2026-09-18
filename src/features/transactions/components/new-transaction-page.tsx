@@ -1,20 +1,12 @@
-import { Grid, Paper, useMantineTheme } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { Grid, Paper } from "@mantine/core";
 import { TransactionBuilderProvider } from "./transaction-builder-context";
 import { TransactionDraftPanel } from "./transaction-draft-panel";
 import { FeeCatalogPanel } from "./fee-catalog-panel";
 import { FiltersPanel } from "./filters-panel";
+import { useSideBySidePanels } from "./use-side-by-side-panels";
 
 export function NewTransactionPage() {
-  const theme = useMantineTheme();
-  // Mirrors the Grid.Col spans below rather than a second literal: those
-  // are what actually stacks the panels, and the height model just needs
-  // to agree with them, not pick its own breakpoint.
-  const isSideBySide = useMediaQuery(
-    `(min-width: ${theme.breakpoints.md})`,
-    true,
-    { getInitialValueInEffect: false },
-  );
+  const isSideBySide = useSideBySidePanels();
 
   const colStyle = isSideBySide ? { height: "100%" } : undefined;
   const paperStyle = isSideBySide
