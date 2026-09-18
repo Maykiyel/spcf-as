@@ -61,6 +61,37 @@ export function isTableFiltered(
   );
 }
 
+/** Absent from the URL means "at its default", so a key with a non-null
+ * default has no other way to say "none". Spelled as `NO_SORT` below,
+ * which the sort param has always used for the same distinction. Read only
+ * where the default is non-null *and* the caller allows it, so a text
+ * filter someone typed `none` into is still that word. */
+const EXPLICIT_NONE = "none";
+
+/** How a declared filter's URL text reads back. */
+export function filterFromParam(
+  raw: string | null,
+  declared: string | null,
+  emptiable = false,
+): string | null {
+  if (raw === null) return declared;
+  if (emptiable && declared !== null && raw === EXPLICIT_NONE) return null;
+  return raw;
+}
+
+/** What a declared filter's new value writes, where `null` deletes the
+ * param. A value at its default is absent; nothing where the default is
+ * something is the sentinel above. */
+export function filterToParam(
+  value: string | null,
+  declared: string | null,
+  emptiable = false,
+): string | null {
+  if (value === declared) return null;
+  if (emptiable && value === null && declared !== null) return EXPLICIT_NONE;
+  return value;
+}
+
 /** Every key a clear writes, as one record. Returning a filter to its
  * declared default is exactly what drops it from the URL, so `null` is both
  * "cleared" and "absent" and a cleared table's URL is clean by
@@ -226,6 +257,7 @@ function useUrlAdapter(
   initialFilters: TableFilters,
   initialSorts: SortEntry[],
   sortPlan: SortPlan | undefined,
+  emptiableFilters: string[],
 ): TableControlsAdapter {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -311,7 +343,11 @@ function useUrlAdapter(
   // hand-edited URL can't inject a filter the endpoint would 400.
   const filters: TableFilters = {};
   for (const [key, defaultValue] of Object.entries(initialFilters)) {
-    filters[key] = searchParams.get(paramName(key)) ?? defaultValue;
+    filters[key] = filterFromParam(
+      searchParams.get(paramName(key)),
+      defaultValue,
+      emptiableFilters.includes(key),
+    );
   }
 
   const onPageChange = (newPage: number) => {
@@ -356,7 +392,11 @@ function useUrlAdapter(
     )) {
       // A filter at its default is absent from the URL: `?status=all` is
       // noise, and makes an unfiltered table look filtered.
-      updates[paramName(key)] = value === initialFilters[key] ? null : value;
+      updates[paramName(key)] = filterToParam(
+        value,
+        initialFilters[key],
+        emptiableFilters.includes(key),
+      );
     }
 
     // Reset the page: what was on page 7 of the old filter isn't there
@@ -398,7 +438,9 @@ function useUrlAdapter(
   };
 }
 
-/** Local (component) state adapter, used when no `urlKey` is provided. */
+/** Local (component) state adapter, used when no `urlKey` is provided. It
+ * needs no `emptiableFilters`: with nothing to encode, a filter set to
+ * nothing is simply held as `null`. */
 function useLocalAdapter(
   initialPageSize: number,
   initialFilters: TableFilters,
@@ -467,6 +509,9 @@ export function useTableControls(
   urlKey?: string,
   initialFilters: TableFilters = {},
   sortPlan?: SortPlan,
+  /** Keys that may be set to nothing separately from being at their
+   * default. Empty for every table whose defaults are already null. */
+  emptiableFilters: string[] = [],
 ): TableControls {
   // Both derived from the plan rather than declared beside it, so a table
   // cannot state a default the endpoint rejects or claim a total order its
@@ -483,6 +528,7 @@ export function useTableControls(
     initialFilters,
     initialSorts,
     sortPlan,
+    emptiableFilters,
   );
   const localAdapter = useLocalAdapter(
     initialPageSize,

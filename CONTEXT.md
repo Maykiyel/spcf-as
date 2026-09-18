@@ -149,6 +149,18 @@ had to keep in agreement, one of which (`useReportPeriod`) re-read the URL by
 hand because the Services Sold columns need the period before the table
 resolves it; `columns` taking a function is what removed that second read
 path.
+
+**`required: false` also buys a third URL state.** Absent from the URL means
+"at its default", so a range with a default had no way to say *none*: the
+Transactions Report opens on the current month, and clearing the range
+landed straight back on it. An optional range therefore writes an explicit
+`none` for each end, which reads back as `null`, drops off the wire in
+`createListAdapter`, and survives a refresh and a pasted link the way every
+other filter does. A **required** range gets no such state, because a
+missing end is a 422 there — clearing one means "back to the default", which
+is what the Services Sold Report has always done. The sentinel is read only
+on keys whose default is non-null, so a text filter someone typed `none`
+into is still that word.
 _Avoid_: date filter (ambiguous with the control), `DateRangeTableFilter`
 (that is the control the page still renders), date range guard (that is one
 of the parts, not the declaration)
@@ -230,7 +242,17 @@ _Avoid_: analytics, statistics; "the reports page" (there is no page at
 **Transactions Report (page)**:
 The admin-only page at `/reports/transactions`: a server-paginated table of
 completed transactions for a chosen period, with the period's total earnings
-beneath it. Named for what it is. It was specified as "Consolidated Item
+beneath it, and a [[period-line]] above it saying which period that is.
+Named for what it is.
+
+**It opens on the current month**, like its two siblings. It was the only
+report without a default, so it loaded every transaction ever recorded and
+put a grand total beneath the table — an all-time figure presented as a
+report total with nothing on screen saying otherwise. **Its range stays
+optional all the same**: no row here links anywhere that needs both dates,
+so clearing the range really does mean all dates, and the query loads
+rather than being guarded off the wire. That is the one page using the
+[[date-range-filter-descriptor]]'s explicit-none state. It was specified as "Consolidated Item
 Reports", which was wrong twice over, since it carries no item data at all and
 "item" means the category in this glossary.
 
@@ -263,6 +285,31 @@ therefore disagree for a transaction that straddled a boundary. Neither is
 wrong; they answer slightly different questions.
 _Avoid_: Consolidated Item Reports (the old name, wrong on both words), earnings
 report (that is the Dashboard's charted figure), item report
+
+**Period line**:
+The line above the three reports' tables reading *Showing September 2026*,
+*Showing Sep 1 – Oct 15, 2026* or *Showing all dates*. Composed as
+`DataTable.Period` rather than passed to `DataTable.Root`, which takes a
+title string and exposes no slot in the card header — the same wall the
+dashboard's **View all** link met, resolved the same way. It reads the
+table's period from context and takes no props, so a page opts in by
+placing it.
+
+**It says what is on screen and knows nothing of default-ness.** An admin
+who picks a different range sees it follow them, rather than a hint about a
+default that is no longer true. The wording is a pure function of the range:
+a whole calendar month spells the month out, since there is nothing to fit
+beside it, and the two-date cases abbreviate to match every other date in
+the app, naming the year once where both ends share it. Half a range
+renders no line at all, because that state sends no request and shows no
+rows, and *all dates* above an empty table would contradict it.
+
+**Only the three reports compose it.** The Transactions list and the
+Activity Log open unfiltered on purpose — a cashier looking up a receipt
+from last term should not have to clear a month first — and would gain
+nothing from a line saying so.
+_Avoid_: period filter (that is the date range control), date label,
+subtitle (it is not the card's heading)
 
 **Services Sold Report (page)**:
 The admin-only page at `/reports/services-sold`: one row per service for a

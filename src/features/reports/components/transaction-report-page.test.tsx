@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, useLocation } from "react-router";
 import { notifications } from "@mantine/notifications";
 import { fireEvent, waitFor, within } from "@testing-library/react";
 import { screen, renderWithQueryClient } from "@/test/render";
@@ -43,13 +43,18 @@ vi.mock("@/components/ui/date-range", async () => {
     DateRangeFilter: ({
       onChange,
     }: {
-      onChange: (value: { from: string; to: string }) => void;
+      onChange: (value: { from: string | null; to: string | null }) => void;
     }) => (
-      <button
-        onClick={() => onChange({ from: "2026-08-01", to: "2026-08-31" })}
-      >
-        Pick range
-      </button>
+      <>
+        <button
+          onClick={() => onChange({ from: "2026-08-01", to: "2026-08-31" })}
+        >
+          Pick range
+        </button>
+        <button onClick={() => onChange({ from: null, to: null })}>
+          Clear range
+        </button>
+      </>
     ),
   };
 });
@@ -101,10 +106,18 @@ const page = (data: TransactionReportRow[], meta = SERVER_TOTAL) => ({
 const lastRequest = () =>
   mockGetReport.mock.calls[mockGetReport.mock.calls.length - 1][0];
 
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.search}</div>;
+}
+
+const currentUrl = () => screen.getByTestId("location").textContent ?? "";
+
 function renderPage(initialEntry = "/reports/transactions") {
   return renderWithQueryClient(
     <MemoryRouter initialEntries={[initialEntry]}>
       <TransactionReportPage />
+      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -135,12 +148,10 @@ function clickSortHeader(header: string) {
   fireEvent.click(within(cell).getByText(header));
 }
 
-/** Past the debounce in `useTableControls` and then some. Fixed rather than
- * `waitFor`, because the assertions it guards are about a request that must
- * never happen. */
-const flush = () => new Promise((resolve) => setTimeout(resolve, 600));
-
 beforeEach(() => {
+  // Only `Date` is faked, so the debounce in `useTableControls` and RTL's
+  // own waiting still run on real timers.
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date(2026, 8, 9) });
   vi.clearAllMocks();
   mockGetReport.mockResolvedValue(page(rows));
   mockGetCashiers.mockResolvedValue([
@@ -150,6 +161,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   notifications.clean();
 });
 
@@ -190,7 +202,11 @@ describe("TransactionReportPage — the rows", () => {
         { key: "created_at", direction: "desc" },
         { key: "id", direction: "asc" },
       ],
-      filters: { from_date: null, to_date: null, cashier_id: null },
+      filters: {
+        from_date: "2026-09-01",
+        to_date: "2026-09-30",
+        cashier_id: null,
+      },
     });
   });
 
@@ -305,16 +321,19 @@ describe("TransactionReportPage — the filters", () => {
     });
   });
 
-  it("asks for nothing while a restored date range has only one end", async () => {
-    // `to_date` carries `after_or_equal:from_date`, so half a range is a 422
-    // rather than a looser filter.
+  it("completes a half-written URL range from the declared month", async () => {
+    // `to_date` carries `after_or_equal:from_date`, so half a range would
+    // be a 422. A missing end reads as its default rather than as nothing,
+    // which is what keeps that state off the wire now the default is a
+    // real month rather than null.
     renderPage(
       "/reports/transactions?transactions_report_from_date=2026-08-01",
     );
-    await flush();
+    await screen.findByText("Anna Reyes");
 
-    expect(mockGetReport).not.toHaveBeenCalled();
-    expect(screen.getByText("No entries found")).toBeInTheDocument();
+    expect(lastRequest()).toMatchObject({
+      filters: { from_date: "2026-08-01", to_date: "2026-09-30" },
+    });
   });
 
   it("offers only real cashiers, and sends the one chosen", async () => {
@@ -333,21 +352,77 @@ describe("TransactionReportPage — the filters", () => {
 });
 
 describe("TransactionReportPage — clearing", () => {
-  it("returns the period to unfiltered and still loads rows", async () => {
-    renderPage(
-      "/reports/transactions?transactions_report_from_date=2026-08-01&transactions_report_to_date=2026-08-31",
-    );
+  it("clears the range to all dates, and still loads rows", async () => {
+    renderPage();
     await screen.findByText("Anna Reyes");
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear range" }));
 
-    // Its range is optional, unlike the two Services Sold pages, so the
-    // unfiltered state here really is no dates.
+    // Its range is optional, unlike the two Services Sold pages, so all
+    // dates is a real state here rather than a 422 waiting to happen —
+    // and reaching it takes a filter that can say "none" separately from
+    // "at its default", which is the current month on this page.
     await waitFor(() =>
       expect(lastRequest()).toMatchObject({
         filters: { from_date: null, to_date: null },
       }),
     );
     expect(await screen.findByText("Anna Reyes")).toBeInTheDocument();
+    expect(screen.getByText("Showing all dates")).toBeInTheDocument();
+  });
+
+  it("keeps all dates across a reload, rather than reverting to the month", async () => {
+    renderPage();
+    await screen.findByText("Anna Reyes");
+    fireEvent.click(screen.getByRole("button", { name: "Clear range" }));
+    await waitFor(() =>
+      expect(lastRequest().filters).toMatchObject({ from_date: null }),
+    );
+
+    // The URL is what a refresh and a pasted link restore from, so an
+    // emptied range has to survive as something other than an absent one.
+    expect(currentUrl()).toContain("transactions_report_from_date=none");
+  });
+
+  it("returns the range to the current month from the toolbar clear", async () => {
+    renderPage();
+    await screen.findByText("Anna Reyes");
+    fireEvent.click(screen.getByRole("button", { name: "Pick range" }));
+    await waitFor(() =>
+      expect(lastRequest().filters).toMatchObject({ from_date: "2026-08-01" }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+
+    // Clear filters means "back to how this table opens", which is not the
+    // same as the range control's own clear.
+    await waitFor(() =>
+      expect(lastRequest()).toMatchObject({
+        filters: { from_date: "2026-09-01", to_date: "2026-09-30" },
+      }),
+    );
+  });
+});
+
+describe("TransactionReportPage — the period line", () => {
+  it("names the month it opened on", async () => {
+    renderPage();
+    await screen.findByText("Anna Reyes");
+
+    // The report carries a grand total beneath the table, so the period
+    // that total covers has to be on screen with it.
+    expect(screen.getByText("Showing September 2026")).toBeInTheDocument();
+  });
+
+  it("follows a picked range rather than naming the default", async () => {
+    renderPage();
+    await screen.findByText("Anna Reyes");
+
+    fireEvent.click(screen.getByRole("button", { name: "Pick range" }));
+
+    expect(await screen.findByText("Showing August 2026")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Showing September 2026"),
+    ).not.toBeInTheDocument();
   });
 });

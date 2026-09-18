@@ -17,6 +17,10 @@ export type DateRangeSpec = {
   default?: () => DateRangePeriod;
 };
 
+/** The filter keys a declared range expands into. Named here because the
+ * spec above owns them; a page never spells either one. */
+export const DATE_RANGE_FILTER_KEYS = ["from_date", "to_date"];
+
 const NO_PERIOD: DateRangePeriod = { from: null, to: null };
 
 /** Half a date range is a 422 everywhere in this API (`to_date` carries
