@@ -116,7 +116,10 @@ export function MonthlyEarningsSection() {
         actions={
           <Select
             label="Year"
-            w={110}
+            // Same shape #148 swept the filter bar to: full width at
+            // base, fixed from `xs` up. A Card.Header action, so it was
+            // left out of that sweep, not exempt from it.
+            w={{ base: "100%", xs: 110 }}
             data={years.map(String)}
             value={String(year)}
             onChange={(value) => value && setYear(Number(value))}
