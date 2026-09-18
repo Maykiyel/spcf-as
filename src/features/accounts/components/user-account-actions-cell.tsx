@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Alert, Group, Modal, Stack, Text } from "@mantine/core";
+import { Group, Stack, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { IconInfoCircle } from "@tabler/icons-react";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
@@ -149,46 +148,21 @@ export function UserAccountActionsCell({
         </Stack>
       </ConfirmModal>
 
-      <Modal
+      <ConfirmModal
         opened={confirmDeleteOpen}
         onClose={closeDelete}
         title="Delete account"
-        centered
-        closeOnClickOutside={!deleteMutation.isPending}
+        confirmLabel="Delete Account"
+        onConfirm={() => deleteMutation.mutate()}
+        loading={deleteMutation.isPending}
+        refusal={refusal}
       >
-        {refusal ? (
-          <Alert
-            color="tertiary"
-            variant="light"
-            icon={<IconInfoCircle size={18} />}
-          >
-            {refusal}
-          </Alert>
-        ) : (
-          <Text size="sm">
-            Delete the account for <strong>{account.full_name}</strong>? This
-            can't be undone, and the server refuses it for anyone with any
-            history. Deactivating is almost always what you want instead.
-          </Text>
-        )}
-
-        <Group justify="flex-end" mt="lg">
-          <DangerButton
-            onClick={closeDelete}
-            disabled={deleteMutation.isPending}
-          >
-            {refusal ? "Close" : "Cancel"}
-          </DangerButton>
-          {!refusal && (
-            <PrimaryButton
-              loading={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate()}
-            >
-              Delete Account
-            </PrimaryButton>
-          )}
-        </Group>
-      </Modal>
+        <Text size="sm">
+          Delete the account for <strong>{account.full_name}</strong>? This
+          can't be undone, and the server refuses it for anyone with any
+          history. Deactivating is almost always what you want instead.
+        </Text>
+      </ConfirmModal>
     </>
   );
 }
