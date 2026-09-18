@@ -90,6 +90,27 @@ function lastRequest() {
   return calls[calls.length - 1]?.[0];
 }
 
+/** The search control's own debounce, and so the longest a request can be
+ * delayed after the last keystroke. */
+const DEBOUNCE_MS = 400;
+
+/** Resolves once a whole debounce has passed with no new request. A fixed
+ * sleep assumes a budget a loaded machine may not honour: the setup's own
+ * debounce then lands after the baseline and is counted as the clear's. */
+async function quiet() {
+  let seen = mockGetServices.mock.calls.length;
+  let since = Date.now();
+
+  await waitFor(() => {
+    const now = mockGetServices.mock.calls.length;
+    if (now !== seen) {
+      seen = now;
+      since = Date.now();
+    }
+    expect(Date.now() - since).toBeGreaterThanOrEqual(DEBOUNCE_MS);
+  });
+}
+
 // The segments are labelled "Active" and "Inactive" — the same words the
 // rows' own active toggles carry — so the click is scoped to the control.
 function chooseStatus(label: string) {
@@ -306,9 +327,9 @@ describe("ServiceTable — clearing", () => {
         filters: { is_active: "0" },
       }),
     );
-    // Settled before counting, so the two debounces still in flight from
-    // the setup are not mistaken for the clear's own requests.
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    // Counted only once the setup has stopped producing requests, so its
+    // debounces are not mistaken for the clear's own.
+    await quiet();
     const before = mockGetServices.mock.calls.length;
 
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
@@ -318,7 +339,7 @@ describe("ServiceTable — clearing", () => {
     await waitFor(() =>
       expect(mockGetServices.mock.calls.length).toBe(before + 1),
     );
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await quiet();
 
     expect(mockGetServices.mock.calls.length).toBe(before + 1);
     expect(lastRequest()).toMatchObject({
