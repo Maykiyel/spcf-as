@@ -11,22 +11,40 @@ import { TransactionStatusBadge } from "./transaction-status-badge";
 import { TransactionDetailFallback } from "./transaction-detail-fallback";
 import { TransactionDetailSkeleton } from "./transaction-detail-skeleton";
 import { formatSeriesNumber } from "@/utils/series-number";
+import type { TransactionOrigin } from "../types";
 
-/** Where a Back with no history entry to pop goes instead. */
+/** Where Back goes when there is no history entry to pop. */
 const TRANSACTIONS_LIST_PATH = "/transactions/receipts";
 
 /** Where this page was opened from, if the caller said. Absent for a
- * bookmark, a pasted link, or a refresh — `location.state` does not
- * survive one. */
-type ViewTransactionFrom = { from?: "list" | "new" | "dashboard" };
+ * bookmark, a pasted link, a refresh, or an unwired caller. Wording only —
+ * see `backLabel`. */
+type ViewTransactionState = { from?: TransactionOrigin };
 
-/** Two origins pop history; only the label differs, and it has to, since
- * it names where the click actually lands. */
-const BACK_LABEL: Record<string, string> = {
-  dashboard: "Back to Dashboard",
+/** One label per origin that gets a control at all. `Record`, not a
+ * lookup with a fallback, so a new `TransactionOrigin` member with no
+ * entry here fails the build instead of rendering "undefined". */
+const BACK_LABEL: Record<Exclude<TransactionOrigin, "new">, string> = {
   list: "Back to Transactions",
-  unknown: "Back to Transactions",
+  dashboard: "Back to Dashboard",
+  void: "Back to Void",
+  report: "Back to Transactions Report",
+  activityLog: "Back to Activity Log",
+  print: "Back to Receipt",
 };
+
+/** `null` renders no control. `hasHistory` false means a bookmark, a
+ * pasted link, or a fresh tab: nothing behind this page, so the origin
+ * (whatever it claims) is moot and the label names the fallback's real
+ * destination instead. */
+function backLabel(
+  origin: TransactionOrigin | undefined,
+  hasHistory: boolean,
+): string | null {
+  if (origin === "new") return null;
+  if (!hasHistory) return "Back to Transactions";
+  return origin ? BACK_LABEL[origin] : "Back";
+}
 
 export function ViewTransactionPage() {
   const { controlId } = useParams<{ controlId: string }>();
@@ -34,25 +52,23 @@ export function ViewTransactionPage() {
   const detail = useTransactionDetail(id);
   const { transaction, isUnavailable } = detail;
   const navigate = useNavigate();
-  const { state } = useLocation() as { state: ViewTransactionFrom | null };
+  const location = useLocation();
+  const { state } = location as { state: ViewTransactionState | null };
 
-  /** Suppressed only for the post-confirm arrival, where the draft has
-   * already been reset and there is nothing behind this page to go back
-   * to. Everything else gets one, including a refresh that lost the state
-   * above: an unnecessary Back is a smaller failure than a missing one. */
-  const backTo = state?.from === "new" ? null : (state?.from ?? "unknown");
+  // React Router keys the first location of a session's history "default"
+  // (browser and memory router alike); any other key means a real entry
+  // sits behind this one. That, not the origin marker, decides where Back
+  // goes — a caller that forgot to set `state` no longer sends the user to
+  // the wrong list, only to a plainer label.
+  const hasHistory = location.key !== "default";
+  const label = backLabel(state?.from, hasHistory);
 
   return (
     <>
-      {backTo && (
+      {label && (
         <UnstyledButton
           onClick={() =>
-            // -1 for a real history entry, so the list comes back on the
-            // page and filters the user left it on. A bookmark has no such
-            // entry, so it gets the list's own path instead.
-            backTo === "unknown"
-              ? navigate(TRANSACTIONS_LIST_PATH)
-              : navigate(-1)
+            hasHistory ? navigate(-1) : navigate(TRANSACTIONS_LIST_PATH)
           }
           mb="xs"
         >
@@ -61,7 +77,7 @@ export function ViewTransactionPage() {
             c="dimmed"
             style={{ display: "flex", alignItems: "center", gap: 4 }}
           >
-            <IconArrowLeft size={14} /> {BACK_LABEL[backTo]}
+            <IconArrowLeft size={14} /> {label}
           </Text>
         </UnstyledButton>
       )}

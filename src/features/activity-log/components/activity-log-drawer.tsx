@@ -142,7 +142,7 @@ function ActivitySubjectReference({
 
   if (route) {
     return (
-      <Anchor component={Link} to={route} size="sm">
+      <Anchor component={Link} to={route.path} state={route.state} size="sm">
         {label}
       </Anchor>
     );

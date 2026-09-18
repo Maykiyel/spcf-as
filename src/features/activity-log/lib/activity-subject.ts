@@ -6,6 +6,11 @@ const SUBJECT_ROUTES: Record<string, (id: number) => string> = {
   transaction: (id) => `/transactions/${id}`,
 };
 
+/** Every subject link out of this drawer comes from the same place, so
+ * the origin is attached once here rather than per entry in
+ * `SUBJECT_ROUTES` — a future subject type's route inherits it for free. */
+export type SubjectRoute = { path: string; state: { from: "activityLog" } };
+
 /** This app's word for each subject type, which is not always the wire's:
  * `ACCOUNT_CREATED` logs against the User model, and "Account" is what the
  * nav group, the page and the entry's own sentence all call it. */
@@ -18,9 +23,10 @@ const SUBJECT_NAMES: Record<string, string> = {
 
 /** Where a subject can be opened, or `null` when it cannot: the record was
  * deleted, or its type has no route. Both cases are shown, not hidden. */
-export function subjectRoute(subject: ActivityLogSubject): string | null {
+export function subjectRoute(subject: ActivityLogSubject): SubjectRoute | null {
   if (!subject.exists) return null;
-  return SUBJECT_ROUTES[subject.type]?.(subject.id) ?? null;
+  const path = SUBJECT_ROUTES[subject.type]?.(subject.id);
+  return path ? { path, state: { from: "activityLog" } } : null;
 }
 
 /** "Transaction #1201". The wire's type is a model class name in snake

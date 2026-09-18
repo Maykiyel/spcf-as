@@ -144,3 +144,10 @@ export function isPriceRangeValue(value: string): value is PriceRangeValue {
 export function isSortByValue(value: string): value is SortByValue {
   return isOneOf(SORT_BY_VALUES, value);
 }
+
+// Where View Transaction was opened from, for its Back control's wording
+// only — never its destination. Closed so a new caller with no case here
+// is a compile error, not a silent generic label. "new" renders no
+// control at all (see ViewTransactionPage).
+export type TransactionOrigin =
+  "list" | "dashboard" | "void" | "report" | "activityLog" | "print" | "new";

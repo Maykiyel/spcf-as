@@ -46,6 +46,7 @@ export function VoidTransactionPage() {
     includeStatus: false,
     includeItems: true,
     actions: (row) => <VoidTransactionAction transaction={row} />,
+    controlIdOrigin: "void",
   });
 
   const tableState = useServerTableState({
@@ -70,9 +71,11 @@ export function VoidTransactionPage() {
       <DataTable.Grid
         onRowClick={(row: TransactionListRow) =>
           // `from` is what gives the detail page a Back control that
-          // returns here with this page, sort and filters intact.
+          // returns here with this page, sort and filters intact. Was
+          // `"list"` — a copy-paste from the receipts list that mislabelled
+          // this page's own Back control.
           navigate(`/transactions/${row.control_id}`, {
-            state: { from: "list" },
+            state: { from: "void" },
           })
         }
       />

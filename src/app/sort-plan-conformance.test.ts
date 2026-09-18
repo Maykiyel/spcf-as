@@ -62,6 +62,7 @@ const CASES: Case[] = [
       includeStatus: true,
       includeItems: true,
       actions: () => null,
+      controlIdOrigin: "list",
     }) as ColumnDef<never>[],
     // Not Control ID, Cashier, Items or Total: the endpoint allow-lists none
     // of them, and Actions has no field at all.
@@ -187,6 +188,7 @@ describe("what each table offers a sort on", () => {
       includeStatus: false,
       includeItems: true,
       actions: () => null,
+      controlIdOrigin: "void",
     }) as ColumnDef<never>[];
 
     expect(sortableColumnIds(TRANSACTIONS_SORT_PLAN, columns)).toEqual([
@@ -206,6 +208,7 @@ describe("what each table offers a sort on", () => {
       includeCashier: false,
       includeStatus: true,
       includeItems: false,
+      controlIdOrigin: "dashboard",
     }) as ColumnDef<never>[];
 
     expect(sortableColumnIds(TRANSACTIONS_SORT_PLAN, columns)).toEqual([

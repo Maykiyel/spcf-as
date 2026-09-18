@@ -50,6 +50,7 @@ export function TransactionListPage() {
     includeCashier: isAdmin,
     includeStatus: true,
     includeItems: true,
+    controlIdOrigin: "list",
   });
 
   const tableState = useServerTableState({

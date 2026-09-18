@@ -32,7 +32,11 @@ export function reportTransactionColumns({
       // A real link, not just a clickable row: it is what a keyboard
       // reaches, a screen reader announces, and middle-click opens.
       render: (row) => (
-        <Anchor component={Link} to={`/transactions/${row.control_id}`}>
+        <Anchor
+          component={Link}
+          to={`/transactions/${row.control_id}`}
+          state={{ from: "report" }}
+        >
           {row.control_id}
         </Anchor>
       ),

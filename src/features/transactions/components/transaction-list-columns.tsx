@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import type { ColumnDef } from "@/components/ui/data-table";
 import { formatCurrency } from "@/utils/currency";
 import { formatDateTime } from "@/utils/date-time";
-import type { TransactionListRow } from "../types";
+import type { TransactionListRow, TransactionOrigin } from "../types";
 import { TransactionItemNamesCell } from "./transaction-item-names-cell";
 import { TransactionStatusBadge } from "./transaction-status-badge";
 import { formatSeriesNumber } from "@/utils/series-number";
@@ -22,6 +22,10 @@ type TransactionListColumnsOptions = {
   /** A trailing Actions column's cell. Omitted rather than passed empty:
    * an "Actions" header over blank cells reads as a render failure. */
   actions?: (row: TransactionListRow) => ReactNode;
+  /** The control-id link's own Back origin — the row click's `state` on
+   * the caller's `onRowClick` and this link have to agree, since both open
+   * the same page from the same table. */
+  controlIdOrigin: TransactionOrigin;
 };
 
 /**
@@ -38,6 +42,7 @@ export function transactionListColumns({
   includeStatus,
   includeItems,
   actions,
+  controlIdOrigin,
 }: TransactionListColumnsOptions): ColumnDef<TransactionListRow>[] {
   const columns: ColumnDef<TransactionListRow>[] = [
     {
@@ -52,7 +57,11 @@ export function transactionListColumns({
       // A real link, not just a clickable row: it is what a keyboard
       // reaches, a screen reader announces, and middle-click opens.
       render: (row) => (
-        <Anchor component={Link} to={`/transactions/${row.control_id}`}>
+        <Anchor
+          component={Link}
+          to={`/transactions/${row.control_id}`}
+          state={{ from: controlIdOrigin }}
+        >
           {row.control_id}
         </Anchor>
       ),
