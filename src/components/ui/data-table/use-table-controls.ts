@@ -61,15 +61,11 @@ export function isTableFiltered(
   );
 }
 
-/** What a filter deliberately set to nothing looks like in the URL, for a
- * key whose declared default is not already nothing.
- *
- * Absent means "at its default", so without this a filter with a non-null
- * default has no way to say "none": the Transactions Report opens on the
- * current month and an admin clearing the range would land back on it.
- * Read only where the default is non-null and the caller says the key can
- * hold nothing, so a text filter someone literally typed `none` into is
- * still that word, and a required range still clears to its default. */
+/** Absent from the URL means "at its default", so a key with a non-null
+ * default has no other way to say "none". Spelled as `NO_SORT` below,
+ * which the sort param has always used for the same distinction. Read only
+ * where the default is non-null *and* the caller allows it, so a text
+ * filter someone typed `none` into is still that word. */
 const EXPLICIT_NONE = "none";
 
 /** How a declared filter's URL text reads back. */
@@ -442,7 +438,9 @@ function useUrlAdapter(
   };
 }
 
-/** Local (component) state adapter, used when no `urlKey` is provided. */
+/** Local (component) state adapter, used when no `urlKey` is provided. It
+ * needs no `emptiableFilters`: with nothing to encode, a filter set to
+ * nothing is simply held as `null`. */
 function useLocalAdapter(
   initialPageSize: number,
   initialFilters: TableFilters,

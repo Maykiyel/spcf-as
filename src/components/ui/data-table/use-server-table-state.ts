@@ -97,10 +97,8 @@ export function useServerTableState<
     [initialFilters, defaultPeriod],
   );
 
-  // A required range cannot be emptied — a missing end is a 422 there — so
-  // clearing one means "back to the default". Optional ranges get the
-  // third state, which is how the Transactions Report reaches all dates
-  // from a month it opens on.
+  // A required range cannot be emptied: a missing end is a 422 there, so
+  // clearing one has to mean "back to the default".
   const rangeIsEmptiable = Boolean(dateRange) && !dateRange?.required;
   const emptiableFilters = useMemo(
     () => (rangeIsEmptiable ? DATE_RANGE_FILTER_KEYS : NO_EMPTIABLE_FILTERS),

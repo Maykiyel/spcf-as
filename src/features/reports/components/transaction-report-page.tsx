@@ -33,8 +33,8 @@ export function TransactionReportPage() {
     sortPlan: TRANSACTION_REPORT_SORT_PLAN,
     initialFilters: REPORT_FILTERS,
     // Optional, unlike its two siblings: no row here links anywhere that
-    // needs both dates, so an admin can still clear to all dates. The
-    // default is what stops the total beneath the table reading all-time.
+    // needs both dates. The default is what stops the total beneath the
+    // table reading all-time.
     dateRange: { default: currentMonthRange },
   });
 

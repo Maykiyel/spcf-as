@@ -47,10 +47,8 @@ describe("periodLabel", () => {
   });
 
   it("claims nothing when only one end is set", () => {
-    // Not reachable through the control, which publishes both ends or
-    // neither; a hand-edited URL is how one arrives. The table sends no
-    // request and shows no rows in that state, so "all dates" would be a
-    // line contradicting the empty table beneath it.
+    // "All dates" here would contradict the empty table beneath it: that
+    // state sends no request and shows no rows.
     expect(periodLabel("2026-09-01", null)).toBeNull();
     expect(periodLabel(null, "2026-09-30")).toBeNull();
   });

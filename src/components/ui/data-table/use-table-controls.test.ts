@@ -277,8 +277,7 @@ describe("filterFromParam / filterToParam", () => {
 
   it("round-trips a filter deliberately set to nothing", () => {
     // Absent means "at its default", so a key with a non-null default
-    // needs a way to say "none" — without it, clearing the Transactions
-    // Report's range lands straight back on the current month.
+    // needs some other way to say "none".
     const written = filterToParam(null, "2026-09-01", true);
 
     expect(written).not.toBeNull();
