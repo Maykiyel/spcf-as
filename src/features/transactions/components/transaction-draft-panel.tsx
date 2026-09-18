@@ -20,9 +20,7 @@ import { TransactionLineItemRow } from "./transaction-line-item-row";
 import { formatCurrency } from "@/utils/currency";
 
 type TransactionDraftPanelProps = {
-  // True in the side-by-side desktop layout, where this panel fills its
-  // column and scrolls internally. False when stacked, where it must size
-  // to its own content instead so the page scrolls as one document.
+  // False when stacked: size to content, so the page scrolls as one document.
   fillHeight?: boolean;
 };
 
