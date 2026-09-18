@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useMantineTheme } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
 import type { DatesRangeValue } from "@mantine/dates";
 import { nextDateRange, type DateRangeValue } from "./date-range-value";
@@ -31,6 +33,15 @@ export function DateRangeFilter({
     setDraft([value.from, value.to]);
   }, [value.from, value.to]);
 
+  const theme = useMantineTheme();
+  // Below the width shape's own `xs` boundary, a floating popover has too
+  // little room either side of the calendar; a modal guarantees it fits.
+  const isCompact = useMediaQuery(
+    `(max-width: ${theme.breakpoints.xs})`,
+    false,
+    { getInitialValueInEffect: false },
+  );
+
   const handleChange = (range: DatesRangeValue) => {
     setDraft(range);
 
@@ -51,6 +62,7 @@ export function DateRangeFilter({
       // second line and shifted everything under it. Width to match.
       valueFormat="MMM D, YYYY"
       w={{ base: "100%", xs: 300 }}
+      dropdownType={isCompact ? "modal" : "popover"}
     />
   );
 }
