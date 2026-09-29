@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   notifySuccess,
   notifyMutationError,
@@ -70,6 +70,8 @@ export function TransactionBuilderProvider({
     enabled: catalogOverride === undefined,
   });
 
+  const queryClient = useQueryClient();
+
   const catalog = catalogOverride ?? fetchedCatalog ?? EMPTY_CATALOG;
 
   useDiscardedTransactionNotice(lineItemSync.transactionId);
@@ -126,6 +128,22 @@ export function TransactionBuilderProvider({
           customer_name: payerName.trim(),
           amount_paid: amountPaid,
         });
+
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: ["dashboard-today"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["monthly-earnings"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["cashier-earnings"],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ["transactions", "recent"],
+          }),
+        ]);
+
         notifySuccess(
           // "Series No.", not "Series receipt #": per CONTEXT.md a Series
           // receipt is the pre-numbered *block* of sheets, while
@@ -151,7 +169,13 @@ export function TransactionBuilderProvider({
         setIsConfirming(false);
       }
     },
-    [lineItemSync.transactionId, payerName, amountPaid, lineItemSyncReset],
+    [
+      lineItemSync.transactionId,
+      payerName,
+      amountPaid,
+      lineItemSyncReset,
+      queryClient,
+    ],
   );
 
   const filteredCatalog = useMemo(
