@@ -23,8 +23,6 @@ const PAGE_SIZE = 5;
  */
 export function CashierEarningsTable() {
   const tableState = useServerTableState({
-    // Inline, like every other server-backed table here: nothing
-    // invalidates this key, because the dashboard has no mutations.
     queryKey: ["cashier-earnings"],
     queryFn: getCashierEarnings,
     columns: cashierEarningsColumns,

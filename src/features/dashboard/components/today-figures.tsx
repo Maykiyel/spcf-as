@@ -14,8 +14,6 @@ import { StatTile } from "./stat-tile";
  * BACKEND_NOTES.md. */
 export function TodayFigures() {
   const { data, isLoading, isError } = useQuery({
-    // Inline, like the other two sections: nothing invalidates these
-    // keys, because the dashboard has no mutations.
     queryKey: ["dashboard-today"],
     queryFn: getDashboardToday,
   });

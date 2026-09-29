@@ -60,6 +60,15 @@ export function VoidTransactionAction({
    * the user has no action hanging off it. */
   const forgetWhatWeKnew = () => {
     queryClient.invalidateQueries({ queryKey: [...TRANSACTIONS_QUERY_KEY] });
+    queryClient.invalidateQueries({
+      queryKey: ["dashboard-today"],
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["monthly-earnings"],
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["cashier-earnings"],
+    });
     queryClient.removeQueries({
       queryKey: transactionDetailQueryKey(transaction.control_id),
     });
